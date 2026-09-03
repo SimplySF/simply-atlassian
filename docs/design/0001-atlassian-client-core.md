@@ -24,8 +24,8 @@ shared module; individual commands get their own docs (0002+).
 
 Add a dependency-free client core at `packages/simply-atlassian/src/core/`, built on Node's
 native `fetch`. No Atlassian SDK. Commands construct a `JiraClient` or `ConfluenceClient` from a
-resolved config; the client exposes typed request helpers and knows which API base
-(`/rest/api/3` vs `/rest/api/2`) and auth scheme the target deployment needs.
+resolved config; each client owns an `HttpTransport` bound to its instance and knows which API
+base (`/rest/api/3` vs `/rest/api/2`) and auth scheme the target deployment needs.
 
 ## Behavior
 
@@ -41,12 +41,12 @@ portable between the two:
 | `JIRA_USERNAME`             | Jira Cloud | Email for Basic auth                                |
 | `JIRA_API_TOKEN`            | Jira Cloud | API token for Basic auth                            |
 | `JIRA_PERSONAL_TOKEN`       | Server/DC  | PAT for Bearer auth                                 |
-| `JIRA_SSL_VERIFY`           | Jira       | `false` disables TLS certificate validation         |
+| `JIRA_SSL_VERIFY`           | Jira       | Rejected if set to a false value (see below)        |
 | `CONFLUENCE_URL`            | Confluence | Base URL (`/wiki` appended automatically for Cloud) |
 | `CONFLUENCE_USERNAME`       | Cloud      | Email for Basic auth                                |
 | `CONFLUENCE_API_TOKEN`      | Cloud      | API token for Basic auth                            |
 | `CONFLUENCE_PERSONAL_TOKEN` | Server/DC  | PAT for Bearer auth                                 |
-| `CONFLUENCE_SSL_VERIFY`     | Confluence | `false` disables TLS certificate validation         |
+| `CONFLUENCE_SSL_VERIFY`     | Confluence | Rejected if set to a false value (see below)        |
 
 Resolution rules:
 
@@ -63,25 +63,33 @@ Resolution rules:
 
 ### HTTP contract
 
-- JSON in/out via native `fetch`; `Accept`/`Content-Type` headers set automatically.
-- 30 s default timeout per request via `AbortController`.
-- Transient failures (network errors, 429, 5xx) retry with exponential backoff (2 retries,
-  500 ms base). A `Retry-After` header, when present on a 429, takes precedence over the
-  computed backoff. 4xx responses other than 429 never retry.
-- `SSL_VERIFY=false` sets `NODE_TLS_REJECT_UNAUTHORIZED=0` process-wide. Node's `fetch` has no
-  per-request TLS option (Bun-style `tls` init keys are silently ignored), and a CLI invocation
-  talks to exactly one configured host, so the process-wide switch is acceptable. The helper
-  is idempotent and lives in one place so the trade-off is documented once.
+- JSON in/out via Node's native `fetch`; `Accept`/`Content-Type` headers set automatically.
+- 30 s default timeout per attempt, covering the **entire exchange including the response
+  body** — a server that sends headers and then stalls mid-body still trips the deadline.
+- Retry policy (3 attempts total, 500 ms exponential backoff base), decided in one place:
+  - 429 and 5xx retry; a `Retry-After` header (delay-seconds or HTTP date, capped at 60 s)
+    takes precedence over the computed backoff. Error bodies are drained before retrying so
+    connections return to the pool.
+  - Transient transport failures (connection reset/refused) retry.
+  - Permanent failures never retry: 4xx other than 429, DNS misses (`ENOTFOUND`), untrusted
+    certificates, and timeouts all fail immediately with a typed, explanatory error.
+- **Certificate verification is always on, and there is no opt-out.** An instance behind an
+  internal or agency CA is supported by trusting that CA — `NODE_EXTRA_CA_CERTS=/path/to/ca.pem`
+  — which keeps verification intact instead of removing it. A `*_SSL_VERIFY` set to a false
+  value (carried over from other Atlassian tooling) raises a `ConfigError` naming that fix
+  rather than being silently ignored, and a certificate failure at request time carries the
+  same hint.
 
 ### Errors
 
 A small typed hierarchy, mapped to oclif exit codes when a command surfaces them:
 
-| Error         | Meaning                                   | Exit code |
-| ------------- | ----------------------------------------- | --------- |
-| `ConfigError` | Missing/contradictory configuration       | 2         |
-| `AuthError`   | 401/403 from the instance                 | 3         |
-| `HttpError`   | Any other non-2xx (carries status + body) | 1         |
+| Error          | Meaning                                                       | Exit code |
+| -------------- | ------------------------------------------------------------- | --------- |
+| `ConfigError`  | Missing/contradictory configuration                           | 2         |
+| `AuthError`    | 401/403 from the instance                                     | 3         |
+| `HttpError`    | Any other non-2xx (carries status + body)                     | 1         |
+| `NetworkError` | The instance never answered: timeout, DNS, TLS trust, refused | 1         |
 
 Commands catch these and re-throw through `this.error(message, { exit })` so users get oclif's
 formatted error output, never a stack trace, for expected failure modes.
@@ -101,10 +109,15 @@ formatted error output, never a stack trace, for expected failure modes.
   porting anything; whether to stay clean-room is an open question below. This design is
   written to be implementable either way — the _behavioral contract_ (env vars, deployment
   detection, API-version mapping) matches regardless.
-- **Per-request TLS control via an `undici` `Agent` dispatcher** — more surgical than the
-  process-wide env var, but adds `undici` as a runtime dependency solely for the escape hatch,
-  and the global dispatcher still leaks process-wide. Rejected; revisit if the CLI ever talks
-  to multiple hosts in one invocation.
+- **Supporting `SSL_VERIFY=false` at all** — inherited from `mcp-atlassian` by way of
+  `kaichen/atlassian-cli`, and dropped after review. Implemented process-wide (via
+  `NODE_TLS_REJECT_UNAUTHORIZED=0`) it is a security defect: configuring it for a self-signed
+  Jira DC silently disables certificate validation for every other host in the process,
+  Confluence Cloud included. Implemented safely (a per-transport `undici` `Agent`) it costs a
+  runtime dependency for a feature whose only real use case — an instance behind an internal CA
+  — is better served by `NODE_EXTRA_CA_CERTS`, which keeps verification on. So the feature is
+  gone, the dependency with it, and users who set the variable get an error naming the CA
+  bundle fix.
 - **A separate `packages/atlassian-core` package** — premature while there is one consumer.
   The module boundary inside `src/core/` keeps extraction cheap later.
 
@@ -116,10 +129,12 @@ All under `packages/simply-atlassian/src/core/`, in write order:
 2. `config.ts` — `resolveJiraConfig()` / `resolveConfluenceConfig()`: env + flag merging,
    deployment detection, URL canonicalization, validation.
 3. `auth.ts` — `buildAuthHeaders(config)`: Basic vs. Bearer.
-4. `http.ts` — `requestJson<T>()` with timeout/retry/`Retry-After`, plus the idempotent
-   `disableTlsVerification()` helper.
-5. `jira-client.ts` / `confluence-client.ts` — thin classes binding a resolved config to
-   `requestJson`, owning API-base selection and pagination helpers.
+4. `http.ts` — `HttpTransport`, a class bound to one instance (base URL, auth headers, TLS
+   policy, timing): `json<T>(call)` with full-exchange timeout, single-site retry policy, error
+   triage, and the scoped insecure `Agent`.
+5. `jira-client.ts` / `confluence-client.ts` — thin classes, each owning an `HttpTransport`,
+   API-base selection, and pagination (including honouring the server's effective `maxResults`
+   cap rather than the requested page size).
 
 Notes for the implementer:
 
@@ -138,8 +153,10 @@ Vitest, in `packages/simply-atlassian/test/core/`:
   `https://x.atlassian.net` → `https://x.atlassian.net/wiki`.
 - **auth**: Basic header is `base64(email:token)`; PAT produces `Bearer <token>`.
 - **http**: against a local `node:http` server — success JSON round-trip; 401 → `AuthError`;
-  404 → `HttpError` carrying status and body; 429 with `Retry-After` respected; retry then
-  success on a transient 503; timeout aborts.
+  404 → `HttpError` carrying status and body; `Retry-After` beats the computed backoff (timed);
+  retry then success on a transient 503; timeout fires for both never-responds and
+  stalls-mid-body; DNS misses fail fast as `NetworkError`; connection-refused retries then
+  reports; a certificate failure names `NODE_EXTRA_CA_CERTS` in its message.
 - **clients**: Jira Cloud client hits `/rest/api/3` and paginates with `nextPageToken`; Server
   client hits `/rest/api/2` with `startAt`; Confluence paths unaffected by deployment type.
 

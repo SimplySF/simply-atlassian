@@ -14,4 +14,17 @@
  * limitations under the License.
  */
 
-export default {};
+export {
+  resolveConfluenceConfig,
+  resolveJiraConfig,
+  type AtlassianAuth,
+  type AtlassianConfig,
+  type BasicAuth,
+  type BearerAuth,
+  type ConfigOverrides,
+  type Deployment,
+  type EnvLike,
+} from './core/config.js';
+export { ConfluenceClient } from './core/confluence-client.js';
+export { AuthError, CliError, ConfigError, HttpError, NetworkError } from './core/errors.js';
+export { JiraClient, type JiraSearchOptions, type JiraSearchPage } from './core/jira-client.js';

@@ -28,7 +28,7 @@
   "license": "Apache-2.0",
   "exports": "./lib/index.js",
   "type": "module",
-  "types": "dist/index.d.ts",
+  "types": "./lib/index.d.ts",
   "bin": {
     "atlassian": "./bin/run.js"
   },
