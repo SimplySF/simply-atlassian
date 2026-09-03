@@ -1,0 +1,10 @@
+[
+  {
+    "alias": [],
+    "command": "hello:world",
+    "flagAliases": [],
+    "flagChars": [],
+    "flags": [],
+    "plugin": "@simplysf/simply-atlassian"
+  }
+]
