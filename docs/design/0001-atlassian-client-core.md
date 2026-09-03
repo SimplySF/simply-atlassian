@@ -1,6 +1,6 @@
 # 0001 — Atlassian client core (config, auth, HTTP)
 
-**Status:** Draft
+**Status:** Implemented (PR #2)
 **Package:** `packages/simply-atlassian`
 **Date:** 2026-09-03
 
