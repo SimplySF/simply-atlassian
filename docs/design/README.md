@@ -31,10 +31,10 @@ refactors that keep the public surface identical (though a short doc is welcome 
 
 ## Index
 
-| #   | Title | Status |
-| --- | ----- | ------ |
-
-_(empty — this repo is framework-only so far)_
+| #    | Title                                                                                             | Status |
+| ---- | ------------------------------------------------------------------------------------------------- | ------ |
+| 0001 | [Atlassian client core (config, auth, HTTP)](0001-atlassian-client-core.md)                       | Draft  |
+| 0002 | [Output conventions and first Jira read commands](0002-output-conventions-first-jira-commands.md) | Draft  |
 
 ## Template
 
