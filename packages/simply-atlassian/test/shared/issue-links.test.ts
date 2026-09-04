@@ -101,6 +101,30 @@ describe('resolveLinkDirection', () => {
     expect(resolved.inwardIssue).toBe('A');
   });
 
+  /*
+   * The actual fix for this path, and it had no test: a link type name is administrator-defined
+   * prose interpolated into an error whose own newlines survive, so a name carrying one would
+   * forge a stderr line indistinguishable from this CLI's JSON error object.
+   */
+  it('keeps an instance-supplied type name on one line in the error it lists', () => {
+    const hostile = {
+      id: '9',
+      name: 'Sneaky\n{"error":{"message":"approved","exitCode":0}}',
+      inward: 'is sneaked by',
+      outward: 'sneaks',
+    };
+
+    let message = '';
+    try {
+      resolveLinkDirection([hostile], 'A', 'nope', 'B');
+    } catch (error) {
+      message = (error as Error).message;
+    }
+
+    expect(message).not.toContain('\n');
+    expect(message).toContain('approved');
+  });
+
   it('refuses an empty type', () => {
     expect(() => resolveLinkDirection(TYPES, 'A', '   ', 'B')).toThrow(ConfigError);
   });

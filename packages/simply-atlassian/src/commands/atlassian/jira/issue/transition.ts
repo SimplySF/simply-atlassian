@@ -18,6 +18,10 @@ import { Args, Flags } from '@oclif/core';
 import { JiraCommand, writeFlags } from '../../../../shared/base-command.js';
 import { mergeFields, parseBodyInput } from '../../../../shared/json-input.js';
 import { ConfigError } from '../../../../core/errors.js';
+import { stripControlOneLine } from '../../../../core/text.js';
+
+/** How many transitions an error lists before summarising the rest. */
+const MAX_LISTED = 20;
 
 interface Transition {
   readonly id?: string;
@@ -108,9 +112,21 @@ export default class JiraIssueTransition extends JiraCommand<typeof JiraIssueTra
     const wanted = name.trim().toLowerCase();
     const matches = available.filter((t) => t.name?.trim().toLowerCase() === wanted);
 
-    const listing = available
-      .map((t) => `${t.name ?? '?'} (id ${t.id ?? '?'}${t.to?.name === undefined ? '' : ` -> ${t.to.name}`})`)
-      .join(', ');
+    // Workflow and status names are instance-supplied, so each is kept to one line: this string
+    // is interpolated into an error whose own newlines survive, and a name carrying one would
+    // forge a stderr line indistinguishable from this CLI's error object. Capped for the same
+    // reason the candidate lists elsewhere are: an instance with many transitions should not
+    // dump all of them into a caller's context.
+    const shown = available.slice(0, MAX_LISTED);
+    const listing =
+      shown
+        .map((t) => {
+          const label = stripControlOneLine(t.name ?? '?');
+          const id = stripControlOneLine(t.id ?? '?');
+          const to = t.to?.name === undefined ? '' : ` -> ${stripControlOneLine(t.to.name)}`;
+          return `${label} (id ${id}${to})`;
+        })
+        .join(', ') + (available.length > shown.length ? `, and ${available.length - shown.length} more` : '');
     // Turning the most common failure into a self-correcting one matters most for an agent,
     // which can retry with a name from this list rather than guessing again.
     if (matches.length === 0) {

@@ -15,6 +15,7 @@
  */
 
 import { ConfigError } from '../core/errors.js';
+import { stripControl, stripControlOneLine } from '../core/text.js';
 import type { JiraClient } from '../core/jira-client.js';
 
 /** Enough of Jira's user shape to identify a person and tell two candidates apart. */
@@ -66,8 +67,17 @@ function looksLikeAccountId(term: string): boolean {
  * path the operator did not ask for: they wanted to post a comment, not receive a staff list.
  */
 function describe(user: JiraUser): string {
-  const id = user.accountId ?? user.name ?? '(no id)';
-  const name = user.displayName ?? user.name ?? '(no name)';
+  // The name is kept to one line: this lands inside a list that is deliberately one candidate
+  // per line, and a display name — chosen by its own account's owner — carrying a newline would
+  // forge a row and make one candidate look like two.
+  //
+  // The id is NOT collapsed. It is the value the caller is told to pass back as
+  // `account:<id>`, and a Server/DC username may legitimately contain spaces, so collapsing it
+  // both corrupts the retry token and lets two distinct accounts print identically — someone
+  // could register "Ada  Lovelace" to collide with "Ada Lovelace" and defeat the very
+  // disambiguation this error exists to provide.
+  const id = stripControl(user.accountId ?? user.name ?? '(no id)');
+  const name = stripControlOneLine(user.displayName ?? user.name ?? '(no name)');
   const state = user.active === false ? ' [inactive]' : '';
   return `${id} — ${name}${state}`;
 }

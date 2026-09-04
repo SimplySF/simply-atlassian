@@ -52,6 +52,47 @@ function routeUsers(users: unknown[]): void {
   });
 }
 
+/*
+ * The candidate list is deliberately one line per candidate, so a display name — chosen by its
+ * own account's owner — must not be able to add a row. The id must NOT be collapsed, though:
+ * it is the value the caller is told to pass back as `account:<id>`, a Server/DC username may
+ * legitimately contain spaces, and collapsing it lets someone register "Ada  Lovelace" to print
+ * identically to "Ada Lovelace" and defeat the disambiguation the error exists for.
+ */
+describe('candidate listing safety', () => {
+  function ambiguityMessage(users: unknown[]): Promise<string> {
+    const stub = {
+      deployment: 'server' as const,
+      searchUsers: () => Promise.resolve(users),
+    } as unknown as Parameters<typeof resolveMentions>[0];
+    return resolveMentions(stub, ['ada']).then(
+      () => '',
+      (error: unknown) => (error as Error).message,
+    );
+  }
+
+  it('keeps a hostile display name from forging a candidate row', async () => {
+    const message = await ambiguityMessage([
+      { name: 'ada', displayName: 'Ada\n  qm:forged — Attacker', active: true },
+      { name: 'ada2', displayName: 'Ada Two', active: true },
+    ]);
+
+    // Two candidates listed, not three: the newline in the name did not become a row.
+    expect(message.split('\n').filter((line) => line.startsWith('  '))).toHaveLength(2);
+  });
+
+  it('does not collapse whitespace inside an id, which would collide two accounts', async () => {
+    const message = await ambiguityMessage([
+      { name: 'Ada  Lovelace', displayName: 'A', active: true },
+      { name: 'Ada Lovelace', displayName: 'B', active: true },
+    ]);
+
+    // Both ids survive verbatim, so the caller can tell them apart and retry precisely.
+    expect(message).toContain('Ada  Lovelace');
+    expect(message).toContain('Ada Lovelace');
+  });
+});
+
 describe('resolveMentions', () => {
   it('passes an account id through without a lookup', async () => {
     const resolved = await resolveMentions(client('cloud'), [ACCOUNT]);

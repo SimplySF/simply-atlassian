@@ -24,39 +24,14 @@ export interface Column<Row> {
 
 const EM_DASH = '—';
 
-/**
- * Removes anything from server-chosen text that could make the rendered output lie.
- *
- * Anyone able to file a ticket controls an issue summary, anyone with page-edit rights controls
- * a page body, and anyone with an account controls their display name. Three classes of
- * character therefore have to go.
- *
- * ESC, BEL, backspace and the C1 range can erase or overwrite lines already printed, so a table
- * could show a different status or assignee than the API actually returned.
- *
- * A bare carriage return does the same thing with no escape sequence at all: everything before
- * it is overwritten on screen but still reaches a caller reading the stream. That splits what a
- * person reviewing the terminal sees from what an agent actually ingests, which is precisely the
- * human-in-the-loop check this output exists to support.
- *
- * Invisible Unicode format and bidi characters can reorder or hide text visually while leaving
- * the underlying bytes intact.
- *
- * Newline and tab are kept: they carry the layout this renderer emits.
- */
-export function stripControl(text: string): string {
-  return (
-    text
-      // eslint-disable-next-line no-control-regex -- matching control characters is the entire point
-      .replaceAll(/[\u0000-\u0008\u000B-\u000D\u000E-\u001F\u007F-\u009F]/g, '')
-      .replaceAll(/[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g, '')
-  );
-}
+import { stripControl, stripControlOneLine } from '../core/text.js';
+
+export { stripControl, stripControlOneLine } from '../core/text.js';
 
 /** Renders any API value as one line of terminal text; missing values read as an em dash. */
 function cell(value: unknown): string {
   if (value === null || value === undefined || value === '') return EM_DASH;
-  if (typeof value === 'string') return stripControl(value).replaceAll(/\s+/g, ' ').trim();
+  if (typeof value === 'string') return stripControlOneLine(value);
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
   return stripControl(JSON.stringify(value));
 }
@@ -70,7 +45,9 @@ function pad(text: string, width: number): string {
 export function formatKeyValue(pairs: readonly Pair[]): string {
   const shown = pairs.filter(([, value]) => value !== undefined);
   if (shown.length === 0) return '';
-  const labelWidth = Math.max(...shown.map(([label]) => label.length));
+  // Reduced for the same reason as formatTable's widths, so the dangerous pattern is not left
+  // sitting one function above the fix for it.
+  const labelWidth = shown.reduce((widest, [label]) => Math.max(widest, label.length), 0);
   return shown.map(([label, value]) => `${pad(`${label}:`, labelWidth + 1)} ${cell(value)}`).join('\n');
 }
 
@@ -82,8 +59,11 @@ export function formatTable<Row>(rows: readonly Row[], columns: ReadonlyArray<Co
   if (rows.length === 0) return '';
 
   const body = rows.map((row) => columns.map((column) => cell(column.value(row))));
+  // Reduced rather than spread into Math.max: `...body.map(...)` puts one argument on the stack
+  // per row, which throws RangeError somewhere past 100k rows. An instance can return that many
+  // links, and an ungraceful crash is a worse answer than a wide table.
   const widths = columns.map((column, index) =>
-    Math.max(column.header.length, ...body.map((cells) => (cells[index] ?? '').length)),
+    body.reduce((widest, cells) => Math.max(widest, (cells[index] ?? '').length), column.header.length),
   );
 
   const render = (cells: readonly string[]): string =>
