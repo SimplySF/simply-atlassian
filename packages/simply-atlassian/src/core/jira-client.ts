@@ -70,7 +70,12 @@ const AGILE_BASE = '/rest/agile/1.0';
  * `/rest/api/2` and pages with numeric `startAt` offsets.
  */
 export class JiraClient {
-  private readonly deployment: AtlassianConfig['deployment'];
+  /**
+   * Exposed because callers building a request body need to know which shape the instance
+   * expects. Inferring it from the data — "this body is a string, so it must be Server" — is
+   * how mentions ended up silently dropped on Cloud.
+   */
+  public readonly deployment: AtlassianConfig['deployment'];
   private readonly transport: HttpTransport;
   private readonly apiBase: string;
 
@@ -211,6 +216,61 @@ export class JiraClient {
       // quietly deciding on the caller's behalf what happens to them.
       query: { deleteSubtasks: options.deleteSubtasks === true ? 'true' : undefined },
     });
+  }
+
+  public addComment(issueKey: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request(`/issue/${encodeURIComponent(issueKey)}/comment`, { method: 'POST', body, mutating: true });
+  }
+
+  public getComments(issueKey: string, options: { startAt?: number; maxResults?: number } = {}): Promise<unknown> {
+    return this.request(`/issue/${encodeURIComponent(issueKey)}/comment`, {
+      method: 'GET',
+      query: { startAt: options.startAt, maxResults: options.maxResults },
+    });
+  }
+
+  public updateComment(issueKey: string, commentId: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request(`/issue/${encodeURIComponent(issueKey)}/comment/${encodeURIComponent(commentId)}`, {
+      method: 'PUT',
+      body,
+      mutating: true,
+    });
+  }
+
+  public async deleteComment(issueKey: string, commentId: string): Promise<void> {
+    await this.request(`/issue/${encodeURIComponent(issueKey)}/comment/${encodeURIComponent(commentId)}`, {
+      method: 'DELETE',
+      mutating: true,
+    });
+  }
+
+  /**
+   * Cloud searches by a free-text `query`; Server/DC by `username`. Same intent, different
+   * parameter, so the client owns the difference as it does everywhere else.
+   */
+  public searchUsers(query: string, maxResults = 20): Promise<unknown> {
+    const key = this.deployment === 'cloud' ? 'query' : 'username';
+    return this.request('/user/search', { method: 'GET', query: { [key]: query, maxResults } });
+  }
+
+  public getUser(account: string): Promise<unknown> {
+    const key = this.deployment === 'cloud' ? 'accountId' : 'username';
+    return this.request('/user', { method: 'GET', query: { [key]: account } });
+  }
+
+  /**
+   * A mention is a structured node on Cloud and wiki markup on Server/DC. Returning the shape
+   * rather than a string keeps the deployment difference out of every caller.
+   */
+  public mentionValue(accountId: string, display?: string): { adf?: unknown; text?: string } {
+    if (this.deployment === 'cloud') {
+      // `text` is a fallback Jira shows where it cannot render the pill — a notification email,
+      // a text export. Putting a raw account id there reads as a uuid, so it is omitted when no
+      // display name is known and Jira resolves the name from the id itself.
+      const attrs = display === undefined ? { id: accountId } : { id: accountId, text: `@${display}` };
+      return { adf: { type: 'mention', attrs } };
+    }
+    return { text: `[~${accountId}]` };
   }
 
   public getTransitions(issueKey: string): Promise<unknown> {

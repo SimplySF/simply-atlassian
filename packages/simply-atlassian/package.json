@@ -55,8 +55,14 @@
       "atlassian:jira": {
         "description": "Work with Jira issues and projects."
       },
+      "atlassian:jira:user": {
+        "description": "Look up Jira users."
+      },
       "atlassian:jira:issue": {
         "description": "Read and manage Jira issues."
+      },
+      "atlassian:jira:issue:comment": {
+        "description": "Read and add issue comments."
       },
       "atlassian:confluence": {
         "description": "Work with Confluence spaces and pages."
