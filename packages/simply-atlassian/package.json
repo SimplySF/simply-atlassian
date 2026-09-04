@@ -57,6 +57,12 @@
       },
       "atlassian:jira:issue": {
         "description": "Read and manage Jira issues."
+      },
+      "atlassian:confluence": {
+        "description": "Work with Confluence spaces and pages."
+      },
+      "atlassian:confluence:page": {
+        "description": "Read Confluence pages."
       }
     }
   },

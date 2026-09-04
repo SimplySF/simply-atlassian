@@ -25,9 +25,159 @@ This package is part of the [`@simplysf/simply-atlassian`](https://github.com/Si
 
 <!-- commands -->
 
+- [`simply atlassian confluence page children PAGE`](#simply-atlassian-confluence-page-children-page)
+- [`simply atlassian confluence page get PAGE`](#simply-atlassian-confluence-page-get-page)
+- [`simply atlassian confluence page search`](#simply-atlassian-confluence-page-search)
 - [`simply atlassian jira issue search`](#simply-atlassian-jira-issue-search)
 - [`simply atlassian jira issue view ISSUE`](#simply-atlassian-jira-issue-view-issue)
 - [`simply atlassian jira whoami`](#simply-atlassian-jira-whoami)
+
+## `simply atlassian confluence page children PAGE`
+
+List the direct child pages of a Confluence page.
+
+```
+USAGE
+  $ simply atlassian confluence page children PAGE [--json] [-e <value>] [--confluence-url <value>] [--confluence-username <value>]
+    [--confluence-api-token <value>] [--confluence-personal-token <value>] [--limit <value>]
+
+ARGUMENTS
+  PAGE  Page id, or a page URL to read the id from.
+
+FLAGS
+  --limit=<value>  [default: 25] Maximum number of children to return.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>                   Path to a .env file holding connection settings.
+      --confluence-api-token=<value>       [env: CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
+      --confluence-personal-token=<value>  [env: CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
+                                           Server/Data Center.
+      --confluence-url=<value>             [env: CONFLUENCE_URL] Base URL of the Confluence instance.
+      --confluence-username=<value>        [env: CONFLUENCE_USERNAME] Account email for Confluence Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  List the direct child pages of a Confluence page.
+
+  Lists pages one level below the given page. Use --json for the complete, unmodified API payload.
+
+EXAMPLES
+  $ simply atlassian confluence page children 123456
+
+  $ simply atlassian confluence page children https://site.atlassian.net/wiki/spaces/DOCS/pages/123456/Title
+
+  $ simply atlassian confluence page children 123456 --limit 50 --json
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+```
+
+_See code: [lib/commands/atlassian/confluence/page/children.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/children.js)_
+
+## `simply atlassian confluence page get PAGE`
+
+Show a single Confluence page.
+
+```
+USAGE
+  $ simply atlassian confluence page get PAGE [--json] [-e <value>] [--confluence-url <value>] [--confluence-username <value>]
+    [--confluence-api-token <value>] [--confluence-personal-token <value>] [--body-format markdown|storage|none]
+    [--expand <value>]
+
+ARGUMENTS
+  PAGE  Page id, or a page URL to read the id from.
+
+FLAGS
+  --body-format=<option>  [default: markdown] How to render the page body.
+                          <options: markdown|storage|none>
+  --expand=<value>        Comma-separated Confluence expansions, replacing the default set.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>                   Path to a .env file holding connection settings.
+      --confluence-api-token=<value>       [env: CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
+      --confluence-personal-token=<value>  [env: CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
+                                           Server/Data Center.
+      --confluence-url=<value>             [env: CONFLUENCE_URL] Base URL of the Confluence instance.
+      --confluence-username=<value>        [env: CONFLUENCE_USERNAME] Account email for Confluence Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Show a single Confluence page.
+
+  Prints page metadata followed by its body. The body is converted to Markdown by default; --body-format storage prints
+  the stored XHTML verbatim, and none omits it entirely (and does not request it, which matters when listing pages whose
+  content will not be read). Use --json for the complete, unmodified API payload.
+
+EXAMPLES
+  $ simply atlassian confluence page get 123456
+
+  $ simply atlassian confluence page get https://site.atlassian.net/wiki/spaces/DOCS/pages/123456/Title
+
+  $ simply atlassian confluence page get 123456 --body-format none
+
+  $ simply atlassian confluence page get 123456 --json
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+```
+
+_See code: [lib/commands/atlassian/confluence/page/get.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/get.js)_
+
+## `simply atlassian confluence page search`
+
+Search Confluence content with CQL.
+
+```
+USAGE
+  $ simply atlassian confluence page search --cql <value> [--json] [-e <value>] [--confluence-url <value>] [--confluence-username
+    <value>] [--confluence-api-token <value>] [--confluence-personal-token <value>] [--limit <value>]
+
+FLAGS
+  --cql=<value>    (required) CQL query to run.
+  --limit=<value>  [default: 25] Maximum number of results to return across all pages.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>                   Path to a .env file holding connection settings.
+      --confluence-api-token=<value>       [env: CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
+      --confluence-personal-token=<value>  [env: CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
+                                           Server/Data Center.
+      --confluence-url=<value>             [env: CONFLUENCE_URL] Base URL of the Confluence instance.
+      --confluence-username=<value>        [env: CONFLUENCE_USERNAME] Account email for Confluence Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Search Confluence content with CQL.
+
+  Runs a CQL query and follows result pages until the limit is reached or the instance has no more matches. Use --json
+  for the complete, unmodified API payload of every result.
+
+EXAMPLES
+  $ simply atlassian confluence page search --cql "type = page AND space = DOCS"
+
+  $ simply atlassian confluence page search --cql 'text ~ "release notes"' --limit 10
+
+  $ simply atlassian confluence page search --cql "type = page order by lastmodified desc" --limit 5 --json
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+```
+
+_See code: [lib/commands/atlassian/confluence/page/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/search.js)_
 
 ## `simply atlassian jira issue search`
 
@@ -74,7 +224,7 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
 _See code: [lib/commands/atlassian/jira/issue/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/search.js)_
@@ -122,7 +272,7 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
 _See code: [lib/commands/atlassian/jira/issue/view.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/view.js)_
@@ -163,7 +313,7 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
 _See code: [lib/commands/atlassian/jira/whoami.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/whoami.js)_

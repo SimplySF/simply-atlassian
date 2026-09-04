@@ -1,6 +1,56 @@
 [
   {
     "alias": [],
+    "command": "atlassian:confluence:page:children",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "confluence-api-token",
+      "confluence-personal-token",
+      "confluence-url",
+      "confluence-username",
+      "env-file",
+      "json",
+      "limit"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:confluence:page:get",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "body-format",
+      "confluence-api-token",
+      "confluence-personal-token",
+      "confluence-url",
+      "confluence-username",
+      "env-file",
+      "expand",
+      "json"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:confluence:page:search",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "confluence-api-token",
+      "confluence-personal-token",
+      "confluence-url",
+      "confluence-username",
+      "cql",
+      "env-file",
+      "json",
+      "limit"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
     "command": "atlassian:jira:issue:search",
     "flagAliases": [],
     "flagChars": ["e"],
