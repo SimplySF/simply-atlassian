@@ -25,15 +25,32 @@ export interface Column<Row> {
 const EM_DASH = '—';
 
 /**
- * Removes terminal control sequences from text the server chose. Anyone able to file a ticket
- * controls an issue summary, and anyone with an account controls their own display name; an
- * escape sequence in either can erase or overwrite lines already printed, so a rendered table
- * could show a different status or assignee than the API actually returned. Ordinary whitespace
- * is kept — callers decide how to lay it out — but ESC, BEL, backspace, and the C1 range go.
+ * Removes anything from server-chosen text that could make the rendered output lie.
+ *
+ * Anyone able to file a ticket controls an issue summary, anyone with page-edit rights controls
+ * a page body, and anyone with an account controls their display name. Three classes of
+ * character therefore have to go.
+ *
+ * ESC, BEL, backspace and the C1 range can erase or overwrite lines already printed, so a table
+ * could show a different status or assignee than the API actually returned.
+ *
+ * A bare carriage return does the same thing with no escape sequence at all: everything before
+ * it is overwritten on screen but still reaches a caller reading the stream. That splits what a
+ * person reviewing the terminal sees from what an agent actually ingests, which is precisely the
+ * human-in-the-loop check this output exists to support.
+ *
+ * Invisible Unicode format and bidi characters can reorder or hide text visually while leaving
+ * the underlying bytes intact.
+ *
+ * Newline and tab are kept: they carry the layout this renderer emits.
  */
 export function stripControl(text: string): string {
-  // eslint-disable-next-line no-control-regex -- matching control characters is the entire point
-  return text.replaceAll(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, '');
+  return (
+    text
+      // eslint-disable-next-line no-control-regex -- matching control characters is the entire point
+      .replaceAll(/[\u0000-\u0008\u000B-\u000D\u000E-\u001F\u007F-\u009F]/g, '')
+      .replaceAll(/[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g, '')
+  );
 }
 
 /** Renders any API value as one line of terminal text; missing values read as an em dash. */

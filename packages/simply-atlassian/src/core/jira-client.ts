@@ -165,7 +165,7 @@ export class JiraClient {
       });
       pages += 1;
       collected.push(...page.issues);
-      total = page.total ?? total;
+      total = typeof page.total === 'number' ? page.total : total;
 
       // A page with no cursor cannot be followed. Some instances (and proxies) answer
       // `isLast: false` while omitting the token, and repeating the identical request would
