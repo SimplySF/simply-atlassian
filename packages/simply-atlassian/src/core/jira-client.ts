@@ -184,6 +184,43 @@ export class JiraClient {
     return { issues: collected.slice(0, limit), total, pages, complete: false };
   }
 
+  /**
+   * Wraps plain text in the shape the deployment expects. Jira Cloud requires an Atlassian
+   * Document Format object for a description; Server/DC takes a string. Callers pass text and
+   * this decides, which is the whole reason the client knows about deployments.
+   */
+  public descriptionValue(text: string): unknown {
+    if (this.deployment !== 'cloud') return text;
+    return { type: 'doc', version: 1, content: adfParagraphs(text) };
+  }
+
+  public createIssue(body: Record<string, unknown>): Promise<unknown> {
+    return this.request('/issue', { method: 'POST', body, mutating: true });
+  }
+
+  /** Jira answers 204 with no body, so there is nothing to return and nothing to verify. */
+  public async updateIssue(issueKey: string, body: Record<string, unknown>): Promise<void> {
+    await this.request(`/issue/${encodeURIComponent(issueKey)}`, { method: 'PUT', body, mutating: true });
+  }
+
+  public async deleteIssue(issueKey: string, options: { deleteSubtasks?: boolean } = {}): Promise<void> {
+    await this.request(`/issue/${encodeURIComponent(issueKey)}`, {
+      method: 'DELETE',
+      mutating: true,
+      // Only sent when asked: Jira's own error for an issue with subtasks is more useful than
+      // quietly deciding on the caller's behalf what happens to them.
+      query: { deleteSubtasks: options.deleteSubtasks === true ? 'true' : undefined },
+    });
+  }
+
+  public getTransitions(issueKey: string): Promise<unknown> {
+    return this.request(`/issue/${encodeURIComponent(issueKey)}/transitions`, { method: 'GET' });
+  }
+
+  public async transitionIssue(issueKey: string, body: Record<string, unknown>): Promise<void> {
+    await this.request(`/issue/${encodeURIComponent(issueKey)}/transitions`, { method: 'POST', body, mutating: true });
+  }
+
   /** Agile endpoints share a base across both deployments, so they use it instead of `apiBase`. */
   public getBoards(options: { startAt?: number; maxResults?: number } = {}): Promise<unknown> {
     return this.request(
@@ -196,6 +233,28 @@ export class JiraClient {
   private request<T>(path: string, call: Omit<JsonCall, 'path'>, base = this.apiBase): Promise<T> {
     return this.transport.json<T>({ ...call, path: `${base}${path}` });
   }
+}
+
+/**
+ * Splits plain text into ADF paragraphs. Two rules are not optional: an ADF text node may not
+ * contain a newline, so a single line break becomes a `hardBreak` node, and a paragraph with no
+ * content is rejected outright by Cloud's validator, so blank segments are dropped rather than
+ * emitted. Getting either wrong turns a formatting detail into a failed create.
+ */
+function adfParagraphs(text: string): unknown[] {
+  return text
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => paragraph !== '')
+    .map((paragraph) => {
+      const lines = paragraph.split('\n');
+      const content: unknown[] = [];
+      for (const [index, line] of lines.entries()) {
+        if (index > 0) content.push({ type: 'hardBreak' });
+        if (line !== '') content.push({ type: 'text', text: line });
+      }
+      return { type: 'paragraph', content };
+    });
 }
 
 /** An empty list must mean "default fields", so it is dropped rather than sent as `fields=`. */

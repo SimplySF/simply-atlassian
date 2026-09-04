@@ -24,7 +24,7 @@ import {
 } from '../core/config.js';
 import { ConfluenceClient } from '../core/confluence-client.js';
 import { loadEnvFile } from '../core/env-file.js';
-import { AuthError, CliError, HttpError } from '../core/errors.js';
+import { AuthError, CliError, ConfigError, HttpError } from '../core/errors.js';
 import { JiraClient } from '../core/jira-client.js';
 import { stripControl } from './output.js';
 
@@ -76,11 +76,53 @@ function redactSecrets(message: string): string {
   return redacted;
 }
 
+/**
+ * Refuses a write when the environment says this context does not write.
+ *
+ * A guardrail, not a security boundary: an agent with shell access can unset the variable. It
+ * exists for the different and real problem of a person, or an agent, running against the wrong
+ * credentials or in the wrong context. The boundary that actually binds is a read-scoped
+ * Atlassian token, which makes the instance refuse the write server-side.
+ */
+export function assertWritesAllowed(): void {
+  const raw = process.env.ATLASSIAN_READ_ONLY;
+  if (raw !== undefined && TRUTHY.has(raw.trim().toLowerCase())) {
+    throw new ConfigError(
+      'ATLASSIAN_READ_ONLY is set, so this context does not make changes. Unset it, or pass a ' +
+        'credential file that is meant for writing, to proceed.',
+    );
+  }
+}
+
 /** Names the failure for a machine reader: our own errors keep their class name. */
 function errorName(error: unknown, oclifExit: number | undefined): string {
   if (error instanceof CliError) return error.name;
   return oclifExit === undefined ? 'Error' : 'UsageError';
 }
+
+const TRUTHY = new Set(['1', 'true', 'yes', 'on']);
+
+/**
+ * Flags every write command shares, defined once so the wording cannot drift between them.
+ *
+ * `--confirm` is only attached to commands whose effect cannot be undone. Requiring it
+ * everywhere would train a caller to pass it always, at which point it protects nothing while
+ * still implying that it does.
+ */
+export const writeFlags = {
+  'dry-run': Flags.boolean({
+    summary: 'Print the request that would be sent and exit without sending it.',
+    default: false,
+  }),
+};
+
+export const confirmFlag = {
+  confirm: Flags.boolean({
+    summary: 'Required to proceed with an irreversible change.',
+    description: 'There is deliberately no short form: a single letter is too easy to add by habit.',
+    default: false,
+  }),
+};
 
 /** Shared by every command regardless of product. */
 const envFileFlag = {
@@ -157,6 +199,13 @@ export abstract class AtlassianCommand<T extends typeof Command> extends Command
   public static override enableJsonFlag = true;
   public static override baseFlags = envFileFlag;
 
+  /**
+   * Set by any command that changes data. The read-only guard is then enforced centrally in
+   * `init()`, so a future write command cannot forget to call it — which is exactly the kind
+   * of omission that would go unnoticed until it mattered.
+   */
+  public static isWrite = false;
+
   protected args!: CommandArgs<T>;
   protected rawFlags: Record<string, unknown> = {};
 
@@ -176,6 +225,10 @@ export abstract class AtlassianCommand<T extends typeof Command> extends Command
     // Applied here, before anything reads configuration, so every later lookup sees the file.
     const envFile = this.rawFlags['env-file'];
     if (typeof envFile === 'string') loadEnvFile(envFile);
+
+    // After the env file, so a read-only guard carried in a credential file is honoured, and
+    // before run(), so no write command can issue a request first.
+    if ((this.constructor as typeof AtlassianCommand).isWrite) assertWritesAllowed();
   }
 
   /**
@@ -218,6 +271,16 @@ export abstract class AtlassianCommand<T extends typeof Command> extends Command
       this.error(message, { exit: exitCode, code: error.name });
     }
     return super.catch(error);
+  }
+
+  /**
+   * Logs a line that contains server-supplied text. Everything the instance chose is stripped
+   * of control characters first — the same treatment error output gets, and for the same
+   * reason: this stream is parsed by an agent, and a bare escape sequence can make what a
+   * person sees differ from what the agent ingests.
+   */
+  protected logSafe(message: string): void {
+    this.log(stripControl(message));
   }
 
   /** Narrowed accessor so subclasses read flags without casting at every use. */

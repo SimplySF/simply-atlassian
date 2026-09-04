@@ -36,6 +36,7 @@ refactors that keep the public surface identical (though a short doc is welcome 
 | 0001 | [Atlassian client core (config, auth, HTTP)](0001-atlassian-client-core.md)                       | Implemented (PR #2) |
 | 0002 | [Output conventions and first Jira read commands](0002-output-conventions-first-jira-commands.md) | Implemented (PR #3) |
 | 0003 | [Confluence read commands and page rendering](0003-confluence-read-commands.md)                   | Implemented (PR #4) |
+| 0004 | [Write safety, and Jira issue writes](0004-write-safety-and-jira-issue-writes.md)                 | Implemented (PR #5) |
 
 ## Template
 
