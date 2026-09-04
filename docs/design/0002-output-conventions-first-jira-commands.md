@@ -1,6 +1,6 @@
 # 0002 — Output conventions and first Jira read commands
 
-**Status:** Implemented (branch `feat/jira-read-commands`)
+**Status:** Implemented (PR #3)
 **Package:** `packages/simply-atlassian`
 **Date:** 2026-09-03
 
