@@ -4,8 +4,13 @@
 
 Command-line interface for working with Atlassian products, built by [SimplySF](https://github.com/SimplySF).
 
-This package is framework-only right now: one placeholder command (`hello world`) proving the
-build/lint/test/oclif pipeline works end to end. Real Atlassian commands land next.
+Covers Jira issues — search, view, create, update, transition, and delete — plus reading
+Confluence pages. Output is human-readable by default and raw JSON with `--json`, and every
+command that changes data takes `--dry-run`, so it is usable both at a terminal and by a script
+or agent. See [Commands](#commands) below for the full reference.
+
+Verified against Jira and Confluence Cloud. Server/Data Center is implemented but not yet
+verified against a live instance.
 
 ## Install
 
@@ -21,6 +26,69 @@ Please report any issues at https://github.com/SimplySF/simply-atlassian/issues
 
 This package is part of the [`@simplysf/simply-atlassian`](https://github.com/SimplySF/simply-atlassian) monorepo. See the repo's [CONTRIBUTING.md](https://github.com/SimplySF/simply-atlassian/blob/main/CONTRIBUTING.md) for the repo structure, how to set up and build the project, our commit conventions, and how to submit a pull request. Please also read our [Code of Conduct](https://github.com/SimplySF/simply-atlassian/blob/main/CODE_OF_CONDUCT.md).
 
+## Credentials
+
+Connection settings come from environment variables, or from a `.env` file named with
+`-e/--env-file`. Only Atlassian connection variables are read from that file; anything else in
+it is ignored.
+
+```
+JIRA_URL=https://your-site.atlassian.net
+JIRA_USERNAME=you@example.com          # Cloud
+JIRA_API_TOKEN=...                     # Cloud
+JIRA_PERSONAL_TOKEN=...                # Server/Data Center, instead of the two above
+
+CONFLUENCE_URL=https://your-site.atlassian.net
+CONFLUENCE_USERNAME=you@example.com
+CONFLUENCE_API_TOKEN=...
+```
+
+Explicit flags beat the environment, which beats the file's contents. Certificate verification
+is always on: for an instance behind an internal or agency CA, trust that CA with
+`NODE_EXTRA_CA_CERTS=/path/to/ca.pem` rather than disabling verification.
+
+## Write safety
+
+The commands that change data — `issue create`, `update`, `transition` — and the one that
+destroys it — `issue delete` — sit behind three layers. Only the last is a real boundary, and
+it is worth being clear about which is which.
+
+**`--confirm`** is required by `issue delete`, and by nothing else. It stops accidents: a
+malformed command, a mistyped key. It does not stop a caller that decides to pass it, and
+requiring it everywhere would train callers to pass it always — at which point it protects
+nothing while still implying that it does.
+
+**`--dry-run`** is accepted by every write command. It prints the request that would be sent
+and sends nothing, which is the cheapest way to see what is about to happen.
+
+**`ATLASSIAN_READ_ONLY`** — set it to `1`, `true`, `yes`, or `on` and every write command
+refuses before making any request. Reads are unaffected. This guards against
+misconfiguration: the wrong credential file, the wrong context. It is not a security boundary,
+because anything that can run commands can also unset an environment variable.
+
+**A read-scoped API token is the only layer that actually binds.** Atlassian's scoped API
+tokens grant named scopes, so a token with read scopes and no write scopes cannot create,
+edit, or delete anything — the instance refuses server-side, regardless of what this CLI sends
+or what any caller is persuaded to attempt.
+
+That matters most when an AI agent drives the CLI, because ticket and page text is written by
+whoever can edit it, and an agent reading that text cannot reliably tell instructions from
+content. The arrangement worth adopting is two credential files:
+
+```
+~/atlassian.env        # read-scoped token — what the agent uses by default
+~/atlassian-write.env  # write-capable token — passed explicitly, by a person
+```
+
+```bash
+simply atlassian jira issue search -e ~/atlassian.env --jql "project = PROJ"
+simply atlassian jira issue delete PROJ-1 -e ~/atlassian-write.env --confirm
+```
+
+The agent's normal loop is then structurally incapable of changing anything, and a write
+becomes a deliberate act. A 403 from a read-scoped token is reported as an authentication
+error that says the credential cannot make changes, rather than looking like a permissions bug.
+
 ## Commands
 
 <!-- commands -->
@@ -28,7 +96,12 @@ This package is part of the [`@simplysf/simply-atlassian`](https://github.com/Si
 - [`simply atlassian confluence page children PAGE`](#simply-atlassian-confluence-page-children-page)
 - [`simply atlassian confluence page get PAGE`](#simply-atlassian-confluence-page-get-page)
 - [`simply atlassian confluence page search`](#simply-atlassian-confluence-page-search)
+- [`simply atlassian jira issue create`](#simply-atlassian-jira-issue-create)
+- [`simply atlassian jira issue delete ISSUE`](#simply-atlassian-jira-issue-delete-issue)
 - [`simply atlassian jira issue search`](#simply-atlassian-jira-issue-search)
+- [`simply atlassian jira issue transition ISSUE TRANSITION`](#simply-atlassian-jira-issue-transition-issue-transition)
+- [`simply atlassian jira issue transitions ISSUE`](#simply-atlassian-jira-issue-transitions-issue)
+- [`simply atlassian jira issue update ISSUE`](#simply-atlassian-jira-issue-update-issue)
 - [`simply atlassian jira issue view ISSUE`](#simply-atlassian-jira-issue-view-issue)
 - [`simply atlassian jira whoami`](#simply-atlassian-jira-whoami)
 
@@ -179,6 +252,119 @@ FLAG DESCRIPTIONS
 
 _See code: [lib/commands/atlassian/confluence/page/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/search.js)_
 
+## `simply atlassian jira issue create`
+
+Create a Jira issue.
+
+```
+USAGE
+  $ simply atlassian jira issue create [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>] [--jira-api-token
+    <value>] [--jira-personal-token <value>] [--dry-run] [--project <value>] [--type <value>] [--summary <value>]
+    [--description <value>] [--assignee <value>] [--priority <value>] [--label <value>...] [--body <value> | --body-file
+    <value>]
+
+FLAGS
+  --assignee=<value>     Assignee: account id on Cloud, username on Server/DC.
+  --body=<value>         Raw JSON request body.
+  --body-file=<value>    Path to a file holding the raw JSON request body.
+  --description=<value>  Issue description as plain text.
+  --dry-run              Print the request that would be sent and exit without sending it.
+  --label=<value>...     Label to apply. Repeatable.
+  --priority=<value>     Priority name.
+  --project=<value>      Project key the issue belongs to.
+  --summary=<value>      Issue summary.
+  --type=<value>         Issue type name, for example Task or Bug.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Create a Jira issue.
+
+  Common fields have flags; --body or --body-file supplies raw fields JSON for anything else, including custom fields.
+  Typed flags are merged over the body, so a template file can provide the shape and a flag can override one value. Use
+  --dry-run to see exactly what would be sent without sending it.
+
+EXAMPLES
+  $ simply atlassian jira issue create --project PROJ --type Task --summary "Fix the thing"
+
+  $ simply atlassian jira issue create --project PROJ --type Bug --summary "Crash" --label urgent --label triage
+
+  $ simply atlassian jira issue create --body-file ./issue.json --dry-run
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+```
+
+_See code: [lib/commands/atlassian/jira/issue/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/create.js)_
+
+## `simply atlassian jira issue delete ISSUE`
+
+Delete a Jira issue.
+
+```
+USAGE
+  $ simply atlassian jira issue delete ISSUE [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+    [--jira-api-token <value>] [--jira-personal-token <value>] [--dry-run] [--confirm] [--delete-subtasks]
+
+ARGUMENTS
+  ISSUE  Issue key, for example PROJ-123.
+
+FLAGS
+  --confirm          Required to proceed with an irreversible change.
+  --delete-subtasks  Also delete the issue's subtasks.
+  --dry-run          Print the request that would be sent and exit without sending it.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Delete a Jira issue.
+
+  Irreversible, so --confirm is required. There is no short form for it on purpose. Use --dry-run to see what would be
+  deleted without deleting it.
+
+EXAMPLES
+  $ simply atlassian jira issue delete PROJ-123 --confirm
+
+  $ simply atlassian jira issue delete PROJ-123 --confirm --delete-subtasks
+
+  $ simply atlassian jira issue delete PROJ-123 --dry-run
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+
+  --confirm  Required to proceed with an irreversible change.
+
+    There is deliberately no short form: a single letter is too easy to add by habit.
+
+  --delete-subtasks  Also delete the issue's subtasks.
+
+    Without this, Jira refuses to delete an issue that has subtasks.
+```
+
+_See code: [lib/commands/atlassian/jira/issue/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/delete.js)_
+
 ## `simply atlassian jira issue search`
 
 Search issues with JQL.
@@ -228,6 +414,160 @@ FLAG DESCRIPTIONS
 ```
 
 _See code: [lib/commands/atlassian/jira/issue/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/search.js)_
+
+## `simply atlassian jira issue transition ISSUE TRANSITION`
+
+Move a Jira issue through a workflow transition.
+
+```
+USAGE
+  $ simply atlassian jira issue transition ISSUE TRANSITION [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+    [--jira-api-token <value>] [--jira-personal-token <value>] [--dry-run] [--comment <value>] [--body <value> |
+    --body-file <value>]
+
+ARGUMENTS
+  ISSUE       Issue key, for example PROJ-123.
+  TRANSITION  Transition id, or its name.
+
+FLAGS
+  --body=<value>       Raw JSON request body.
+  --body-file=<value>  Path to a file holding the raw JSON request body.
+  --comment=<value>    Comment to add as part of the transition.
+  --dry-run            Print the request that would be sent and exit without sending it.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Move a Jira issue through a workflow transition.
+
+  The transition may be given as an id or as a name, matched case-insensitively against the transitions currently
+  available for the issue — a name is what a person or an agent actually knows. An unmatched name lists what is
+  available. Use "issue transitions" to see the set, or --dry-run to check without sending.
+
+EXAMPLES
+  $ simply atlassian jira issue transition PROJ-123 Done
+
+  $ simply atlassian jira issue transition PROJ-123 "In Progress"
+
+  $ simply atlassian jira issue transition PROJ-123 31
+
+  $ simply atlassian jira issue transition PROJ-123 Done --comment "shipped"
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+```
+
+_See code: [lib/commands/atlassian/jira/issue/transition.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/transition.js)_
+
+## `simply atlassian jira issue transitions ISSUE`
+
+List the transitions available for an issue.
+
+```
+USAGE
+  $ simply atlassian jira issue transitions ISSUE [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+    [--jira-api-token <value>] [--jira-personal-token <value>]
+
+ARGUMENTS
+  ISSUE  Issue key, for example PROJ-123.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  List the transitions available for an issue.
+
+  Shows which transitions the issue can currently take, which is what makes "issue transition" usable: the available set
+  depends on the workflow and the current status.
+
+EXAMPLES
+  $ simply atlassian jira issue transitions PROJ-123
+
+  $ simply atlassian jira issue transitions PROJ-123 --json
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+```
+
+_See code: [lib/commands/atlassian/jira/issue/transitions.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/transitions.js)_
+
+## `simply atlassian jira issue update ISSUE`
+
+Update fields on a Jira issue.
+
+```
+USAGE
+  $ simply atlassian jira issue update ISSUE [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+    [--jira-api-token <value>] [--jira-personal-token <value>] [--dry-run] [--summary <value>] [--description <value>]
+    [--assignee <value>] [--priority <value>] [--label <value>...] [--body <value> | --body-file <value>] [--verify]
+
+ARGUMENTS
+  ISSUE  Issue key, for example PROJ-123.
+
+FLAGS
+  --assignee=<value>     New assignee: account id on Cloud, username on Server/DC.
+  --body=<value>         Raw JSON request body.
+  --body-file=<value>    Path to a file holding the raw JSON request body.
+  --description=<value>  New description as plain text.
+  --dry-run              Print the request that would be sent and exit without sending it.
+  --label=<value>...     Label to set. Repeatable, and replaces the existing labels.
+  --priority=<value>     New priority name.
+  --summary=<value>      New summary.
+  --[no-]verify          Re-read the issue after updating and print it.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Update fields on a Jira issue.
+
+  Common fields have flags; --body or --body-file supplies raw fields JSON for anything else, including custom fields.
+  Jira answers an update with an empty 204, so the issue is re-read afterwards and printed — silence is a poor
+  confirmation that anything changed. Pass --no-verify to skip that second request.
+
+EXAMPLES
+  $ simply atlassian jira issue update PROJ-123 --summary "Clearer title"
+
+  $ simply atlassian jira issue update PROJ-123 --label triage --label urgent
+
+  $ simply atlassian jira issue update PROJ-123 --body-file ./fields.json --dry-run
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+```
+
+_See code: [lib/commands/atlassian/jira/issue/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/update.js)_
 
 ## `simply atlassian jira issue view ISSUE`
 

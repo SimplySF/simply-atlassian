@@ -86,6 +86,25 @@ describe('HttpTransport', () => {
     expect(server.requests).toHaveLength(1);
   });
 
+  it('mentions write scope on a 403 only when the call declares itself mutating', async () => {
+    // Found in review: gating on the HTTP verb fired this on Jira Cloud's issue search, which
+    // is a POST. An agent reading "use a credential with write scope" after an ordinary search
+    // failure would swap in the write credential and escalate its own privileges.
+    server.route('/forbidden', (_req, res) => {
+      respondJson(res, 403, { message: 'no permission' });
+    });
+
+    const readByPost = await transport()
+      .json({ method: 'POST', path: '/forbidden' })
+      .catch((caught: unknown) => caught);
+    const write = await transport()
+      .json({ method: 'POST', path: '/forbidden', mutating: true })
+      .catch((caught: unknown) => caught);
+
+    expect((readByPost as AuthError).message).not.toContain('write scope');
+    expect((write as AuthError).message).toContain('write scope');
+  });
+
   it('maps a non-retryable 4xx to HttpError with status and body, without retrying', async () => {
     server.route('/missing', (_req, res) => {
       respondJson(res, 404, { message: 'not found' });

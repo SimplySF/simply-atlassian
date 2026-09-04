@@ -24,6 +24,12 @@ export interface JsonCall {
   readonly path: string;
   readonly query?: Record<string, QueryValue>;
   readonly body?: unknown;
+  /**
+   * Whether this call changes data. Declared by the caller rather than guessed from the verb,
+   * because the verb is not a reliable signal: Jira Cloud's issue search is a POST. Guessing
+   * wrong here is worse than not guessing — see the 403 handling below.
+   */
+  readonly mutating?: boolean;
 }
 
 /** Where and how a transport talks: fixed per client instance. */
@@ -143,8 +149,15 @@ export class HttpTransport {
       });
 
       if (response.status === 401 || response.status === 403) {
+        const detail = await describeBody(response);
+        // A 403 on a call that really does change data is often a credential that can read but
+        // not write, so naming that possibility saves a confusing hunt. It is phrased as an
+        // observation rather than an instruction, and gated on the caller's declared intent:
+        // an agent reading "use a credential with write scope" after an ordinary search
+        // failure would escalate its own privileges, defeating the one boundary that binds.
+        const hint = response.status === 403 && call.mutating === true ? ' This credential may lack write scope.' : '';
         throw new AuthError(
-          `Authentication failed: ${call.method} ${call.path} returned ${response.status}.${await describeBody(response)}`,
+          `Authentication failed: ${call.method} ${call.path} returned ${response.status}.${detail}${hint}`,
           response.status,
         );
       }

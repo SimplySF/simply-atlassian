@@ -26,6 +26,9 @@ import { ConfigError } from './errors.js';
  * explanatory ConfigError rather than silence.
  */
 const APPLICABLE_KEYS = new Set([
+  // Safe to allow: the real environment still wins, so a file can turn the guard on but never
+  // off. A read-only credential file carrying this is the intended arrangement.
+  'ATLASSIAN_READ_ONLY',
   'JIRA_URL',
   'JIRA_USERNAME',
   'JIRA_API_TOKEN',

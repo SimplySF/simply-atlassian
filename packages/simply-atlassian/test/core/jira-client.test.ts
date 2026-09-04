@@ -159,6 +159,34 @@ describe('JiraClient on Server/DC', () => {
     expect(result.complete).toBe(true);
   });
 
+  it('builds ADF paragraphs a Cloud validator accepts', async () => {
+    // Found in review: an ADF text node may not contain a newline, and a paragraph with no
+    // content is rejected outright, so both used to make a create fail over formatting.
+    const client = new JiraClient(makeConfig('cloud'));
+    const single = client.descriptionValue('line1\nline2') as { content: Array<{ content: unknown[] }> };
+
+    expect(single.content).toHaveLength(1);
+    expect(single.content[0]?.content).toEqual([
+      { type: 'text', text: 'line1' },
+      { type: 'hardBreak' },
+      { type: 'text', text: 'line2' },
+    ]);
+
+    const paragraphs = client.descriptionValue('one\n\ntwo') as { content: unknown[] };
+    expect(paragraphs.content).toHaveLength(2);
+
+    // No empty paragraphs, whatever the whitespace.
+    for (const text of ['', '   ', '\n\n', '\n\nfoo', 'foo\n\n']) {
+      const doc = client.descriptionValue(text) as { content: Array<{ content: unknown[] }> };
+      for (const paragraph of doc.content) expect(paragraph.content.length).toBeGreaterThan(0);
+    }
+    expect((client.descriptionValue('   ') as { content: unknown[] }).content).toEqual([]);
+  });
+
+  it('sends a description as a plain string on Server/DC', () => {
+    expect(new JiraClient(makeConfig('server')).descriptionValue('line1\nline2')).toBe('line1\nline2');
+  });
+
   it('omits the fields param entirely for an empty fields array', async () => {
     server.route('/rest/api/2/issue/PROJ-9', (req, res) => {
       const url = new URL(req.url ?? '/', 'http://127.0.0.1');
