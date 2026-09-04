@@ -30,7 +30,7 @@
   "type": "module",
   "types": "./lib/index.d.ts",
   "bin": {
-    "atlassian": "./bin/run.js"
+    "simply": "./bin/run.js"
   },
   "oclif": {
     "additionalVersionFlags": [
@@ -39,7 +39,7 @@
     "additionalHelpFlags": [
       "-h"
     ],
-    "bin": "atlassian",
+    "bin": "simply",
     "commands": "./lib/commands",
     "devPlugins": [
       "@oclif/plugin-command-snapshot"
@@ -47,7 +47,18 @@
     "flexibleTaxonomy": true,
     "plugins": [],
     "repositoryPrefix": "<%- repo %>/blob/@simplysf/simply-atlassian@<%- version %>/packages/simply-atlassian/<%- commandPath %>",
-    "topicSeparator": " "
+    "topicSeparator": " ",
+    "topics": {
+      "atlassian": {
+        "description": "Work with Atlassian products."
+      },
+      "atlassian:jira": {
+        "description": "Work with Jira issues and projects."
+      },
+      "atlassian:jira:issue": {
+        "description": "Read and manage Jira issues."
+      }
+    }
   },
   "dependencies": {
     "@oclif/core": "^4.11.2"

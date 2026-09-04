@@ -37,11 +37,17 @@ export class ConfigError extends CliError {
   }
 }
 
-/** The instance rejected our credentials (401/403). */
+/**
+ * The instance rejected our credentials. Carries the status because 401 and 403 call for
+ * different responses: bad credentials versus a valid account without the needed permission.
+ */
 export class AuthError extends CliError {
-  public constructor(message: string) {
+  public readonly status: number;
+
+  public constructor(message: string, status: number) {
     super(message, 3);
     this.name = 'AuthError';
+    this.status = status;
   }
 }
 
