@@ -18,7 +18,13 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
+import { readdir } from 'node:fs/promises';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import JiraIssueCommentAdd from '../../../../../src/commands/atlassian/jira/issue/comment/add.js';
+import JiraIssueCommentDelete from '../../../../../src/commands/atlassian/jira/issue/comment/delete.js';
+import JiraIssueCommentEdit from '../../../../../src/commands/atlassian/jira/issue/comment/edit.js';
+import JiraIssueLinkCreate from '../../../../../src/commands/atlassian/jira/issue/link/create.js';
+import JiraIssueLinkDelete from '../../../../../src/commands/atlassian/jira/issue/link/delete.js';
 import JiraIssueTransition from '../../../../../src/commands/atlassian/jira/issue/transition.js';
 import JiraIssueCreate from '../../../../../src/commands/atlassian/jira/issue/create.js';
 import JiraIssueDelete from '../../../../../src/commands/atlassian/jira/issue/delete.js';
@@ -68,6 +74,11 @@ describe('the read-only guard', () => {
         JiraIssueUpdate.run(argv('P-1', '--summary', 's')),
         JiraIssueDelete.run(argv('P-1', '--confirm')),
         JiraIssueTransition.run(argv('P-1', '41')),
+        JiraIssueLinkCreate.run(argv('P-1', 'blocks', 'P-2')),
+        JiraIssueLinkDelete.run(argv('10201')),
+        JiraIssueCommentAdd.run(argv('P-1', '--text', 't')),
+        JiraIssueCommentEdit.run(argv('P-1', '1', '--text', 't')),
+        JiraIssueCommentDelete.run(argv('P-1', '1', '--confirm')),
       ].map(async (attempt) => attempt.catch((caught: unknown) => caught)),
     )) as Failure[];
 
@@ -191,5 +202,42 @@ describe('--dry-run', () => {
   it('sends nothing at all for an update', async () => {
     await expect(JiraIssueUpdate.run(argv('P-1', '--summary', 'x', '--dry-run'))).resolves.toBeDefined();
     expect(server.requests).toHaveLength(0);
+  });
+});
+
+/**
+ * The enumeration above is hand-maintained, and it silently fell behind twice — once for the
+ * comment writes, once for the link writes. This walks the command tree instead, so a new write
+ * command cannot be added without either testing it here or failing this test.
+ */
+describe('write-command coverage', () => {
+  it('tests every command that declares itself a write', async () => {
+    const root = new URL('../../../../../src/commands/', import.meta.url);
+    const files = await readdir(root, { recursive: true });
+    const declared: string[] = [];
+
+    for (const entry of files) {
+      // Windows yields backslash-separated relative paths; normalised up front rather than
+      // relying on the `file:` scheme quietly accepting them. CI runs this job on Windows.
+      const file = entry.replaceAll('\\', '/');
+      if (!file.endsWith('.ts')) continue;
+      // eslint-disable-next-line no-await-in-loop -- a handful of modules, read once
+      const module = (await import(new URL(file, root).href)) as { default?: { isWrite?: boolean } };
+      if (module.default?.isWrite === true) declared.push(file);
+    }
+
+    expect(declared.toSorted()).toEqual(
+      [
+        'atlassian/jira/issue/comment/add.ts',
+        'atlassian/jira/issue/comment/delete.ts',
+        'atlassian/jira/issue/comment/edit.ts',
+        'atlassian/jira/issue/create.ts',
+        'atlassian/jira/issue/delete.ts',
+        'atlassian/jira/issue/link/create.ts',
+        'atlassian/jira/issue/link/delete.ts',
+        'atlassian/jira/issue/transition.ts',
+        'atlassian/jira/issue/update.ts',
+      ].toSorted(),
+    );
   });
 });
