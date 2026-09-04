@@ -29,6 +29,16 @@ export interface JiraSearchOptions {
   readonly nextPageToken?: string;
 }
 
+/** Everything a caller needs after following pages: the issues plus why paging stopped. */
+export interface JiraSearchResult {
+  readonly issues: unknown[];
+  /** The instance's reported match count, when it reports one. */
+  readonly total?: number;
+  readonly pages: number;
+  /** False when the caller's limit cut the results short. */
+  readonly complete: boolean;
+}
+
 /** Deployment-independent view of one page of search results. */
 export interface JiraSearchPage {
   readonly issues: unknown[];
@@ -131,6 +141,47 @@ export class JiraClient {
       nextStartAt,
       total: response.total,
     };
+  }
+
+  /**
+   * Follows pages until `limit` issues are collected or the instance says there are no more.
+   * Callers get a flat list and never touch a cursor — the Cloud/Server paging difference stays
+   * inside the client, which is the whole point of it living here.
+   */
+  public async searchAllIssues(options: JiraSearchOptions, limit: number): Promise<JiraSearchResult> {
+    const collected: unknown[] = [];
+    let cursor: Pick<JiraSearchOptions, 'startAt' | 'nextPageToken'> = {};
+    let total: number | undefined;
+    let pages = 0;
+
+    /* Paging is sequential by definition: each request needs the previous page's cursor. */
+    /* eslint-disable no-await-in-loop */
+    while (collected.length < limit) {
+      const page = await this.searchIssues({
+        ...options,
+        ...cursor,
+        // Never ask for more than the caller wants, so a limit of 5 is one small request.
+        maxResults: Math.min(options.maxResults ?? DEFAULT_MAX_RESULTS, limit - collected.length),
+      });
+      pages += 1;
+      collected.push(...page.issues);
+      total = page.total ?? total;
+
+      // A page with no cursor cannot be followed. Some instances (and proxies) answer
+      // `isLast: false` while omitting the token, and repeating the identical request would
+      // return the same issues forever, so the absence of a cursor ends paging too.
+      const nextCursor = { startAt: page.nextStartAt, nextPageToken: page.nextPageToken };
+      const canAdvance =
+        nextCursor.nextPageToken !== undefined ||
+        (nextCursor.startAt !== undefined && nextCursor.startAt > (cursor.startAt ?? 0));
+      const exhausted = page.isLast || page.issues.length === 0 || !canAdvance;
+      if (exhausted) return { issues: collected.slice(0, limit), total, pages, complete: true };
+      cursor = nextCursor;
+    }
+    /* eslint-enable no-await-in-loop */
+
+    // Stopped because the limit was reached, not because the instance ran out.
+    return { issues: collected.slice(0, limit), total, pages, complete: false };
   }
 
   /** Agile endpoints share a base across both deployments, so they use it instead of `apiBase`. */

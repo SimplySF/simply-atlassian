@@ -145,6 +145,7 @@ export class HttpTransport {
       if (response.status === 401 || response.status === 403) {
         throw new AuthError(
           `Authentication failed: ${call.method} ${call.path} returned ${response.status}.${await describeBody(response)}`,
+          response.status,
         );
       }
 

@@ -68,8 +68,9 @@ if (jiraConfig) {
   const me = await run('GET /myself (credential check)', () => jira.getCurrentUser());
   if (me) console.log(`     signed in as: ${me.displayName ?? me.name ?? '(unknown)'}`);
 
-  const page = await run('search: 5 most recently updated issues visible to you', () =>
-    jira.searchIssues({ jql: 'order by updated desc', maxResults: 5, fields: ['key', 'summary'] }),
+  // Cloud's /search/jql rejects an unbounded query, so the smoke query carries a date bound.
+  const page = await run('search: 5 recently updated issues visible to you', () =>
+    jira.searchIssues({ jql: 'updated >= -30d order by updated desc', maxResults: 5, fields: ['key', 'summary'] }),
   );
   if (page) {
     console.log(`     got ${page.issues.length} issue(s), isLast=${page.isLast}`);

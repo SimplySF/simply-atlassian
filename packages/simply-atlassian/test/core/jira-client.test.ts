@@ -143,6 +143,22 @@ describe('JiraClient on Server/DC', () => {
     expect(page.nextStartAt).toBe(3);
   });
 
+  it('stops paging when a non-last page carries no usable cursor', async () => {
+    // A proxy or older instance can answer isLast:false with no token; repeating the identical
+    // request would return the same issues until the limit was filled.
+    let calls = 0;
+    server.route('/rest/api/3/search/jql', (_req, res) => {
+      calls += 1;
+      respondJson(res, 200, { issues: [{ key: 'PROJ-1' }], isLast: false });
+    });
+
+    const result = await new JiraClient(makeConfig('cloud')).searchAllIssues({ jql: 'project = PROJ' }, 50);
+
+    expect(calls).toBe(1);
+    expect(result.issues).toEqual([{ key: 'PROJ-1' }]);
+    expect(result.complete).toBe(true);
+  });
+
   it('omits the fields param entirely for an empty fields array', async () => {
     server.route('/rest/api/2/issue/PROJ-9', (req, res) => {
       const url = new URL(req.url ?? '/', 'http://127.0.0.1');

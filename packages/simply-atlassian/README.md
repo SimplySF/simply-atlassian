@@ -25,27 +25,144 @@ This package is part of the [`@simplysf/simply-atlassian`](https://github.com/Si
 
 <!-- commands -->
 
-- [`atlassian hello world`](#atlassian-hello-world)
+- [`atlassian jira issue search`](#atlassian-jira-issue-search)
+- [`atlassian jira issue view ISSUE`](#atlassian-jira-issue-view-issue)
+- [`atlassian jira whoami`](#atlassian-jira-whoami)
 
-## `atlassian hello world`
+## `atlassian jira issue search`
 
-Print a friendly greeting.
+Search issues with JQL.
 
 ```
 USAGE
-  $ atlassian hello world
+  $ atlassian jira issue search --jql <value> [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+    [--jira-api-token <value>] [--jira-personal-token <value>] [--limit <value>] [--fields <value>]
+
+FLAGS
+  --fields=<value>  Comma-separated field names to request instead of the instance default.
+  --jql=<value>     (required) JQL query to run.
+  --limit=<value>   [default: 50] Maximum number of issues to return across all pages.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
 
 DESCRIPTION
-  Print a friendly greeting.
+  Search issues with JQL.
 
-  A placeholder command that proves the CLI framework is wired up end to end. Replace or remove it once real Atlassian
-  commands land.
+  Runs a JQL query and follows result pages until the limit is reached or the instance has no more matches. Use --json
+  for the complete, unmodified API payload of every issue.
 
 EXAMPLES
-  $ atlassian hello world
+  $ atlassian jira issue search --jql "project = PROJ AND statusCategory != Done"
+
+  $ atlassian jira issue search --jql "assignee = currentUser()" --limit 10
+
+  $ atlassian jira issue search --jql "order by updated desc" --limit 5 --json
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/hello/world.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/hello/world.js)_
+_See code: [lib/commands/jira/issue/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/jira/issue/search.js)_
+
+## `atlassian jira issue view ISSUE`
+
+Show a single Jira issue.
+
+```
+USAGE
+  $ atlassian jira issue view ISSUE [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+    [--jira-api-token <value>] [--jira-personal-token <value>] [--fields <value>] [--expand <value>]
+
+ARGUMENTS
+  ISSUE  Issue key, for example PROJ-123.
+
+FLAGS
+  --expand=<value>  Comma-separated Jira expand parameters (for example changelog).
+  --fields=<value>  Comma-separated field names to request instead of the instance default.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Show a single Jira issue.
+
+  Prints a curated set of fields for one issue. Use --json for the complete, unmodified API payload, and --fields to
+  control which fields the instance returns.
+
+EXAMPLES
+  $ atlassian jira issue view PROJ-123
+
+  $ atlassian jira issue view PROJ-123 --json
+
+  $ atlassian jira issue view PROJ-123 --fields summary,status,assignee
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export. A path that cannot be read is an error.
+```
+
+_See code: [lib/commands/jira/issue/view.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/jira/issue/view.js)_
+
+## `atlassian jira whoami`
+
+Show the account the configured credentials belong to.
+
+```
+USAGE
+  $ atlassian jira whoami [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>] [--jira-api-token
+    <value>] [--jira-personal-token <value>]
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Show the account the configured credentials belong to.
+
+  Calls the Jira /myself endpoint. This is the cheapest way to confirm that the URL, credentials, and network path all
+  work before running anything heavier.
+
+EXAMPLES
+  $ atlassian jira whoami
+
+  $ atlassian jira whoami --env-file .env
+
+  $ atlassian jira whoami --json
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export. A path that cannot be read is an error.
+```
+
+_See code: [lib/commands/jira/whoami.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/jira/whoami.js)_
 <!-- commandsstop -->
 
 ## License

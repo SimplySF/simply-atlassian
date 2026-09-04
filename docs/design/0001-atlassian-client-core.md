@@ -165,7 +165,8 @@ Vitest, in `packages/simply-atlassian/test/core/`:
 - **Clean-room vs. port with attribution** — implement from this spec only, or adapt
   `kaichen/atlassian-cli`'s MIT client layer with a NOTICE entry? Clay decides; given the
   federal-client provenance story, clean-room is the safer default and this doc assumes it.
-- **`.env` file support** (`--env-file` flag) — useful for local multi-instance work, but not
-  needed by the core. Defer to a later doc if wanted.
+- **`.env` file support** (`--env-file` flag) — resolved: it is required, because it is how the
+  tool is actually invoked in practice. It is a CLI concern rather than a core one, so it is
+  designed in 0002 alongside the other global flags.
 - **Which commands land first** — proposed as 0002 (`jira issue view` / `jira issue search`),
   where output formatting (`--json` vs. human tables) gets designed.

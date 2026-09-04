@@ -47,7 +47,15 @@
     "flexibleTaxonomy": true,
     "plugins": [],
     "repositoryPrefix": "<%- repo %>/blob/@simplysf/simply-atlassian@<%- version %>/packages/simply-atlassian/<%- commandPath %>",
-    "topicSeparator": " "
+    "topicSeparator": " ",
+    "topics": {
+      "jira": {
+        "description": "Work with Jira issues and projects."
+      },
+      "jira:issue": {
+        "description": "Read and manage Jira issues."
+      }
+    }
   },
   "dependencies": {
     "@oclif/core": "^4.11.2"

@@ -1,10 +1,45 @@
 [
   {
     "alias": [],
-    "command": "hello:world",
+    "command": "jira:issue:search",
     "flagAliases": [],
-    "flagChars": [],
-    "flags": [],
+    "flagChars": ["e"],
+    "flags": [
+      "env-file",
+      "fields",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "jql",
+      "json",
+      "limit"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "jira:issue:view",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "env-file",
+      "expand",
+      "fields",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "json"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "jira:whoami",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": ["env-file", "jira-api-token", "jira-personal-token", "jira-url", "jira-username", "json"],
     "plugin": "@simplysf/simply-atlassian"
   }
 ]
