@@ -41,7 +41,7 @@ documents env vars as the recommended path — flags land in shell history.
 
 **`--env-file` is how the tool is actually driven in practice**, so it is a first-class global
 flag rather than a convenience: credentials live in a `.env` file and every invocation names it
-(`atlassian -e .env jira issue search ...`), matching the muscle memory and agent command
+(`simply atlassian jira issue search -e .env ...`), matching the muscle memory and agent command
 templates already in use with the previous tooling. Resolution order is therefore explicit
 flags, then the real environment, then the `--env-file` contents — the file never clobbers a
 variable already set in the environment. A file named explicitly but missing or unreadable is a
@@ -114,14 +114,18 @@ The CLI's dominant real-world caller is an AI agent running it as shell commands
 
 ### Commands
 
-**`atlassian jira whoami`** — calls `GET /myself`; prints display name, account/user ID, and
+The binary is `simply` and every command sits under an `atlassian` topic, so invocations read
+`simply atlassian jira ...`. That keeps room for other SimplySF products under one namespace
+rather than claiming the bare `atlassian` name for this package.
+
+**`simply atlassian jira whoami`** — calls `GET /myself`; prints display name, account/user ID, and
 email. The cheapest possible check that URL + credentials + network all work.
 
-**`atlassian jira issue view <issue-key>`** — one issue. Flags: `--fields <csv>` (curated
+**`simply atlassian jira issue view <issue-key>`** — one issue. Flags: `--fields <csv>` (curated
 default), `--expand <csv>`. Human output: key, summary, status, type, assignee, reporter,
 created/updated, description (plain text).
 
-**`atlassian jira issue search`** — flags: `--jql <query>` (required), `--limit <n>` (total
+**`simply atlassian jira issue search`** — flags: `--jql <query>` (required), `--limit <n>` (total
 issues to fetch, default 50; the command follows `nextPageToken`/`startAt` pages internally
 until the limit or the last page), `--fields <csv>`. Human output: table of key, status,
 assignee, summary, plus a `Showing N of M` footer when the instance reports a total.

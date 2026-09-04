@@ -1,7 +1,7 @@
 [
   {
     "alias": [],
-    "command": "jira:issue:search",
+    "command": "atlassian:jira:issue:search",
     "flagAliases": [],
     "flagChars": ["e"],
     "flags": [
@@ -19,7 +19,7 @@
   },
   {
     "alias": [],
-    "command": "jira:issue:view",
+    "command": "atlassian:jira:issue:view",
     "flagAliases": [],
     "flagChars": ["e"],
     "flags": [
@@ -36,7 +36,7 @@
   },
   {
     "alias": [],
-    "command": "jira:whoami",
+    "command": "atlassian:jira:whoami",
     "flagAliases": [],
     "flagChars": ["e"],
     "flags": ["env-file", "jira-api-token", "jira-personal-token", "jira-url", "jira-username", "json"],

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { CliError } from '../../core/errors.js';
-import { JiraCommand } from '../../shared/base-command.js';
-import { formatKeyValue } from '../../shared/output.js';
+import { CliError } from '../../../core/errors.js';
+import { JiraCommand } from '../../../shared/base-command.js';
+import { formatKeyValue } from '../../../shared/output.js';
 
 /** Shape of the fields we surface from `/myself`; the raw payload carries far more. */
 interface CurrentUser {

@@ -15,8 +15,8 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { JiraCommand, parseList } from '../../../shared/base-command.js';
-import { formatKeyValue, stripControl } from '../../../shared/output.js';
+import { JiraCommand, parseList } from '../../../../shared/base-command.js';
+import { formatKeyValue, stripControl } from '../../../../shared/output.js';
 
 interface IssueFields {
   readonly summary?: string;

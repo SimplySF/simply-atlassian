@@ -15,8 +15,8 @@
  */
 
 import { Flags } from '@oclif/core';
-import { JiraCommand, parseList } from '../../../shared/base-command.js';
-import { formatTable } from '../../../shared/output.js';
+import { JiraCommand, parseList } from '../../../../shared/base-command.js';
+import { formatTable } from '../../../../shared/output.js';
 
 interface SearchedIssue {
   readonly key?: string;

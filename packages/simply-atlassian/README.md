@@ -25,17 +25,17 @@ This package is part of the [`@simplysf/simply-atlassian`](https://github.com/Si
 
 <!-- commands -->
 
-- [`atlassian jira issue search`](#atlassian-jira-issue-search)
-- [`atlassian jira issue view ISSUE`](#atlassian-jira-issue-view-issue)
-- [`atlassian jira whoami`](#atlassian-jira-whoami)
+- [`simply atlassian jira issue search`](#simply-atlassian-jira-issue-search)
+- [`simply atlassian jira issue view ISSUE`](#simply-atlassian-jira-issue-view-issue)
+- [`simply atlassian jira whoami`](#simply-atlassian-jira-whoami)
 
-## `atlassian jira issue search`
+## `simply atlassian jira issue search`
 
 Search issues with JQL.
 
 ```
 USAGE
-  $ atlassian jira issue search --jql <value> [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+  $ simply atlassian jira issue search --jql <value> [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
     [--jira-api-token <value>] [--jira-personal-token <value>] [--limit <value>] [--fields <value>]
 
 FLAGS
@@ -59,12 +59,16 @@ DESCRIPTION
   Runs a JQL query and follows result pages until the limit is reached or the instance has no more matches. Use --json
   for the complete, unmodified API payload of every issue.
 
+  Jira Cloud rejects an unbounded query, so include a restriction such as a project, an assignee, or a date range —
+  "order by updated desc" alone returns an error there, while "updated >= -7d order by updated desc" works on both
+  deployments.
+
 EXAMPLES
-  $ atlassian jira issue search --jql "project = PROJ AND statusCategory != Done"
+  $ simply atlassian jira issue search --jql "project = PROJ AND statusCategory != Done"
 
-  $ atlassian jira issue search --jql "assignee = currentUser()" --limit 10
+  $ simply atlassian jira issue search --jql "assignee = currentUser()" --limit 10
 
-  $ atlassian jira issue search --jql "order by updated desc" --limit 5 --json
+  $ simply atlassian jira issue search --jql "updated >= -7d order by updated desc" --limit 5 --json
 
 FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
@@ -73,15 +77,15 @@ FLAG DESCRIPTIONS
     explicit export. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/jira/issue/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/jira/issue/search.js)_
+_See code: [lib/commands/atlassian/jira/issue/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/search.js)_
 
-## `atlassian jira issue view ISSUE`
+## `simply atlassian jira issue view ISSUE`
 
 Show a single Jira issue.
 
 ```
 USAGE
-  $ atlassian jira issue view ISSUE [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+  $ simply atlassian jira issue view ISSUE [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
     [--jira-api-token <value>] [--jira-personal-token <value>] [--fields <value>] [--expand <value>]
 
 ARGUMENTS
@@ -108,11 +112,11 @@ DESCRIPTION
   control which fields the instance returns.
 
 EXAMPLES
-  $ atlassian jira issue view PROJ-123
+  $ simply atlassian jira issue view PROJ-123
 
-  $ atlassian jira issue view PROJ-123 --json
+  $ simply atlassian jira issue view PROJ-123 --json
 
-  $ atlassian jira issue view PROJ-123 --fields summary,status,assignee
+  $ simply atlassian jira issue view PROJ-123 --fields summary,status,assignee
 
 FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
@@ -121,15 +125,15 @@ FLAG DESCRIPTIONS
     explicit export. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/jira/issue/view.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/jira/issue/view.js)_
+_See code: [lib/commands/atlassian/jira/issue/view.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/view.js)_
 
-## `atlassian jira whoami`
+## `simply atlassian jira whoami`
 
 Show the account the configured credentials belong to.
 
 ```
 USAGE
-  $ atlassian jira whoami [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>] [--jira-api-token
+  $ simply atlassian jira whoami [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>] [--jira-api-token
     <value>] [--jira-personal-token <value>]
 
 CONNECTION FLAGS
@@ -149,11 +153,11 @@ DESCRIPTION
   work before running anything heavier.
 
 EXAMPLES
-  $ atlassian jira whoami
+  $ simply atlassian jira whoami
 
-  $ atlassian jira whoami --env-file .env
+  $ simply atlassian jira whoami --env-file .env
 
-  $ atlassian jira whoami --json
+  $ simply atlassian jira whoami --json
 
 FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
@@ -162,7 +166,7 @@ FLAG DESCRIPTIONS
     explicit export. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/jira/whoami.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/jira/whoami.js)_
+_See code: [lib/commands/atlassian/jira/whoami.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/whoami.js)_
 <!-- commandsstop -->
 
 ## License

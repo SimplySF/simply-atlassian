@@ -16,8 +16,8 @@
 
 import process from 'node:process';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import JiraWhoami from '../../../src/commands/jira/whoami.js';
-import { respondJson, startTestServer, type TestServer } from '../../core/support.js';
+import JiraWhoami from '../../../../src/commands/atlassian/jira/whoami.js';
+import { respondJson, startTestServer, type TestServer } from '../../../core/support.js';
 
 let server: TestServer;
 

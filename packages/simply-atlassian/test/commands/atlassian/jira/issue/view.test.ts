@@ -15,8 +15,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import JiraIssueView from '../../../../src/commands/jira/issue/view.js';
-import { respondJson, startTestServer, type TestServer } from '../../../core/support.js';
+import JiraIssueView from '../../../../../src/commands/atlassian/jira/issue/view.js';
+import { respondJson, startTestServer, type TestServer } from '../../../../core/support.js';
 
 let server: TestServer;
 
