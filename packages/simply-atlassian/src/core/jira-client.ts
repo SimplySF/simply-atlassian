@@ -273,6 +273,29 @@ export class JiraClient {
     return { text: `[~${accountId}]` };
   }
 
+  public getLinkTypes(): Promise<unknown> {
+    return this.request('/issueLinkType', { method: 'GET' });
+  }
+
+  /** Resolves one link, so a command can say what it is about to change. Returns both ends. */
+  public getIssueLink(linkId: string): Promise<unknown> {
+    return this.request(`/issueLink/${encodeURIComponent(linkId)}`, { method: 'GET' });
+  }
+
+  /**
+   * Creates an issue link. The caller passes the `inwardIssue`/`outwardIssue` pair already
+   * resolved, because working out which end is which from a phrase is a decision with a right
+   * and a wrong answer and it belongs in one place — see `shared/issue-links.ts`.
+   */
+  public createIssueLink(body: Record<string, unknown>): Promise<unknown> {
+    return this.request('/issueLink', { method: 'POST', body, mutating: true });
+  }
+
+  /** Jira answers 204, so there is nothing to return. */
+  public async deleteIssueLink(linkId: string): Promise<void> {
+    await this.request(`/issueLink/${encodeURIComponent(linkId)}`, { method: 'DELETE', mutating: true });
+  }
+
   public getTransitions(issueKey: string): Promise<unknown> {
     return this.request(`/issue/${encodeURIComponent(issueKey)}/transitions`, { method: 'GET' });
   }

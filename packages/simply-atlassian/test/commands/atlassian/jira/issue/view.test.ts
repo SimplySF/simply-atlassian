@@ -52,6 +52,49 @@ describe('jira issue view', () => {
     expect(issue.fields['customfield_1']).toBe('kept');
   });
 
+  it("shows a subtask's parent, so --parent is readable back", async () => {
+    const logged: string[] = [];
+    server.route('/rest/api/2/issue/PROJ-2', (_req, res) => {
+      respondJson(res, 200, {
+        key: 'PROJ-2',
+        fields: {
+          summary: 'write the tests',
+          issuetype: { name: 'Subtask' },
+          parent: { key: 'PROJ-1', fields: { summary: 'ship the thing' } },
+        },
+      });
+    });
+
+    const command = new JiraIssueView(argv('PROJ-2'), {
+      runHook: async () => ({ successes: [], failures: [] }),
+    } as never);
+    command.log = (message?: string): void => {
+      logged.push(String(message));
+    };
+    await command.init();
+    await command.run();
+
+    expect(logged.join('\n')).toContain('PROJ-1 — ship the thing');
+  });
+
+  it('omits the parent row for an issue that has none', async () => {
+    const logged: string[] = [];
+    server.route('/rest/api/2/issue/PROJ-3', (_req, res) => {
+      respondJson(res, 200, { key: 'PROJ-3', fields: { summary: 'a task', issuetype: { name: 'Task' } } });
+    });
+
+    const command = new JiraIssueView(argv('PROJ-3'), {
+      runHook: async () => ({ successes: [], failures: [] }),
+    } as never);
+    command.log = (message?: string): void => {
+      logged.push(String(message));
+    };
+    await command.init();
+    await command.run();
+
+    expect(logged.join('\n')).not.toContain('Parent');
+  });
+
   it('percent-encodes the issue key into the path', async () => {
     server.route('/rest/api/2/issue/PROJ%2F1', (_req, res) => {
       respondJson(res, 200, { key: 'PROJ/1' });

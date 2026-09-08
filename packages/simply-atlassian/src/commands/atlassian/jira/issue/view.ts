@@ -22,6 +22,7 @@ interface IssueFields {
   readonly summary?: string;
   readonly status?: { readonly name?: string };
   readonly issuetype?: { readonly name?: string };
+  readonly parent?: { readonly key?: string; readonly fields?: { readonly summary?: string } };
   readonly priority?: { readonly name?: string };
   readonly assignee?: { readonly displayName?: string };
   readonly reporter?: { readonly displayName?: string };
@@ -108,6 +109,9 @@ export default class JiraIssueView extends JiraCommand<typeof JiraIssueView> {
         ['Summary', fields.summary],
         ['Status', fields.status?.name],
         ['Type', fields.issuetype?.name],
+        // A subtask whose parent is invisible here would make "issue create --parent" a write
+        // with no way to read it back, so the relation is shown wherever the instance reports one.
+        ['Parent', parentLabel(fields.parent)],
         ['Priority', fields.priority?.name],
         ['Assignee', fields.assignee?.displayName],
         ['Reporter', fields.reporter?.displayName],
@@ -123,4 +127,11 @@ export default class JiraIssueView extends JiraCommand<typeof JiraIssueView> {
 
     return issue;
   }
+}
+
+/** The key is what other commands take; the summary is what makes it recognisable. */
+function parentLabel(parent: IssueFields['parent']): string | undefined {
+  if (parent?.key === undefined) return undefined;
+  const summary = parent.fields?.summary;
+  return summary === undefined ? parent.key : `${parent.key} — ${summary}`;
 }

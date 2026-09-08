@@ -102,6 +102,10 @@ error that says the credential cannot make changes, rather than looking like a p
 - [`simply atlassian jira issue comment list ISSUE`](#simply-atlassian-jira-issue-comment-list-issue)
 - [`simply atlassian jira issue create`](#simply-atlassian-jira-issue-create)
 - [`simply atlassian jira issue delete ISSUE`](#simply-atlassian-jira-issue-delete-issue)
+- [`simply atlassian jira issue link create FROM TYPE TO`](#simply-atlassian-jira-issue-link-create-from-type-to)
+- [`simply atlassian jira issue link delete LINK-ID`](#simply-atlassian-jira-issue-link-delete-link-id)
+- [`simply atlassian jira issue link list ISSUE`](#simply-atlassian-jira-issue-link-list-issue)
+- [`simply atlassian jira issue link types`](#simply-atlassian-jira-issue-link-types)
 - [`simply atlassian jira issue search`](#simply-atlassian-jira-issue-search)
 - [`simply atlassian jira issue transition ISSUE TRANSITION`](#simply-atlassian-jira-issue-transition-issue-transition)
 - [`simply atlassian jira issue transitions ISSUE`](#simply-atlassian-jira-issue-transitions-issue)
@@ -476,9 +480,9 @@ Create a Jira issue.
 ```
 USAGE
   $ simply atlassian jira issue create [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>] [--jira-api-token
-    <value>] [--jira-personal-token <value>] [--dry-run] [--project <value>] [--type <value>] [--summary <value>]
-    [--description <value>] [--assignee <value>] [--priority <value>] [--label <value>...] [--body <value> | --body-file
-    <value>]
+    <value>] [--jira-personal-token <value>] [--dry-run] [--project <value>] [--type <value>] [--parent <value>]
+    [--summary <value>] [--description <value>] [--assignee <value>] [--priority <value>] [--label <value>...] [--body
+    <value> | --body-file <value>]
 
 FLAGS
   --assignee=<value>     Assignee: account id on Cloud, username on Server/DC.
@@ -487,6 +491,7 @@ FLAGS
   --description=<value>  Issue description as plain text.
   --dry-run              Print the request that would be sent and exit without sending it.
   --label=<value>...     Label to apply. Repeatable.
+  --parent=<value>       Parent issue key, making this a subtask of it.
   --priority=<value>     Priority name.
   --project=<value>      Project key the issue belongs to.
   --summary=<value>      Issue summary.
@@ -514,6 +519,8 @@ EXAMPLES
 
   $ simply atlassian jira issue create --project PROJ --type Bug --summary "Crash" --label urgent --label triage
 
+  $ simply atlassian jira issue create --project PROJ --type Subtask --parent PROJ-1 --summary "Write the tests"
+
   $ simply atlassian jira issue create --body-file ./issue.json --dry-run
 
 FLAG DESCRIPTIONS
@@ -521,6 +528,12 @@ FLAG DESCRIPTIONS
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+
+  --parent=<value>  Parent issue key, making this a subtask of it.
+
+    Pair with --type Subtask for a subtask. On team-managed projects this is also how an issue is placed under an epic,
+    so it is not validated against the issue type — Jira rejects the combinations that are genuinely wrong, and its
+    error is more current than any rule encoded here.
 ```
 
 _See code: [lib/commands/atlassian/jira/issue/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/create.js)_
@@ -581,6 +594,193 @@ FLAG DESCRIPTIONS
 ```
 
 _See code: [lib/commands/atlassian/jira/issue/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/delete.js)_
+
+## `simply atlassian jira issue link create FROM TYPE TO`
+
+Link two Jira issues.
+
+```
+USAGE
+  $ simply atlassian jira issue link create FROM TYPE TO [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+    [--jira-api-token <value>] [--jira-personal-token <value>] [--dry-run] [--comment <value>]
+
+ARGUMENTS
+  FROM  Issue the relationship is stated from, for example PROJ-1.
+  TYPE  Relationship phrase or type name, for example "blocks".
+  TO    Issue the relationship points at, for example PROJ-2.
+
+FLAGS
+  --comment=<value>  Comment to add to the link.
+  --dry-run          Print the request that would be sent and exit without sending it.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Link two Jira issues.
+
+  The relationship is given the way it would be said out loud: "A blocks B". Either direction of a type works — "A
+  blocks B" and "B is blocked by A" state the same fact and produce the same link — so the phrasing can follow whatever
+  the source text used. The type may also be given by name, which is read as its outward phrase. An unmatched type lists
+  what the instance offers. Use "issue link types" to see them, or --dry-run to check without sending.
+
+EXAMPLES
+  $ simply atlassian jira issue link create PROJ-1 blocks PROJ-2
+
+  $ simply atlassian jira issue link create PROJ-2 "is blocked by" PROJ-1
+
+  $ simply atlassian jira issue link create PROJ-1 relates PROJ-3 --comment "same root cause"
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+```
+
+_See code: [lib/commands/atlassian/jira/issue/link/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/create.js)_
+
+## `simply atlassian jira issue link delete LINK-ID`
+
+Delete an issue link.
+
+```
+USAGE
+  $ simply atlassian jira issue link delete LINK-ID [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+    [--jira-api-token <value>] [--jira-personal-token <value>] [--dry-run]
+
+ARGUMENTS
+  LINK-ID  Link id, as shown by "issue link list".
+
+FLAGS
+  --dry-run  Print the request that would be sent and exit without sending it.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Delete an issue link.
+
+  Takes the link id, which "issue link list" prints. The link is resolved first, so both the dry run and the result name
+  the relationship being removed rather than only its id — a link id is instance-global and identifies nothing on its
+  own. Unlike issue and comment deletion this does not require --confirm: what it prints is enough to re-create the link
+  in one command, so it is not the irreversible loss of data that --confirm exists to guard.
+
+EXAMPLES
+  $ simply atlassian jira issue link delete 10201
+
+  $ simply atlassian jira issue link delete 10201 --dry-run
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+```
+
+_See code: [lib/commands/atlassian/jira/issue/link/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/delete.js)_
+
+## `simply atlassian jira issue link list ISSUE`
+
+List an issue's links.
+
+```
+USAGE
+  $ simply atlassian jira issue link list ISSUE [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+    [--jira-api-token <value>] [--jira-personal-token <value>] [--limit <value>]
+
+ARGUMENTS
+  ISSUE  Issue key, for example PROJ-123.
+
+FLAGS
+  --limit=<value>  [default: 25] Maximum number of links to show.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  List an issue's links.
+
+  Each relationship is phrased from the perspective of the issue asked about, so "blocks" means this issue blocks the
+  one named. The ID column is what "issue link delete" needs and is not otherwise discoverable.
+
+EXAMPLES
+  $ simply atlassian jira issue link list PROJ-123
+
+  $ simply atlassian jira issue link list PROJ-123 --json
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+```
+
+_See code: [lib/commands/atlassian/jira/issue/link/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/list.js)_
+
+## `simply atlassian jira issue link types`
+
+List the issue link types this instance offers.
+
+```
+USAGE
+  $ simply atlassian jira issue link types [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>] [--jira-api-token
+    <value>] [--jira-personal-token <value>] [--limit <value>]
+
+FLAGS
+  --limit=<value>  [default: 25] Maximum number of link types to show.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  List the issue link types this instance offers.
+
+  Both phrases are shown because either one can be passed to "issue link create", and neither is guessable from the type
+  name — Duplicate offers "duplicates" and "is duplicated by". Link types are configured per instance, so this list is
+  the authority.
+
+EXAMPLES
+  $ simply atlassian jira issue link types
+
+  $ simply atlassian jira issue link types --json
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+```
+
+_See code: [lib/commands/atlassian/jira/issue/link/types.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/types.js)_
 
 ## `simply atlassian jira issue search`
 
@@ -870,6 +1070,10 @@ DESCRIPTION
   The account id column is the point of this command: it is what --mention and --assignee need, and it is not something
   anyone can guess. On Cloud, whether an email address is visible is a per-user privacy setting, so that column is often
   empty — searching by an email address still works even when it is not shown back.
+
+  This adds no access the credential does not already have, but it does put colleagues' names and addresses wherever the
+  output goes. When an AI agent is the caller, that means into its context — worth a thought before running it broadly
+  against a work instance.
 
 EXAMPLES
   $ simply atlassian jira user search ada

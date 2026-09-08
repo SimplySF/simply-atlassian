@@ -39,6 +39,7 @@ export default class JiraIssueCreate extends JiraCommand<typeof JiraIssueCreate>
   public static override readonly examples = [
     '<%= config.bin %> <%= command.id %> --project PROJ --type Task --summary "Fix the thing"',
     '<%= config.bin %> <%= command.id %> --project PROJ --type Bug --summary "Crash" --label urgent --label triage',
+    '<%= config.bin %> <%= command.id %> --project PROJ --type Subtask --parent PROJ-1 --summary "Write the tests"',
     '<%= config.bin %> <%= command.id %> --body-file ./issue.json --dry-run',
   ];
 
@@ -46,6 +47,14 @@ export default class JiraIssueCreate extends JiraCommand<typeof JiraIssueCreate>
     ...writeFlags,
     project: Flags.string({ summary: 'Project key the issue belongs to.' }),
     type: Flags.string({ summary: 'Issue type name, for example Task or Bug.' }),
+    parent: Flags.string({
+      summary: 'Parent issue key, making this a subtask of it.',
+      description:
+        'Pair with --type Subtask for a subtask. On team-managed projects this is also how an ' +
+        'issue is placed under an epic, so it is not validated against the issue type — Jira ' +
+        'rejects the combinations that are genuinely wrong, and its error is more current than ' +
+        'any rule encoded here.',
+    }),
     summary: Flags.string({ summary: 'Issue summary.' }),
     description: Flags.string({ summary: 'Issue description as plain text.' }),
     assignee: Flags.string({ summary: 'Assignee: account id on Cloud, username on Server/DC.' }),
@@ -61,6 +70,7 @@ export default class JiraIssueCreate extends JiraCommand<typeof JiraIssueCreate>
     const fields: Record<string, unknown> = {};
     if (this.flags.project !== undefined) fields.project = { key: this.flags.project };
     if (this.flags.type !== undefined) fields.issuetype = { name: this.flags.type };
+    if (this.flags.parent !== undefined) fields.parent = { key: this.flags.parent };
     if (this.flags.summary !== undefined) fields.summary = this.flags.summary;
     if (this.flags.description !== undefined) fields.description = client.descriptionValue(this.flags.description);
     if (this.flags.assignee !== undefined)
