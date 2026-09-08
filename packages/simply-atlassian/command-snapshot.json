@@ -1,6 +1,22 @@
 [
   {
     "alias": [],
+    "command": "atlassian:confluence:open",
+    "flagAliases": ["url"],
+    "flagChars": ["e"],
+    "flags": [
+      "confluence-api-token",
+      "confluence-personal-token",
+      "confluence-url",
+      "confluence-username",
+      "env-file",
+      "json",
+      "print"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
     "command": "atlassian:confluence:page:children",
     "flagAliases": [],
     "flagChars": ["e"],
@@ -284,6 +300,14 @@
       "jira-username",
       "json"
     ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:open",
+    "flagAliases": ["url"],
+    "flagChars": ["e"],
+    "flags": ["env-file", "jira-api-token", "jira-personal-token", "jira-url", "jira-username", "json", "print"],
     "plugin": "@simplysf/simply-atlassian"
   },
   {

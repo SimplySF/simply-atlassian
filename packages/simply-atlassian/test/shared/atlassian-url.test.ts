@@ -15,8 +15,28 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { pageIdFromInput } from '../../src/shared/atlassian-url.js';
+import { issueUrl, pageIdFromInput, pageUrl, projectUrl } from '../../src/shared/atlassian-url.js';
 import { ConfigError } from '../../src/core/errors.js';
+
+describe('browser URL builders', () => {
+  it('builds an encoded issue URL without a duplicate trailing slash', () => {
+    expect(issueUrl('https://jira.example.gov/', 'PROJ/1')).toBe('https://jira.example.gov/browse/PROJ%2F1');
+  });
+
+  it('builds the universal project URL for Cloud and Server/DC bases', () => {
+    expect(projectUrl('https://example.atlassian.net', 'PROJ')).toBe('https://example.atlassian.net/browse/PROJ');
+    expect(projectUrl('https://jira.example.gov/', 'OPS')).toBe('https://jira.example.gov/browse/OPS');
+  });
+
+  it('builds the page URL from either Cloud or Server/DC base shapes', () => {
+    expect(pageUrl('https://example.atlassian.net/wiki', '123456')).toBe(
+      'https://example.atlassian.net/wiki/pages/viewpage.action?pageId=123456',
+    );
+    expect(pageUrl('https://confluence.example.gov/', '987/65')).toBe(
+      'https://confluence.example.gov/pages/viewpage.action?pageId=987%2F65',
+    );
+  });
+});
 
 describe('pageIdFromInput', () => {
   it('passes a bare numeric id through', () => {
