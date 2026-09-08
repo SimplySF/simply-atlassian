@@ -15,6 +15,7 @@
  */
 
 import { ConfigError } from '../core/errors.js';
+import { stripControlOneLine } from '../core/text.js';
 
 /** A link type as the instance reports it. Both phrases are configurable per instance. */
 export interface LinkType {
@@ -47,8 +48,12 @@ function normalise(value: string): string {
 
 /** Names a type by everything a caller could have typed, since a match may come from any of them. */
 function describe(type: LinkType): string {
-  const name = type.name ?? '(unnamed)';
-  const phrases = [type.outward, type.inward].filter((phrase): phrase is string => phrase !== undefined);
+  // Administrator-defined prose, kept to one line for the same reason as a display name: it is
+  // interpolated into a message whose own line breaks carry meaning.
+  const name = stripControlOneLine(type.name ?? '(unnamed)');
+  const phrases = [type.outward, type.inward]
+    .filter((phrase): phrase is string => phrase !== undefined)
+    .map((phrase) => stripControlOneLine(phrase));
   return phrases.length === 0 ? name : `${name} ("${phrases.join('" / "')}")`;
 }
 

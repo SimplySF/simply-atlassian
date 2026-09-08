@@ -51,14 +51,23 @@ Errors carry no stack trace and map to stable exit codes:
 | `1`       | Anything else, including an API error or an unknown key |
 
 Under `--json`, a failure is written as one JSON object on **stderr** and stdout stays empty, so a
-caller that captures stdout never has to disambiguate an error from a payload. Error messages are
-scrubbed of any known credential value and of terminal control characters before they are emitted.
+caller that captures stdout never has to disambiguate an error from a payload. The object nests
+under an `error` key:
+
+```json
+{ "error": { "name": "HttpError", "message": "...", "exitCode": 1, "status": 404, "body": {} } }
+```
+
+`body` carries the API's own response when there was one. Every string in the object — the message
+and everything inside `body` — is scrubbed of any known credential value and of characters that
+could rewrite the terminal or hide text, so a response that quotes your token back at you does not
+put it on the stream.
 
 ```sh
 if ! out=$(simply atlassian jira issue view PROJ-999 --json 2>err.json); then
   case $? in
     3) echo "credentials rejected";;
-    *) jq -r .message err.json;;
+    *) jq -r .error.message err.json;;
   esac
 fi
 ```

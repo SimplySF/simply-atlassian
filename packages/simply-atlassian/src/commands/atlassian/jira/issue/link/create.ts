@@ -17,6 +17,7 @@
 import { Args, Flags } from '@oclif/core';
 import { JiraCommand, writeFlags } from '../../../../../shared/base-command.js';
 import { resolveLinkDirection, type LinkTypesResponse } from '../../../../../shared/issue-links.js';
+import { stripControlOneLine } from '../../../../../core/text.js';
 
 export default class JiraIssueLinkCreate extends JiraCommand<typeof JiraIssueLinkCreate> {
   public static override isWrite = true;
@@ -78,7 +79,9 @@ export default class JiraIssueLinkCreate extends JiraCommand<typeof JiraIssueLin
     // Echoed as the caller said it, not as the payload is shaped: inward/outward is exactly the
     // framing this command exists to hide, and repeating it back would invite doubt about
     // whether the right thing was sent.
-    this.logSafe(`Linked: ${from} ${resolved.phrase} ${to}.`);
+    // The phrase is the instance's own canonical wording, so it is kept to one line: logSafe
+    // keeps newlines, and a forged line on stdout reads as this CLI's own output.
+    this.logSafe(`Linked: ${from} ${stripControlOneLine(resolved.phrase)} ${to}.`);
     return { from, to, type: resolved.type.name ?? resolved.type.id, phrase: resolved.phrase, linked: true };
   }
 }

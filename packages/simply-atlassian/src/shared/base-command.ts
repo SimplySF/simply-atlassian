@@ -77,6 +77,31 @@ function redactSecrets(message: string): string {
 }
 
 /**
+ * Applies the same guards to a response body that the error message already gets.
+ *
+ * `message` was redacted and stripped while `body` — the same bytes from the same response —
+ * went out untouched, which is a credential disclosure whenever the far side echoes the token
+ * back: a captive portal, a proxy, or an agency gateway does exactly that. `JSON.stringify`
+ * escapes C0 but not C1, U+2028/U+2029, or the invisible ranges, so a hostile body also reached
+ * an agent's context with live escape sequences intact.
+ *
+ * Recursive because the body is arbitrary server JSON — Jira nests its messages under
+ * `errorMessages` and `errors` — so guarding only a top-level string would miss the common case.
+ */
+function sanitiseDeep(value: unknown, depth = 0): unknown {
+  // The body comes from the instance, so the walk is bounded rather than trusted to be shallow.
+  if (depth > 12) return undefined;
+  if (typeof value === 'string') return stripControl(redactSecrets(value));
+  if (Array.isArray(value)) return value.map((item) => sanitiseDeep(item, depth + 1));
+  if (typeof value === 'object' && value !== null) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [stripControl(key), sanitiseDeep(item, depth + 1)]),
+    );
+  }
+  return value;
+}
+
+/**
  * Refuses a write when the environment says this context does not write.
  *
  * A guardrail, not a security boundary: an agent with shell access can unset the variable. It
@@ -249,6 +274,11 @@ export abstract class AtlassianCommand<T extends typeof Command> extends Command
     const exitCode = error instanceof CliError ? error.exitCode : (oclifExit ?? 1);
     // Error text can quote a server response body, which is as attacker-influenced as any
     // other field the instance returns.
+    // Control-stripped but NOT collapsed to one line. Newlines here are this CLI's own: the
+    // ambiguity errors deliberately list candidate ids one per line so a caller can retry
+    // precisely, and flattening that runs the ids together. Server-supplied text is made
+    // single-line where it is interpolated instead — see `formatSnippet` in core/http.ts and
+    // the `describe` helpers in shared/mentions.ts and shared/issue-links.ts.
     const message = stripControl(redactSecrets(error.message));
 
     if (this.jsonEnabled()) {
@@ -259,7 +289,7 @@ export abstract class AtlassianCommand<T extends typeof Command> extends Command
             name: errorName(error, oclifExit),
             message,
             exitCode,
-            ...(error instanceof HttpError ? { status: error.status, body: error.body } : {}),
+            ...(error instanceof HttpError ? { status: error.status, body: sanitiseDeep(error.body) } : {}),
             ...(error instanceof AuthError ? { status: error.status } : {}),
           },
         })}\n`,
@@ -270,7 +300,12 @@ export abstract class AtlassianCommand<T extends typeof Command> extends Command
     if (error instanceof CliError) {
       this.error(message, { exit: exitCode, code: error.name });
     }
-    return super.catch(error);
+    // An unexpected error — a TypeError from a malformed payload, say — would otherwise reach
+    // oclif's default handler carrying the original, unsanitised and unredacted text. Rethrow
+    // the sanitised message instead, preserving the exit code oclif attached.
+    const sanitised = new Error(message);
+    Object.assign(sanitised, { oclif: { exit: exitCode } });
+    return super.catch(sanitised);
   }
 
   /**

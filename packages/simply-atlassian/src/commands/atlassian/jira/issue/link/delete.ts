@@ -18,6 +18,7 @@ import { Args } from '@oclif/core';
 import { JiraCommand, writeFlags } from '../../../../../shared/base-command.js';
 import { ConfigError } from '../../../../../core/errors.js';
 import type { IssueLink } from '../../../../../shared/issue-links.js';
+import { stripControlOneLine } from '../../../../../core/text.js';
 
 export default class JiraIssueLinkDelete extends JiraCommand<typeof JiraIssueLinkDelete> {
   public static override isWrite = true;
@@ -78,8 +79,11 @@ export default class JiraIssueLinkDelete extends JiraCommand<typeof JiraIssueLin
  * `shared/issue-links.ts`, the issue in `inwardIssue` is the subject of the outward phrase.
  */
 function describe(link: IssueLink): string {
-  const subject = link.inwardIssue?.key ?? '(unknown issue)';
-  const object = link.outwardIssue?.key ?? '(unknown issue)';
-  const phrase = link.type?.outward?.trim();
-  return `${subject} ${phrase === undefined || phrase === '' ? 'is linked to' : phrase} ${object}`;
+  // One line each. `logSafe` strips control characters but deliberately keeps newlines, so an
+  // administrator-defined outward phrase containing one would forge a whole line on stdout —
+  // with no prefix and no JSON escaping, it reads as this CLI's own output.
+  const subject = stripControlOneLine(link.inwardIssue?.key ?? '(unknown issue)');
+  const object = stripControlOneLine(link.outwardIssue?.key ?? '(unknown issue)');
+  const phrase = stripControlOneLine(link.type?.outward ?? '');
+  return `${subject} ${phrase === '' ? 'is linked to' : phrase} ${object}`;
 }

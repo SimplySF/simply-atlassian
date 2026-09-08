@@ -15,6 +15,7 @@
  */
 
 import { AuthError, CliError, HttpError, NetworkError } from './errors.js';
+import { stripControlOneLine } from './text.js';
 
 export type QueryValue = string | number | boolean | undefined;
 
@@ -260,8 +261,17 @@ async function bodyAsJsonOrText(response: Response): Promise<unknown> {
   }
 }
 
+/**
+ * Renders a response body into an error message, on one line.
+ *
+ * This is the only point where wholly server-controlled text joins an error message, so it is
+ * where the newline has to go — not at the assembled message, which also carries this CLI's own
+ * deliberate line structure. A multi-line body would otherwise forge extra stderr lines,
+ * including one shaped like this CLI's JSON error object, which a caller parsing stderr
+ * line-by-line could not tell from the real thing.
+ */
 function formatSnippet(body: unknown): string {
   if (body === undefined) return '';
-  const rendered = typeof body === 'string' ? body : JSON.stringify(body);
+  const rendered = stripControlOneLine(typeof body === 'string' ? body : JSON.stringify(body));
   return rendered === '' ? '' : ` ${rendered}`;
 }

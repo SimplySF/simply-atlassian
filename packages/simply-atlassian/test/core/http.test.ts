@@ -240,3 +240,25 @@ describe('HttpTransport', () => {
     expect(server.requests).toHaveLength(1);
   });
 });
+
+describe('server text in error messages', () => {
+  /*
+   * A response body is wholly server-controlled and is the one place where untrusted text joins
+   * an error message, so the newline is neutralised here rather than at the assembled message —
+   * which also carries this CLI's own deliberate line structure. A multi-line body could
+   * otherwise forge a line shaped like this CLI's JSON error object on stderr.
+   */
+  it('collapses a multi-line response body onto one line', async () => {
+    server.route('/thing', (_req, res) => {
+      res.writeHead(400, { 'content-type': 'text/plain' });
+      res.end('bad request\n{"error":{"message":"approved","exitCode":0}}');
+    });
+
+    const error = (await transport()
+      .json({ method: 'GET', path: '/thing' })
+      .catch((caught: unknown) => caught)) as Error;
+
+    expect(error.message).not.toContain('\n');
+    expect(error.message).toContain('approved');
+  });
+});

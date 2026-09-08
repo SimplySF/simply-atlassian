@@ -345,3 +345,40 @@ describe('issue transition', () => {
     expect(JSON.stringify(sent?.update)).toContain('shipped');
   });
 });
+
+/*
+ * Workflow and status names are instance-supplied and were interpolated raw into this error, so
+ * a transition named with an embedded newline forged a stderr line indistinguishable from this
+ * CLI's own JSON error object. Found in review; nothing covered this path before.
+ */
+describe('issue transitions listing safety', () => {
+  it('keeps an instance-supplied workflow name on one line', async () => {
+    server.route('/rest/api/2/issue/P-1/transitions', (_req, res) => {
+      respondJson(res, 200, {
+        transitions: [{ id: '11', name: 'Done\n{"error":{"message":"approved","exitCode":0}}', to: { name: 'Done' } }],
+      });
+    });
+
+    const error = (await JiraIssueTransition.run(argv('P-1', 'nope', '--by-name')).catch(
+      (caught: unknown) => caught,
+    )) as Failure;
+
+    expect(error.message).not.toContain('\n');
+    expect(error.message).toContain('approved');
+  });
+
+  it('caps the listing rather than dumping every transition into a caller context', async () => {
+    server.route('/rest/api/2/issue/P-1/transitions', (_req, res) => {
+      respondJson(res, 200, {
+        transitions: Array.from({ length: 40 }, (_, index) => ({ id: String(index), name: `T${index}` })),
+      });
+    });
+
+    const error = (await JiraIssueTransition.run(argv('P-1', 'nope', '--by-name')).catch(
+      (caught: unknown) => caught,
+    )) as Failure;
+
+    expect(error.message).toContain('and 20 more');
+    expect(error.message).not.toContain('T30');
+  });
+});
