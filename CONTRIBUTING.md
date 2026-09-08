@@ -18,10 +18,10 @@ This repository is a Lerna monorepo holding the CLI package and an MCP server pa
 product coverage (Jira, Confluence, ...) grows. Every package has its own `CONTRIBUTING.md` covering
 what's specific to it — read this file first, then that one.
 
-| Package                                                           | Description                                                      |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------- |
-| [`@simplysf/simply-atlassian`](packages/simply-atlassian)         | The `atlassian` CLI                                              |
-| [`@simplysf/simply-atlassian-mcp`](packages/simply-atlassian-mcp) | MCP server exposing the CLI to AI agents (scaffold, unpublished) |
+| Package                                                           | Description                                       |
+| ----------------------------------------------------------------- | ------------------------------------------------- |
+| [`@simplysf/simply-atlassian`](packages/simply-atlassian)         | The `atlassian` CLI                               |
+| [`@simplysf/simply-atlassian-mcp`](packages/simply-atlassian-mcp) | MCP server exposing the CLI to AI agents as tools |
 
 Tooling:
 
