@@ -56,7 +56,11 @@ The local HTTP harness verifies agile paths, query parameters, `values` paginati
 write chunking. Command tests verify rendering inputs, numeric-id validation, dry-run behavior, and
 the read-only write guard.
 
-## Open questions
+## Operational verification
 
-Real Scrum-board end-to-end verification requires credentials and a live Jira instance; it remains
-a manual follow-up.
+Live Scrum-board end-to-end verification is blocked pending a configured Jira connection and a
+designated safe issue to move. On 2026-09-08, `node packages/simply-atlassian/bin/run.js atlassian
+jira board list --limit 1` exited before making a request with `Jira URL is not configured. Set
+JIRA_URL or pass --jira-url.` No accessible `atlassian.env`, `atlassian-write.env`, or configured
+`JIRA_URL` was available. Do not record the required board list, sprint list, sprint issues, or
+add-to-sprint exercises as completed until those inputs are supplied.
