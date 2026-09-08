@@ -73,7 +73,7 @@ export interface JiraChangelogEntry {
   readonly items: JiraChangelogItem[];
 }
 
-/** A deployment-independent changelog page. Cloud supplies a cursor; Server/DC is one page. */
+/** A deployment-independent changelog page. Cloud supplies a token; Server/DC uses an offset. */
 export interface JiraChangelogPage {
   readonly entries: JiraChangelogEntry[];
   readonly total?: number;
@@ -124,10 +124,10 @@ interface CloudChangelogResponse {
 }
 
 interface ServerChangelogResponse {
-  readonly changelog?: {
-    readonly histories?: RawChangelogEntry[];
-    readonly total?: number;
-  };
+  readonly histories?: RawChangelogEntry[];
+  readonly total?: number;
+  /** The instance's effective page size, which may be smaller than what was asked for. */
+  readonly maxResults?: number;
 }
 
 const DEFAULT_MAX_RESULTS = 50;
@@ -170,23 +170,26 @@ export class JiraClient {
     });
   }
 
-  /**
-   * Gets one changelog page and hides the Cloud endpoint versus Server/DC expansion difference.
-   * Server/DC returns its complete history in the expanded issue response, so it is always the
-   * last page from a caller's point of view.
-   */
+  /** Gets one changelog page and hides the Cloud versus Server/DC pagination difference. */
   public async getChangelog(
     issueKey: string,
     options: { startAt?: number; maxResults?: number } = {},
   ): Promise<JiraChangelogPage> {
     if (this.deployment !== 'cloud') {
-      const issue = (await this.getIssue(issueKey, { expand: 'changelog' })) as ServerChangelogResponse;
-      const changelog = issue.changelog;
-      const entries = normalizeChangelogEntries(changelog?.histories);
+      const startAt = options.startAt ?? 0;
+      const maxResults = options.maxResults ?? DEFAULT_MAX_RESULTS;
+      const response = await this.request<ServerChangelogResponse>(`/issue/${encodeURIComponent(issueKey)}/changelog`, {
+        method: 'GET',
+        query: { startAt, maxResults },
+      });
+      const entries = normalizeChangelogEntries(response.histories);
+      const nextStartAt = startAt + entries.length;
+      const pageCap = response.maxResults ?? maxResults;
       return {
         entries,
-        total: changelog?.total ?? entries.length,
-        isLast: true,
+        total: response.total,
+        isLast: response.total === undefined ? entries.length < pageCap : nextStartAt >= response.total,
+        nextStartAt,
       };
     }
 

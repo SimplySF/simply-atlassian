@@ -139,20 +139,32 @@ describe('JiraClient on Server/DC', () => {
     expect(issue.authorization).toBe('Bearer pat');
   });
 
-  it('normalizes the complete changelog from an expanded issue', async () => {
-    server.route('/rest/api/2/issue/PROJ-1', (req, res) => {
-      expect(new URL(req.url ?? '/', 'http://127.0.0.1').searchParams.get('expand')).toBe('changelog');
+  it('follows and normalizes paged changelog responses', async () => {
+    server.route('/rest/api/2/issue/PROJ-1/changelog', (req, res) => {
+      const url = new URL(req.url ?? '/', 'http://127.0.0.1');
+      const startAt = Number(url.searchParams.get('startAt'));
+      expect(url.searchParams.get('maxResults')).toBe(startAt === 0 ? '50' : '49');
+      if (startAt === 1) {
+        respondJson(res, 200, {
+          startAt: 1,
+          maxResults: 1,
+          total: 2,
+          histories: [{ id: '8', author: { displayName: 'Bob' }, created: '2026-09-08T02:00:00.000Z', items: [] }],
+        });
+        return;
+      }
       respondJson(res, 200, {
-        changelog: {
-          histories: [
-            {
-              id: '7',
-              author: { displayName: 'Alice' },
-              created: '2026-09-08T01:00:00.000Z',
-              items: [{ field: 'assignee', from: null, to: 'alice' }],
-            },
-          ],
-        },
+        startAt: 0,
+        maxResults: 1,
+        total: 2,
+        histories: [
+          {
+            id: '7',
+            author: { displayName: 'Alice' },
+            created: '2026-09-08T01:00:00.000Z',
+            items: [{ field: 'assignee', from: null, to: 'alice' }],
+          },
+        ],
       });
     });
 
@@ -166,11 +178,16 @@ describe('JiraClient on Server/DC', () => {
           created: '2026-09-08T01:00:00.000Z',
           items: [{ field: 'assignee', fromString: undefined, toString: undefined, from: null, to: 'alice' }],
         },
+        { id: '8', author: 'Bob', created: '2026-09-08T02:00:00.000Z', items: [] },
       ],
-      total: 1,
-      pages: 1,
+      total: 2,
+      pages: 2,
       complete: true,
     });
+    expect(server.requests.map((request) => new URL(request.url, 'http://127.0.0.1').pathname)).toEqual([
+      '/rest/api/2/issue/PROJ-1/changelog',
+      '/rest/api/2/issue/PROJ-1/changelog',
+    ]);
   });
 
   it('searches via GET /search and pages with startAt against total', async () => {

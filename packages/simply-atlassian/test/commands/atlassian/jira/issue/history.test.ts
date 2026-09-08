@@ -34,24 +34,22 @@ function argv(...extra: string[]): string[] {
 
 describe('jira issue history', () => {
   it('renders grouped entries oldest first and strips control characters', async () => {
-    server.route('/rest/api/2/issue/PROJ-1', (_req, res) => {
+    server.route('/rest/api/2/issue/PROJ-1/changelog', (_req, res) => {
       respondJson(res, 200, {
-        changelog: {
-          histories: [
-            {
-              id: '2',
-              author: { displayName: 'New\u001b[31m' },
-              created: '2026-09-08T02:00:00.000Z',
-              items: [{ field: 'summary', from: 'old\u0007', to: 'new' }],
-            },
-            {
-              id: '1',
-              author: { displayName: 'Old' },
-              created: '2026-09-08T01:00:00.000Z',
-              items: [{ field: 'status', fromString: 'Open', toString: 'Done', from: '1', to: '5' }],
-            },
-          ],
-        },
+        histories: [
+          {
+            id: '2',
+            author: { displayName: 'New\u001b[31m' },
+            created: '2026-09-08T02:00:00.000Z',
+            items: [{ field: 'summary', from: 'old\u0007', to: 'new' }],
+          },
+          {
+            id: '1',
+            author: { displayName: 'Old' },
+            created: '2026-09-08T01:00:00.000Z',
+            items: [{ field: 'status', fromString: 'Open', toString: 'Done', from: '1', to: '5' }],
+          },
+        ],
       });
     });
 
@@ -74,24 +72,22 @@ describe('jira issue history', () => {
   });
 
   it('filters entries by field case-insensitively', async () => {
-    server.route('/rest/api/2/issue/PROJ-1', (_req, res) => {
+    server.route('/rest/api/2/issue/PROJ-1/changelog', (_req, res) => {
       respondJson(res, 200, {
-        changelog: {
-          histories: [
-            {
-              id: '1',
-              author: { displayName: 'Alice' },
-              created: '2026-09-08T01:00:00.000Z',
-              items: [{ field: 'status', fromString: 'Open', toString: 'Done' }],
-            },
-            {
-              id: '2',
-              author: { displayName: 'Bob' },
-              created: '2026-09-08T02:00:00.000Z',
-              items: [{ field: 'assignee', from: null, to: 'bob' }],
-            },
-          ],
-        },
+        histories: [
+          {
+            id: '1',
+            author: { displayName: 'Alice' },
+            created: '2026-09-08T01:00:00.000Z',
+            items: [{ field: 'status', fromString: 'Open', toString: 'Done' }],
+          },
+          {
+            id: '2',
+            author: { displayName: 'Bob' },
+            created: '2026-09-08T02:00:00.000Z',
+            items: [{ field: 'assignee', from: null, to: 'bob' }],
+          },
+        ],
       });
     });
 
@@ -111,16 +107,14 @@ describe('jira issue history', () => {
   });
 
   it('caps entries and returns normalized data for JSON callers', async () => {
-    server.route('/rest/api/2/issue/PROJ-1', (_req, res) => {
+    server.route('/rest/api/2/issue/PROJ-1/changelog', (_req, res) => {
       respondJson(res, 200, {
-        changelog: {
-          total: 3,
-          histories: [
-            { id: '1', author: { displayName: 'Alice' }, created: '2026-09-08T01:00:00.000Z', items: [] },
-            { id: '2', author: { displayName: 'Bob' }, created: '2026-09-08T02:00:00.000Z', items: [] },
-            { id: '3', author: { displayName: 'Cara' }, created: '2026-09-08T03:00:00.000Z', items: [] },
-          ],
-        },
+        total: 3,
+        histories: [
+          { id: '1', author: { displayName: 'Alice' }, created: '2026-09-08T01:00:00.000Z', items: [] },
+          { id: '2', author: { displayName: 'Bob' }, created: '2026-09-08T02:00:00.000Z', items: [] },
+          { id: '3', author: { displayName: 'Cara' }, created: '2026-09-08T03:00:00.000Z', items: [] },
+        ],
       });
     });
 
