@@ -194,6 +194,23 @@
   },
   {
     "alias": [],
+    "command": "atlassian:jira:issue:history",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "env-file",
+      "field",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "json",
+      "limit"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
     "command": "atlassian:jira:issue:link:create",
     "flagAliases": [],
     "flagChars": ["e"],

@@ -78,6 +78,50 @@ describe('JiraClient on Cloud', () => {
     expect(second.isLast).toBe(true);
     expect(server.requests.every((request) => request.method === 'POST')).toBe(true);
   });
+
+  it('pages and normalizes the changelog endpoint', async () => {
+    server.route('/rest/api/3/issue/PROJ-1/changelog', (req, res) => {
+      const startAt = Number(new URL(req.url ?? '/', 'http://127.0.0.1').searchParams.get('startAt'));
+      if (startAt === 1) {
+        respondJson(res, 200, {
+          values: [{ id: '2', author: { displayName: 'Bob' }, created: '2026-09-08T02:00:00.000Z', items: [] }],
+          total: 2,
+          isLast: true,
+        });
+        return;
+      }
+      respondJson(res, 200, {
+        values: [
+          {
+            id: '1',
+            author: { displayName: 'Alice' },
+            created: '2026-09-08T01:00:00.000Z',
+            items: [{ field: 'status', fromString: 'Open', toString: 'Done', from: '1', to: '5' }],
+          },
+        ],
+        total: 2,
+        isLast: false,
+      });
+    });
+
+    const result = await new JiraClient(makeConfig('cloud')).getAllChangelog('PROJ-1', 2);
+
+    expect(result.entries).toEqual([
+      {
+        id: '1',
+        author: 'Alice',
+        created: '2026-09-08T01:00:00.000Z',
+        items: [{ field: 'status', fromString: 'Open', toString: 'Done', from: '1', to: '5' }],
+      },
+      { id: '2', author: 'Bob', created: '2026-09-08T02:00:00.000Z', items: [] },
+    ]);
+    expect(result.total).toBe(2);
+    expect(result.complete).toBe(true);
+    expect(server.requests.map((request) => new URL(request.url, 'http://127.0.0.1').pathname)).toEqual([
+      '/rest/api/3/issue/PROJ-1/changelog',
+      '/rest/api/3/issue/PROJ-1/changelog',
+    ]);
+  });
 });
 
 describe('JiraClient on Server/DC', () => {
@@ -93,6 +137,40 @@ describe('JiraClient on Server/DC', () => {
 
     expect(issue.key).toBe('PROJ-1');
     expect(issue.authorization).toBe('Bearer pat');
+  });
+
+  it('normalizes the complete changelog from an expanded issue', async () => {
+    server.route('/rest/api/2/issue/PROJ-1', (req, res) => {
+      expect(new URL(req.url ?? '/', 'http://127.0.0.1').searchParams.get('expand')).toBe('changelog');
+      respondJson(res, 200, {
+        changelog: {
+          histories: [
+            {
+              id: '7',
+              author: { displayName: 'Alice' },
+              created: '2026-09-08T01:00:00.000Z',
+              items: [{ field: 'assignee', from: null, to: 'alice' }],
+            },
+          ],
+        },
+      });
+    });
+
+    const result = await new JiraClient(makeConfig('server')).getAllChangelog('PROJ-1', 50);
+
+    expect(result).toEqual({
+      entries: [
+        {
+          id: '7',
+          author: 'Alice',
+          created: '2026-09-08T01:00:00.000Z',
+          items: [{ field: 'assignee', fromString: undefined, toString: undefined, from: null, to: 'alice' }],
+        },
+      ],
+      total: 1,
+      pages: 1,
+      complete: true,
+    });
   });
 
   it('searches via GET /search and pages with startAt against total', async () => {

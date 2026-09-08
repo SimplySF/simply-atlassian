@@ -56,6 +56,39 @@ export interface JiraAgileResult {
   readonly complete: boolean;
 }
 
+/** One field change in a Jira issue history entry, normalized across deployments. */
+export interface JiraChangelogItem {
+  readonly field: string;
+  readonly fromString?: unknown;
+  readonly toString?: unknown;
+  readonly from?: unknown;
+  readonly to?: unknown;
+}
+
+/** One grouped set of field changes made at the same time by the same user. */
+export interface JiraChangelogEntry {
+  readonly id: string;
+  readonly author?: string;
+  readonly created?: string;
+  readonly items: JiraChangelogItem[];
+}
+
+/** A deployment-independent changelog page. Cloud supplies a cursor; Server/DC is one page. */
+export interface JiraChangelogPage {
+  readonly entries: JiraChangelogEntry[];
+  readonly total?: number;
+  readonly isLast: boolean;
+  readonly nextStartAt?: number;
+}
+
+/** The flat result returned after following changelog pages up to the caller's limit. */
+export interface JiraChangelogResult {
+  readonly entries: JiraChangelogEntry[];
+  readonly total?: number;
+  readonly pages: number;
+  readonly complete: boolean;
+}
+
 interface CloudSearchResponse {
   readonly issues?: unknown[];
   readonly nextPageToken?: string;
@@ -67,6 +100,34 @@ interface ServerSearchResponse {
   readonly total?: number;
   /** The instance's effective page size, which may be smaller than what was asked for. */
   readonly maxResults?: number;
+}
+
+interface RawChangelogItem {
+  readonly field?: unknown;
+  readonly fromString?: unknown;
+  readonly toString?: unknown;
+  readonly from?: unknown;
+  readonly to?: unknown;
+}
+
+interface RawChangelogEntry {
+  readonly id?: unknown;
+  readonly author?: { readonly displayName?: unknown };
+  readonly created?: unknown;
+  readonly items?: RawChangelogItem[];
+}
+
+interface CloudChangelogResponse {
+  readonly values?: RawChangelogEntry[];
+  readonly total?: number;
+  readonly isLast?: boolean;
+}
+
+interface ServerChangelogResponse {
+  readonly changelog?: {
+    readonly histories?: RawChangelogEntry[];
+    readonly total?: number;
+  };
 }
 
 const DEFAULT_MAX_RESULTS = 50;
@@ -107,6 +168,80 @@ export class JiraClient {
       method: 'GET',
       query: { fields: joinFields(options.fields), expand: options.expand },
     });
+  }
+
+  /**
+   * Gets one changelog page and hides the Cloud endpoint versus Server/DC expansion difference.
+   * Server/DC returns its complete history in the expanded issue response, so it is always the
+   * last page from a caller's point of view.
+   */
+  public async getChangelog(
+    issueKey: string,
+    options: { startAt?: number; maxResults?: number } = {},
+  ): Promise<JiraChangelogPage> {
+    if (this.deployment !== 'cloud') {
+      const issue = (await this.getIssue(issueKey, { expand: 'changelog' })) as ServerChangelogResponse;
+      const changelog = issue.changelog;
+      const entries = normalizeChangelogEntries(changelog?.histories);
+      return {
+        entries,
+        total: changelog?.total ?? entries.length,
+        isLast: true,
+      };
+    }
+
+    const startAt = options.startAt ?? 0;
+    const maxResults = options.maxResults ?? DEFAULT_MAX_RESULTS;
+    const response = await this.request<CloudChangelogResponse>(`/issue/${encodeURIComponent(issueKey)}/changelog`, {
+      method: 'GET',
+      query: { startAt, maxResults },
+    });
+    const entries = normalizeChangelogEntries(response.values);
+    const nextStartAt = startAt + entries.length;
+    return {
+      entries,
+      total: response.total,
+      isLast:
+        response.isLast ?? (response.total === undefined ? entries.length < maxResults : nextStartAt >= response.total),
+      nextStartAt,
+    };
+  }
+
+  /** Follows the deployment's changelog pagination until the limit or the full history is read. */
+  public async getAllChangelog(issueKey: string, limit: number): Promise<JiraChangelogResult> {
+    const collected: JiraChangelogEntry[] = [];
+    let startAt = 0;
+    let total: number | undefined;
+    let pages = 0;
+
+    /* Paging is sequential by definition: each request needs the previous page's cursor. */
+    /* eslint-disable no-await-in-loop */
+    while (collected.length < limit) {
+      const page = await this.getChangelog(issueKey, {
+        startAt,
+        maxResults: Math.min(DEFAULT_MAX_RESULTS, limit - collected.length),
+      });
+      pages += 1;
+      collected.push(...page.entries);
+      total = typeof page.total === 'number' ? page.total : total;
+
+      const nextStartAt = page.nextStartAt;
+      const canAdvance = nextStartAt !== undefined && nextStartAt > startAt;
+      const reachedLimit = collected.length >= limit;
+      const moreEntries = total === undefined ? !page.isLast || collected.length > limit : total > limit;
+      if (reachedLimit || page.isLast || page.entries.length === 0 || !canAdvance) {
+        return {
+          entries: collected.slice(0, limit),
+          total,
+          pages,
+          complete: !reachedLimit || !moreEntries,
+        };
+      }
+      startAt = nextStartAt;
+    }
+    /* eslint-enable no-await-in-loop */
+
+    return { entries: collected.slice(0, limit), total, pages, complete: false };
   }
 
   public async searchIssues(options: JiraSearchOptions): Promise<JiraSearchPage> {
@@ -480,4 +615,29 @@ function adfParagraphs(text: string): unknown[] {
 /** An empty list must mean "default fields", so it is dropped rather than sent as `fields=`. */
 function joinFields(fields: string[] | undefined): string | undefined {
   return fields !== undefined && fields.length > 0 ? fields.join(',') : undefined;
+}
+
+function normalizeChangelogEntries(entries: RawChangelogEntry[] | undefined): JiraChangelogEntry[] {
+  return (entries ?? []).map((entry) => ({
+    id: stringifyScalar(entry.id),
+    author: typeof entry.author?.displayName === 'string' ? entry.author.displayName : undefined,
+    created: typeof entry.created === 'string' ? entry.created : undefined,
+    items: (entry.items ?? []).map((item) => ({
+      field: typeof item.field === 'string' ? item.field : stringifyScalar(item.field),
+      fromString: ownValue(item, 'fromString'),
+      toString: ownValue(item, 'toString'),
+      from: item.from,
+      to: ownValue(item, 'to'),
+    })),
+  }));
+}
+
+function ownValue(value: object, key: string): unknown {
+  return Object.hasOwn(value, key) ? (value as Record<string, unknown>)[key] : undefined;
+}
+
+function stringifyScalar(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') return String(value);
+  return JSON.stringify(value) ?? '';
 }
