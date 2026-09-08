@@ -16,7 +16,8 @@ Add `jira open` and `confluence open` commands. They resolve the configured prod
 build a browser URL locally, and launch the platform's default browser through `open` on macOS,
 `xdg-open` on Linux, or `start` on Windows. `--print` and its `--url` alias print the URL without
 launching. `--json` always returns `{ "url": "..." }` without launching. If the process is in CI,
-has no Linux display, or the opener cannot be spawned, the command prints the URL instead.
+has no Linux display, or the opener cannot be launched or exits unsuccessfully, the command prints
+the URL instead.
 
 ## Behavior
 
@@ -52,7 +53,8 @@ with both shapes.
 ## Testing
 
 Unit tests cover encoding and Cloud/Server base shapes. Command tests cover issue/project and page
-resolution, `--print`, `--url`, `--json`, and synchronous opener failure fallback.
+resolution, `--print`, `--url`, `--json`, and opener failure fallback for synchronous spawn errors,
+asynchronous `error` events, and non-zero exits.
 
 ## Open questions
 
