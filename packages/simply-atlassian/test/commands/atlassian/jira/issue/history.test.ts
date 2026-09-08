@@ -34,9 +34,9 @@ function argv(...extra: string[]): string[] {
 
 describe('jira issue history', () => {
   it('renders grouped entries oldest first and strips control characters', async () => {
-    server.route('/rest/api/2/issue/PROJ-1/changelog', (_req, res) => {
+    server.route('/rest/api/2/issue/PROJ-1', (_req, res) => {
       respondJson(res, 200, {
-        histories: [
+        changelog: { histories: [
           {
             id: '2',
             author: { displayName: 'New\u001b[31m' },
@@ -49,7 +49,7 @@ describe('jira issue history', () => {
             created: '2026-09-08T01:00:00.000Z',
             items: [{ field: 'status', fromString: 'Open', toString: 'Done', from: '1', to: '5' }],
           },
-        ],
+        ] },
       });
     });
 
@@ -72,9 +72,9 @@ describe('jira issue history', () => {
   });
 
   it('filters entries by field case-insensitively', async () => {
-    server.route('/rest/api/2/issue/PROJ-1/changelog', (_req, res) => {
+    server.route('/rest/api/2/issue/PROJ-1', (_req, res) => {
       respondJson(res, 200, {
-        histories: [
+        changelog: { histories: [
           {
             id: '1',
             author: { displayName: 'Alice' },
@@ -87,7 +87,7 @@ describe('jira issue history', () => {
             created: '2026-09-08T02:00:00.000Z',
             items: [{ field: 'assignee', from: null, to: 'bob' }],
           },
-        ],
+        ] },
       });
     });
 
@@ -106,22 +106,34 @@ describe('jira issue history', () => {
     expect(logged.join('\n')).not.toContain('Bob');
   });
 
-  it('caps entries and returns normalized data for JSON callers', async () => {
-    server.route('/rest/api/2/issue/PROJ-1/changelog', (_req, res) => {
+  it('caps entries and returns raw changelog data for JSON callers', async () => {
+    server.route('/rest/api/2/issue/PROJ-1', (_req, res) => {
       respondJson(res, 200, {
-        total: 3,
-        histories: [
-          { id: '1', author: { displayName: 'Alice' }, created: '2026-09-08T01:00:00.000Z', items: [] },
+        changelog: { total: 3, histories: [
+          {
+            id: '1',
+            author: { displayName: 'Alice', emailAddress: 'alice@example.test' },
+            created: '2026-09-08T01:00:00.000Z',
+            historyMetadata: { type: 'automation' },
+            items: [],
+          },
           { id: '2', author: { displayName: 'Bob' }, created: '2026-09-08T02:00:00.000Z', items: [] },
           { id: '3', author: { displayName: 'Cara' }, created: '2026-09-08T03:00:00.000Z', items: [] },
-        ],
+        ] },
       });
     });
 
     const result = await JiraIssueHistory.run(argv('PROJ-1', '--limit', '2', '--json'));
 
-    expect(result.entries.map((entry) => entry.id)).toEqual(['1', '2']);
-    expect(result.total).toBe(3);
-    expect(result.complete).toBe(false);
+    expect(result).toEqual([
+      {
+        id: '1',
+        author: { displayName: 'Alice', emailAddress: 'alice@example.test' },
+        created: '2026-09-08T01:00:00.000Z',
+        historyMetadata: { type: 'automation' },
+        items: [],
+      },
+      { id: '2', author: { displayName: 'Bob' }, created: '2026-09-08T02:00:00.000Z', items: [] },
+    ]);
   });
 });

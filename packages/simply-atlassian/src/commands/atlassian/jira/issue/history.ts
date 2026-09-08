@@ -17,7 +17,7 @@
 import { Args, Flags } from '@oclif/core';
 import { JiraCommand } from '../../../../shared/base-command.js';
 import { formatKeyValue } from '../../../../shared/output.js';
-import type { JiraChangelogEntry, JiraChangelogItem, JiraChangelogResult } from '../../../../core/jira-client.js';
+import type { JiraChangelogEntry, JiraChangelogItem } from '../../../../core/jira-client.js';
 
 const DEFAULT_LIMIT = 50;
 
@@ -25,7 +25,7 @@ export default class JiraIssueHistory extends JiraCommand<typeof JiraIssueHistor
   public static override readonly summary = 'Show an issue field-change history.';
   public static override readonly description =
     'Lists who changed which fields, when, and the previous and new values. History is grouped ' +
-    'by changelog entry and rendered oldest first. Use --json for normalized entries.';
+    'by changelog entry and rendered oldest first. Use --json for the unmodified changelog entries.';
 
   public static override readonly examples = [
     '<%= config.bin %> <%= command.id %> PROJ-123',
@@ -51,11 +51,17 @@ export default class JiraIssueHistory extends JiraCommand<typeof JiraIssueHistor
     }),
   };
 
-  public async run(): Promise<JiraChangelogResult> {
+  public async run(): Promise<unknown> {
     const result = await this.jira().getAllChangelog(this.args.issue, this.flags.limit);
     const field = normalizeField(this.flags.field);
     const entries = field === undefined ? result.entries : result.entries.filter((entry) => touchesField(entry, field));
     const visible = { ...result, entries };
+
+    if (this.jsonEnabled()) {
+      return field === undefined
+        ? result.rawEntries
+        : result.rawEntries.filter((_entry, index) => touchesField(result.entries[index], field));
+    }
 
     if (entries.length === 0) {
       this.log(field === undefined ? 'No history entries found.' : `No history entries changed ${field}.`);

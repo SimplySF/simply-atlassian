@@ -76,6 +76,8 @@ export interface JiraChangelogEntry {
 /** A deployment-independent changelog page. Cloud supplies a token; Server/DC uses an offset. */
 export interface JiraChangelogPage {
   readonly entries: JiraChangelogEntry[];
+  /** Original history entries, retained for consumers that need Jira's complete audit record. */
+  readonly rawEntries: unknown[];
   readonly total?: number;
   readonly isLast: boolean;
   readonly nextStartAt?: number;
@@ -84,6 +86,8 @@ export interface JiraChangelogPage {
 /** The flat result returned after following changelog pages up to the caller's limit. */
 export interface JiraChangelogResult {
   readonly entries: JiraChangelogEntry[];
+  /** Original history entries in the same order as `entries`, before normalization. */
+  readonly rawEntries: unknown[];
   readonly total?: number;
   readonly pages: number;
   readonly complete: boolean;
@@ -130,6 +134,11 @@ interface ServerChangelogResponse {
   readonly maxResults?: number;
 }
 
+/** Server/DC exposes history by expanding the issue rather than a changelog subresource. */
+interface ServerIssueResponse {
+  readonly changelog?: ServerChangelogResponse;
+}
+
 const DEFAULT_MAX_RESULTS = 50;
 const MAX_ISSUES_PER_SPRINT_MOVE = 50;
 const AGILE_BASE = '/rest/agile/1.0';
@@ -170,26 +179,24 @@ export class JiraClient {
     });
   }
 
-  /** Gets one changelog page and hides the Cloud versus Server/DC pagination difference. */
+  /** Gets one changelog page and hides the Cloud versus Server/DC retrieval difference. */
   public async getChangelog(
     issueKey: string,
     options: { startAt?: number; maxResults?: number } = {},
   ): Promise<JiraChangelogPage> {
     if (this.deployment !== 'cloud') {
-      const startAt = options.startAt ?? 0;
-      const maxResults = options.maxResults ?? DEFAULT_MAX_RESULTS;
-      const response = await this.request<ServerChangelogResponse>(`/issue/${encodeURIComponent(issueKey)}/changelog`, {
+      const response = await this.request<ServerIssueResponse>(`/issue/${encodeURIComponent(issueKey)}`, {
         method: 'GET',
-        query: { startAt, maxResults },
+        query: { expand: 'changelog' },
       });
-      const entries = normalizeChangelogEntries(response.histories);
-      const nextStartAt = startAt + entries.length;
-      const pageCap = response.maxResults ?? maxResults;
+      const changelog = response.changelog;
+      const rawEntries = changelog?.histories ?? [];
       return {
-        entries,
-        total: response.total,
-        isLast: response.total === undefined ? entries.length < pageCap : nextStartAt >= response.total,
-        nextStartAt,
+        entries: normalizeChangelogEntries(rawEntries),
+        rawEntries,
+        total: changelog?.total,
+        // Server/DC's expanded issue response contains its changelog in one response.
+        isLast: true,
       };
     }
 
@@ -203,6 +210,7 @@ export class JiraClient {
     const nextStartAt = startAt + entries.length;
     return {
       entries,
+      rawEntries: response.values ?? [],
       total: response.total,
       isLast:
         response.isLast ?? (response.total === undefined ? entries.length < maxResults : nextStartAt >= response.total),
@@ -213,6 +221,7 @@ export class JiraClient {
   /** Follows the deployment's changelog pagination until the limit or the full history is read. */
   public async getAllChangelog(issueKey: string, limit: number): Promise<JiraChangelogResult> {
     const collected: JiraChangelogEntry[] = [];
+    const rawEntries: unknown[] = [];
     let startAt = 0;
     let total: number | undefined;
     let pages = 0;
@@ -226,6 +235,7 @@ export class JiraClient {
       });
       pages += 1;
       collected.push(...page.entries);
+      rawEntries.push(...page.rawEntries);
       total = typeof page.total === 'number' ? page.total : total;
 
       const nextStartAt = page.nextStartAt;
@@ -235,6 +245,7 @@ export class JiraClient {
       if (reachedLimit || page.isLast || page.entries.length === 0 || !canAdvance) {
         return {
           entries: collected.slice(0, limit),
+          rawEntries: rawEntries.slice(0, limit),
           total,
           pages,
           complete: !reachedLimit || !moreEntries,
@@ -244,7 +255,7 @@ export class JiraClient {
     }
     /* eslint-enable no-await-in-loop */
 
-    return { entries: collected.slice(0, limit), total, pages, complete: false };
+    return { entries: collected.slice(0, limit), rawEntries: rawEntries.slice(0, limit), total, pages, complete: false };
   }
 
   public async searchIssues(options: JiraSearchOptions): Promise<JiraSearchPage> {
