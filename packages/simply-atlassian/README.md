@@ -96,6 +96,10 @@ error that says the credential cannot make changes, rather than looking like a p
 - [`simply atlassian confluence page children PAGE`](#simply-atlassian-confluence-page-children-page)
 - [`simply atlassian confluence page get PAGE`](#simply-atlassian-confluence-page-get-page)
 - [`simply atlassian confluence page search`](#simply-atlassian-confluence-page-search)
+- [`simply atlassian jira issue comment add ISSUE`](#simply-atlassian-jira-issue-comment-add-issue)
+- [`simply atlassian jira issue comment delete ISSUE COMMENT`](#simply-atlassian-jira-issue-comment-delete-issue-comment)
+- [`simply atlassian jira issue comment edit ISSUE COMMENT`](#simply-atlassian-jira-issue-comment-edit-issue-comment)
+- [`simply atlassian jira issue comment list ISSUE`](#simply-atlassian-jira-issue-comment-list-issue)
 - [`simply atlassian jira issue create`](#simply-atlassian-jira-issue-create)
 - [`simply atlassian jira issue delete ISSUE`](#simply-atlassian-jira-issue-delete-issue)
 - [`simply atlassian jira issue search`](#simply-atlassian-jira-issue-search)
@@ -103,6 +107,8 @@ error that says the credential cannot make changes, rather than looking like a p
 - [`simply atlassian jira issue transitions ISSUE`](#simply-atlassian-jira-issue-transitions-issue)
 - [`simply atlassian jira issue update ISSUE`](#simply-atlassian-jira-issue-update-issue)
 - [`simply atlassian jira issue view ISSUE`](#simply-atlassian-jira-issue-view-issue)
+- [`simply atlassian jira user search QUERY`](#simply-atlassian-jira-user-search-query)
+- [`simply atlassian jira user view ACCOUNT`](#simply-atlassian-jira-user-view-account)
 - [`simply atlassian jira whoami`](#simply-atlassian-jira-whoami)
 
 ## `simply atlassian confluence page children PAGE`
@@ -251,6 +257,217 @@ FLAG DESCRIPTIONS
 ```
 
 _See code: [lib/commands/atlassian/confluence/page/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/search.js)_
+
+## `simply atlassian jira issue comment add ISSUE`
+
+Add a comment to a Jira issue.
+
+```
+USAGE
+  $ simply atlassian jira issue comment add ISSUE [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+    [--jira-api-token <value>] [--jira-personal-token <value>] [--dry-run] [--text <value>] [--mention <value>...]
+    [--body <value> | --body-file <value>]
+
+ARGUMENTS
+  ISSUE  Issue key, for example PROJ-123.
+
+FLAGS
+  --body=<value>        Raw JSON request body.
+  --body-file=<value>   Path to a file holding the raw JSON request body.
+  --dry-run             Print the request that would be sent and exit without sending it.
+  --mention=<value>...  Account id, or a name or email to resolve. Repeatable.
+  --text=<value>        Comment text.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Add a comment to a Jira issue.
+
+  The comment text is passed as plain text and converted to the shape the deployment expects — Atlassian Document Format
+  on Cloud, a string on Server/DC. Use --body or --body-file for anything the text alone cannot express, such as
+  restricting visibility to a role or group. Use --dry-run to see what would be sent without sending it.
+
+EXAMPLES
+  $ simply atlassian jira issue comment add PROJ-123 --text "Deployed to staging"
+
+  $ simply atlassian jira issue comment add PROJ-123 --text "See the runbook" --dry-run
+
+  $ simply atlassian jira issue comment add PROJ-123 --body-file ./comment.json
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+
+  --mention=<value>...  Account id, or a name or email to resolve. Repeatable.
+
+    An email address is the term most likely to be unique. A term matching more than one user is an error listing the
+    candidates, rather than a guess at who was meant.
+```
+
+_See code: [lib/commands/atlassian/jira/issue/comment/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/add.js)_
+
+## `simply atlassian jira issue comment delete ISSUE COMMENT`
+
+Delete a comment.
+
+```
+USAGE
+  $ simply atlassian jira issue comment delete ISSUE COMMENT [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+    [--jira-api-token <value>] [--jira-personal-token <value>] [--dry-run] [--confirm]
+
+ARGUMENTS
+  ISSUE    Issue key, for example PROJ-123.
+  COMMENT  Comment id, from "issue comment list".
+
+FLAGS
+  --confirm  Required to proceed with an irreversible change.
+  --dry-run  Print the request that would be sent and exit without sending it.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Delete a comment.
+
+  A deleted comment cannot be recovered through the API, so --confirm is required — the same rule "issue delete"
+  follows. Comment ids come from "issue comment list".
+
+EXAMPLES
+  $ simply atlassian jira issue comment delete PROJ-123 10001 --confirm
+
+  $ simply atlassian jira issue comment delete PROJ-123 10001 --dry-run
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+
+  --confirm  Required to proceed with an irreversible change.
+
+    There is deliberately no short form: a single letter is too easy to add by habit.
+```
+
+_See code: [lib/commands/atlassian/jira/issue/comment/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/delete.js)_
+
+## `simply atlassian jira issue comment edit ISSUE COMMENT`
+
+Change an existing comment.
+
+```
+USAGE
+  $ simply atlassian jira issue comment edit ISSUE COMMENT [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+    [--jira-api-token <value>] [--jira-personal-token <value>] [--dry-run] [--text <value>] [--mention <value>...]
+    [--body <value> | --body-file <value>]
+
+ARGUMENTS
+  ISSUE    Issue key, for example PROJ-123.
+  COMMENT  Comment id, from "issue comment list".
+
+FLAGS
+  --body=<value>        Raw JSON request body.
+  --body-file=<value>   Path to a file holding the raw JSON request body.
+  --dry-run             Print the request that would be sent and exit without sending it.
+  --mention=<value>...  Account id, or a name or email to resolve. Repeatable.
+  --text=<value>        Replacement comment text.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Change an existing comment.
+
+  Replaces the comment body — it does not append to it, since an edit that silently added text would be a surprising way
+  to lose a comment's meaning. Comment ids come from "issue comment list"; they are not visible in the Jira UI.
+
+EXAMPLES
+  $ simply atlassian jira issue comment edit PROJ-123 10001 --text "Corrected: staging, not production"
+
+  $ simply atlassian jira issue comment edit PROJ-123 10001 --text "please review" --mention ada@example.com
+
+  $ simply atlassian jira issue comment edit PROJ-123 10001 --text "x" --dry-run
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+
+  --mention=<value>...  Account id, or a name or email to resolve. Repeatable.
+
+    A term matching more than one user is an error listing the candidates, rather than a guess.
+```
+
+_See code: [lib/commands/atlassian/jira/issue/comment/edit.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/edit.js)_
+
+## `simply atlassian jira issue comment list ISSUE`
+
+List an issue's comments.
+
+```
+USAGE
+  $ simply atlassian jira issue comment list ISSUE [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+    [--jira-api-token <value>] [--jira-personal-token <value>] [--limit <value>]
+
+ARGUMENTS
+  ISSUE  Issue key, for example PROJ-123.
+
+FLAGS
+  --limit=<value>  [default: 25] Maximum number of comments to return.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  List an issue's comments.
+
+  Shows one line per comment. Bodies are Atlassian Document Format on Cloud, so the preview column is flattened text;
+  use --json for the unmodified payload.
+
+EXAMPLES
+  $ simply atlassian jira issue comment list PROJ-123
+
+  $ simply atlassian jira issue comment list PROJ-123 --limit 5 --json
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+```
+
+_See code: [lib/commands/atlassian/jira/issue/comment/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/list.js)_
 
 ## `simply atlassian jira issue create`
 
@@ -422,8 +639,8 @@ Move a Jira issue through a workflow transition.
 ```
 USAGE
   $ simply atlassian jira issue transition ISSUE TRANSITION [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
-    [--jira-api-token <value>] [--jira-personal-token <value>] [--dry-run] [--comment <value>] [--body <value> |
-    --body-file <value>]
+    [--jira-api-token <value>] [--jira-personal-token <value>] [--dry-run] [--comment <value>] [--by-name] [--body
+    <value> | --body-file <value>]
 
 ARGUMENTS
   ISSUE       Issue key, for example PROJ-123.
@@ -432,6 +649,7 @@ ARGUMENTS
 FLAGS
   --body=<value>       Raw JSON request body.
   --body-file=<value>  Path to a file holding the raw JSON request body.
+  --by-name            Treat the transition argument as a name even if it is all digits.
   --comment=<value>    Comment to add as part of the transition.
   --dry-run            Print the request that would be sent and exit without sending it.
 
@@ -466,6 +684,10 @@ FLAG DESCRIPTIONS
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+
+  --by-name  Treat the transition argument as a name even if it is all digits.
+
+    A digits-only argument is otherwise taken as an id, which makes a workflow step literally named "41" unreachable.
 ```
 
 _See code: [lib/commands/atlassian/jira/issue/transition.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/transition.js)_
@@ -616,6 +838,96 @@ FLAG DESCRIPTIONS
 ```
 
 _See code: [lib/commands/atlassian/jira/issue/view.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/view.js)_
+
+## `simply atlassian jira user search QUERY`
+
+Find users by name or email.
+
+```
+USAGE
+  $ simply atlassian jira user search QUERY [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+    [--jira-api-token <value>] [--jira-personal-token <value>] [--limit <value>]
+
+ARGUMENTS
+  QUERY  Name or email to search for.
+
+FLAGS
+  --limit=<value>  [default: 20] Maximum number of users to return.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Find users by name or email.
+
+  The account id column is the point of this command: it is what --mention and --assignee need, and it is not something
+  anyone can guess. On Cloud, whether an email address is visible is a per-user privacy setting, so that column is often
+  empty — searching by an email address still works even when it is not shown back.
+
+EXAMPLES
+  $ simply atlassian jira user search ada
+
+  $ simply atlassian jira user search ada@example.com
+
+  $ simply atlassian jira user search ada --json
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+```
+
+_See code: [lib/commands/atlassian/jira/user/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/user/search.js)_
+
+## `simply atlassian jira user view ACCOUNT`
+
+Show one user.
+
+```
+USAGE
+  $ simply atlassian jira user view ACCOUNT [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+    [--jira-api-token <value>] [--jira-personal-token <value>]
+
+ARGUMENTS
+  ACCOUNT  Account id (Cloud) or username (Server/DC).
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Show one user.
+
+  Takes an account id on Cloud, or a username on Server/Data Center — the same distinction the connection settings make.
+  Use "user search" if you have a name rather than an id.
+
+EXAMPLES
+  $ simply atlassian jira user view 70121:8d8e579e-980f-49ed-93ec-0a0d519f60e4
+
+  $ simply atlassian jira user view ada --json
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+```
+
+_See code: [lib/commands/atlassian/jira/user/view.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.1.0/packages/simply-atlassian/lib/commands/atlassian/jira/user/view.js)_
 
 ## `simply atlassian jira whoami`
 
