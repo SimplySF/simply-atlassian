@@ -22,7 +22,7 @@ The Jira client owns the deployment difference:
 | Deployment | Request | Paging |
 | --- | --- | --- |
 | Cloud | `GET /rest/api/3/issue/{key}/changelog` | `startAt` and `maxResults`; response `values`/`isLast` |
-| Server/DC | `GET /rest/api/2/issue/{key}?expand=changelog` | `changelog.histories` is returned in one response |
+| Server/DC | `GET /rest/api/2/issue/{key}/changelog` | `startAt` and `maxResults`; response `values`/`histories`, `total`, and page metadata |
 
 Both paths normalize to `JiraChangelogEntry[]`, where each entry has an id, display-name author,
 creation timestamp, and field-change items. Items retain both string and id forms so the command
@@ -39,7 +39,8 @@ typed HTTP error mapping.
 
 - Cloud client paging is covered through two `/changelog` responses and its `values`/`isLast`
   cursor.
-- Server/DC normalization is covered through an expanded issue with `changelog.histories`.
+- Server/DC paging is covered through two `/changelog` responses, following numeric `startAt`
+  offsets across `histories` pages and using the response `total`.
 - Command tests cover grouped output, case-insensitive field selection, entry limits, JSON-shaped
   normalized output, id fallback, and control-character removal.
 
@@ -48,4 +49,3 @@ typed HTTP error mapping.
 The worktree has no configured live Jira Cloud or Server/DC instance, so live verification against
 a real issue and a target Server/DC version remains for the review/deployment environment. The
 automated tests pin the documented REST response shapes.
-
