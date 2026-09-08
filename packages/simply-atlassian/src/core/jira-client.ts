@@ -385,6 +385,7 @@ export class JiraClient {
           AGILE_BASE,
         ),
       options,
+      (page) => page.issues ?? [],
     );
   }
 
@@ -417,6 +418,7 @@ export class JiraClient {
 }
 
 interface AgilePage {
+  readonly issues?: unknown[];
   readonly values?: unknown[];
   readonly isLast?: boolean;
   readonly total?: number;
@@ -425,6 +427,7 @@ interface AgilePage {
 async function getAllAgile(
   fetchPage: (startAt: number, maxResults: number) => Promise<AgilePage>,
   options: { readonly startAt?: number; readonly maxResults?: number; readonly limit?: number },
+  readItems: (page: AgilePage) => unknown[] = (page) => page.values ?? [],
 ): Promise<JiraAgileResult> {
   const values: unknown[] = [];
   const limit = options.limit ?? Number.POSITIVE_INFINITY;
@@ -437,7 +440,7 @@ async function getAllAgile(
   while (values.length < limit) {
     const page = await fetchPage(startAt, Math.min(pageSize, limit - values.length));
     pages += 1;
-    const pageValues = page.values ?? [];
+    const pageValues = readItems(page);
     values.push(...pageValues);
     total = typeof page.total === 'number' ? page.total : total;
 

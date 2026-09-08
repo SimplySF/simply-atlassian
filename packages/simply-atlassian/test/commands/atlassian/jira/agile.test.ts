@@ -71,7 +71,7 @@ describe('jira agile commands', () => {
   it('lists sprint issues through the shared issue columns', async () => {
     server.route('/rest/agile/1.0/sprint/11/issue', (_req, res) => {
       respondJson(res, 200, {
-        values: [{ key: 'PROJ-1', fields: { summary: 'Fix it', status: { name: 'To Do' } } }],
+        issues: [{ key: 'PROJ-1', fields: { summary: 'Fix it', status: { name: 'To Do' } } }],
         isLast: true,
       });
     });

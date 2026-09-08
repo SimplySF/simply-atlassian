@@ -68,14 +68,20 @@ describe('JiraClient agile endpoints', () => {
     server.route('/rest/agile/1.0/sprint/11/issue', (req, res) => {
       const url = new URL(req.url ?? '/', 'http://127.0.0.1');
       expect(url.searchParams.get('fields')).toBe('summary,status');
-      respondJson(res, 200, { values: [{ key: 'PROJ-1' }], isLast: true });
+      const startAt = Number(url.searchParams.get('startAt'));
+      if (startAt === 0) {
+        respondJson(res, 200, { issues: [{ key: 'PROJ-1' }], total: 2, isLast: false });
+      } else {
+        respondJson(res, 200, { issues: [{ key: 'PROJ-2' }], total: 2, isLast: true });
+      }
     });
 
     expect((await makeClient().getSprints('7', { state: 'active,future' })).values).toEqual([
       { id: 11, name: 'Current' },
     ]);
-    expect((await makeClient().getSprintIssues('11', { fields: ['summary', 'status'] })).values).toEqual([
+    expect((await makeClient().getSprintIssues('11', { fields: ['summary', 'status'], maxResults: 1 })).values).toEqual([
       { key: 'PROJ-1' },
+      { key: 'PROJ-2' },
     ]);
   });
 
