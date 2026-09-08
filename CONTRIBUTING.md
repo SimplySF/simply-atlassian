@@ -14,13 +14,14 @@ Thanks for your interest in contributing to Simply Atlassian! This document cove
 
 ## Repository Structure
 
-This repository is a Lerna monorepo. Today it holds a single package; more will be added as Atlassian
+This repository is a Lerna monorepo holding the CLI package and an MCP server package that wraps it; more will be added as Atlassian
 product coverage (Jira, Confluence, ...) grows. Every package has its own `CONTRIBUTING.md` covering
 what's specific to it — read this file first, then that one.
 
-| Package                                                   | Description         |
-| --------------------------------------------------------- | ------------------- |
-| [`@simplysf/simply-atlassian`](packages/simply-atlassian) | The `atlassian` CLI |
+| Package                                                           | Description                                                      |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------- |
+| [`@simplysf/simply-atlassian`](packages/simply-atlassian)         | The `atlassian` CLI                                              |
+| [`@simplysf/simply-atlassian-mcp`](packages/simply-atlassian-mcp) | MCP server exposing the CLI to AI agents (scaffold, unpublished) |
 
 Tooling:
 
