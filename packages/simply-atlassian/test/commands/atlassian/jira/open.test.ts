@@ -15,6 +15,7 @@
  */
 
 import { spawn } from 'node:child_process';
+import { EventEmitter } from 'node:events';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import JiraOpen from '../../../../src/commands/atlassian/jira/open.js';
 
@@ -95,6 +96,28 @@ describe('jira open', () => {
       ['https://jira.example.gov/browse/PROJ-1'],
       expect.objectContaining({ detached: true, stdio: 'ignore' }),
     );
+    expect(outcome.logged).toEqual(['https://jira.example.gov/browse/PROJ-1']);
+  });
+
+  it('prints when the platform opener emits an error', async () => {
+    const child = Object.assign(new EventEmitter(), { unref: vi.fn() });
+    spawnMock.mockReturnValue(child as never);
+
+    const outcome = await invoke(['PROJ-1']);
+    child.emit('error', new Error('xdg-open unavailable'));
+
+    expect(child.unref).not.toHaveBeenCalled();
+    expect(outcome.logged).toEqual(['https://jira.example.gov/browse/PROJ-1']);
+  });
+
+  it('prints when the platform opener exits unsuccessfully', async () => {
+    const child = Object.assign(new EventEmitter(), { unref: vi.fn() });
+    spawnMock.mockReturnValue(child as never);
+
+    const outcome = await invoke(['PROJ-1']);
+    child.emit('exit', 1);
+
+    expect(child.unref).not.toHaveBeenCalled();
     expect(outcome.logged).toEqual(['https://jira.example.gov/browse/PROJ-1']);
   });
 });

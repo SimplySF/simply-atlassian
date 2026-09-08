@@ -42,7 +42,7 @@ function shouldPrintInsteadOfLaunching(): boolean {
   return process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY;
 }
 
-/** Opens a URL without holding the CLI open, printing it when a browser cannot be launched. */
+/** Opens a URL and prints it when the browser cannot be launched. */
 export function openInBrowser(url: string, options: OpenInBrowserOptions): void {
   if (options.print || shouldPrintInsteadOfLaunching()) {
     options.log(url);
@@ -67,7 +67,6 @@ export function openInBrowser(url: string, options: OpenInBrowserOptions): void 
     child.once('exit', (code) => {
       if (code !== 0) printUrl();
     });
-    child.unref();
   } catch {
     options.log(url);
   }
