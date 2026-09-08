@@ -67,6 +67,12 @@
       "atlassian:jira:issue:link": {
         "description": "Relate issues to one another."
       },
+      "atlassian:jira:board": {
+        "description": "List Jira agile boards."
+      },
+      "atlassian:jira:sprint": {
+        "description": "List sprints, sprint issues, and add issues to sprints."
+      },
       "atlassian:confluence": {
         "description": "Work with Confluence spaces and pages."
       },
