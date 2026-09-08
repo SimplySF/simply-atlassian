@@ -27,6 +27,12 @@ to get skipped, because nothing forces them locally the way `pnpm test` forces t
    directory and commit the result.
 2. **Run `pnpm run build`** for the affected package(s) so `command-snapshot.json` regenerates, and
    commit whatever changes.
+3. **Check the docs site.** The command-reference pages under `site/src/content/docs/reference/`
+   regenerate from the package README at build time (gitignored, nothing to commit), so step 1 is
+   what keeps them current. The guides under `site/src/content/docs/guides/` are hand-written —
+   update the relevant one if the change touches credentials, write safety, or the `--json`/exit-code
+   contract. A new command topic needs a `GROUPS` entry in `site/scripts/sync-command-reference.mjs`,
+   or its commands are skipped with a warning.
 
 CI's `git diff --exit-code` after `pnpm run build` catches a stale `command-snapshot.json`, but there
 is no equivalent check for a stale README — it fails silently (published, just wrong) unless you

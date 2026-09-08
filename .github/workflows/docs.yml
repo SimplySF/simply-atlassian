@@ -1,0 +1,73 @@
+name: docs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'site/**'
+      - 'packages/*/README.md'
+      - 'packages/*/package.json'
+      - '.github/workflows/docs.yml'
+  pull_request:
+    paths:
+      - 'site/**'
+      - 'packages/*/README.md'
+      - 'packages/*/package.json'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/setup@v2
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 'lts/*'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # The command-reference pages are derived from packages/simply-atlassian/README.md by the
+      # site's `sync` script (also run by its prebuild hook); no package build is needed.
+      - run: pnpm --filter site run build
+
+      - name: Check for broken internal links
+        run: |
+          pnpm --filter site run preview &
+          npx --yes wait-on http://localhost:4321/simply-atlassian/
+          pnpm exec linkinator http://localhost:4321/simply-atlassian/ --recurse --skip "^https?://(?!localhost)"
+
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/dist
+
+  deploy:
+    # Auto-deploys on every push to main, or on a manual run explicitly
+    # dispatched against main (still gated to main so a manual run against
+    # some other branch/ref can never publish it to Pages).
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/configure-pages@v5
+      - id: deployment
+        uses: actions/deploy-pages@v4
