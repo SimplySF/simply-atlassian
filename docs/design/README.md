@@ -31,15 +31,15 @@ refactors that keep the public surface identical (though a short doc is welcome 
 
 ## Index
 
-| #    | Title                                                                                             | Status              |
-| ---- | ------------------------------------------------------------------------------------------------- | ------------------- |
-| 0001 | [Atlassian client core (config, auth, HTTP)](0001-atlassian-client-core.md)                       | Implemented (PR #2) |
-| 0002 | [Output conventions and first Jira read commands](0002-output-conventions-first-jira-commands.md) | Implemented (PR #3) |
-| 0003 | [Confluence read commands and page rendering](0003-confluence-read-commands.md)                   | Implemented (PR #4) |
-| 0004 | [Write safety, and Jira issue writes](0004-write-safety-and-jira-issue-writes.md)                 | Implemented (PR #5) |
-| 0005 | [Mentions, user lookup, and comment editing](0005-mentions-user-lookup-and-comment-editing.md)    | Implemented (PR #6) |
-| 0006 | [Relating issues: subtasks and links](0006-relating-issues.md)                                    | Implemented (PR #7) |
-| 0007 | [MCP server wrapping the CLI](0007-mcp-server.md)                                                 | Draft               |
+| #    | Title                                                                                             | Status                    |
+| ---- | ------------------------------------------------------------------------------------------------- | ------------------------- |
+| 0001 | [Atlassian client core (config, auth, HTTP)](0001-atlassian-client-core.md)                       | Implemented (PR #2)       |
+| 0002 | [Output conventions and first Jira read commands](0002-output-conventions-first-jira-commands.md) | Implemented (PR #3)       |
+| 0003 | [Confluence read commands and page rendering](0003-confluence-read-commands.md)                   | Implemented (PR #4)       |
+| 0004 | [Write safety, and Jira issue writes](0004-write-safety-and-jira-issue-writes.md)                 | Implemented (PR #5)       |
+| 0005 | [Mentions, user lookup, and comment editing](0005-mentions-user-lookup-and-comment-editing.md)    | Implemented (PR #6)       |
+| 0006 | [Relating issues: subtasks and links](0006-relating-issues.md)                                    | Implemented (PR #7)       |
+| 0007 | [MCP server wrapping the CLI](0007-mcp-server.md)                                                 | Implemented (PR #10, #11) |
 
 ## Template
 

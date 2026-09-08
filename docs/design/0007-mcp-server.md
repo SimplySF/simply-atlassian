@@ -1,6 +1,6 @@
 # 0007 — MCP server wrapping the CLI
 
-**Status:** Implemented (scaffold PR #10; tools PR #N)
+**Status:** Implemented (scaffold PR #10; tools PR #11)
 **Package:** `packages/simply-atlassian-mcp`
 **Date:** 2026-09-08
 
