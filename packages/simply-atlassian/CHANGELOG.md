@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.2.1](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.2.0...%40simplysf%2Fsimply-atlassian%400.2.1) (2026-09-08)
+
+### Bug Fixes
+
+- **simply-atlassian:** harden output sanitising and unexpected-error handling ([ec4c43d](https://github.com/SimplySF/simply-atlassian/commit/ec4c43d42229ae4b31252ea1f40fa7b86eed841f))
+
 # 0.2.0 (2026-09-08)
 
 ### Features
