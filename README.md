@@ -23,8 +23,14 @@ npm install -g @simplysf/simply-atlassian
 ```
 
 ```sh
-atlassian --help
+simply atlassian --help
 ```
+
+## Documentation
+
+The [documentation site](https://simplysf.github.io/simply-atlassian/) has a getting-started guide, guides to
+credentials, write safety, and scripting, and the full command reference. The same command reference is in the
+[package README](packages/simply-atlassian/README.md#commands).
 
 ## Contributing
 

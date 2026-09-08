@@ -1,0 +1,71 @@
+---
+title: Simply Atlassian
+description: A command-line interface for Jira and Confluence by SimplySF, built to be driven by people, scripts, and agents alike.
+template: splash
+hero:
+  tagline: Jira and Confluence from the command line — search, view, create, update, transition, comment on, and link issues; read Confluence pages. Human-readable by default, raw JSON with --json, and every write takes --dry-run.
+  image:
+    alt: Simply SF logo — a stylized cloud
+    light: ../../assets/logo-full.png
+    dark: ../../assets/logo-full-dark.png
+  # Hero actions are plain frontmatter, not markdown body content, so the
+  # remark-base-links plugin can't rewrite them — the /simply-atlassian prefix
+  # here must be kept in sync with `base` in astro.config.mjs by hand.
+  actions:
+    - text: Get Started
+      link: /simply-atlassian/getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: Command Reference
+      link: /simply-atlassian/reference/
+      icon: open-book
+      variant: secondary
+    - text: View on GitHub
+      link: https://github.com/SimplySF/simply-atlassian
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## What it does
+
+<CardGrid>
+  <Card title="Jira issues" icon="list-format">
+    Search with JQL, view, create, update, transition, and delete issues. [Reference](/reference/jira-issues/)
+  </Card>
+  <Card title="Comments and mentions" icon="comment">
+    List, add, edit, and delete comments, with @-mentions resolved by user lookup.
+    [Reference](/reference/jira-issue-comments/)
+  </Card>
+  <Card title="Issue links and subtasks" icon="random">
+    Relate issues to one another and inspect the link types your instance allows.
+    [Reference](/reference/jira-issue-links/)
+  </Card>
+  <Card title="Users" icon="approve-check">
+    Find users by name or account id, and confirm which account the CLI is acting as.
+    [Reference](/reference/jira-users/)
+  </Card>
+  <Card title="Confluence pages" icon="document">
+    Fetch a page by id or title, search, and list a page's children. [Reference](/reference/confluence-pages/)
+  </Card>
+  <Card title="Scripts and agents" icon="setting">
+    `--json` returns the raw API payload, exit codes are stable, and a read-scoped token makes writes structurally
+    impossible. [Guide](/guides/scripting/)
+  </Card>
+</CardGrid>
+
+## Install
+
+```sh
+npm install -g @simplysf/simply-atlassian
+simply atlassian --help
+```
+
+Then point it at your instance with a few environment variables — see [Credentials](/guides/credentials/).
+
+## Related
+
+Simply Atlassian is one of [SimplySF](https://github.com/SimplySF)'s command-line tools, alongside the
+[Salesforce CLI plugins](https://simplysf.github.io/simply-plugins/) and the
+[Node libraries](https://simplysf.github.io/simply-node/) behind them.
