@@ -33,6 +33,81 @@
   },
   {
     "alias": [],
+    "command": "atlassian:confluence:page:comment:add",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "body",
+      "body-file",
+      "confluence-api-token",
+      "confluence-personal-token",
+      "confluence-url",
+      "confluence-username",
+      "dry-run",
+      "env-file",
+      "json",
+      "text"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:confluence:page:comment:list",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "confluence-api-token",
+      "confluence-personal-token",
+      "confluence-url",
+      "confluence-username",
+      "env-file",
+      "json",
+      "limit"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:confluence:page:create",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "body",
+      "body-file",
+      "confluence-api-token",
+      "confluence-personal-token",
+      "confluence-url",
+      "confluence-username",
+      "dry-run",
+      "env-file",
+      "json",
+      "parent",
+      "space",
+      "text",
+      "title"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:confluence:page:delete",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "confirm",
+      "confluence-api-token",
+      "confluence-personal-token",
+      "confluence-url",
+      "confluence-username",
+      "dry-run",
+      "env-file",
+      "json",
+      "purge"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
     "command": "atlassian:confluence:page:get",
     "flagAliases": [],
     "flagChars": ["e"],
@@ -62,6 +137,26 @@
       "env-file",
       "json",
       "limit"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:confluence:page:update",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "body",
+      "body-file",
+      "confluence-api-token",
+      "confluence-personal-token",
+      "confluence-url",
+      "confluence-username",
+      "dry-run",
+      "env-file",
+      "json",
+      "text",
+      "title"
     ],
     "plugin": "@simplysf/simply-atlassian"
   },

@@ -66,6 +66,45 @@ export class ConfluenceClient {
     });
   }
 
+  public createContent(body: Record<string, unknown>): Promise<unknown> {
+    return this.request('/content', { method: 'POST', body, mutating: true });
+  }
+
+  public updateContent(contentId: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request(`/content/${encodeURIComponent(contentId)}`, { method: 'PUT', body, mutating: true });
+  }
+
+  /**
+   * Deletes content, in one of the two senses Confluence gives that verb.
+   *
+   * A plain delete moves a page to the space trash: it still resolves under `?status=any` with
+   * `status: trashed` and can be restored. Passing `status=trashed` purges it, after which the id
+   * is gone for good. Same endpoint, same method, very different consequence — which is why the
+   * caller states which one it wants rather than the command guessing.
+   */
+  public async deleteContent(contentId: string, options: { purge?: boolean } = {}): Promise<void> {
+    await this.request(`/content/${encodeURIComponent(contentId)}`, {
+      method: 'DELETE',
+      mutating: true,
+      query: { status: options.purge === true ? 'trashed' : undefined },
+    });
+  }
+
+  /**
+   * A comment is content in its own right, not a sub-resource of the page, so it is read from the
+   * page's comment children rather than from a `/comment` path under it.
+   */
+  public getComments(pageId: string, options: { limit?: number; start?: number } = {}): Promise<unknown> {
+    return this.request(`/content/${encodeURIComponent(pageId)}/child/comment`, {
+      method: 'GET',
+      query: {
+        limit: options.limit ?? DEFAULT_LIMIT,
+        start: options.start,
+        expand: 'body.storage,version,history',
+      },
+    });
+  }
+
   public searchPages(cql: string, options: { limit?: number; start?: number } = {}): Promise<unknown> {
     return this.request('/content/search', {
       method: 'GET',

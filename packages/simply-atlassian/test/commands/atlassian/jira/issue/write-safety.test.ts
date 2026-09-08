@@ -20,6 +20,10 @@ import { join } from 'node:path';
 import process from 'node:process';
 import { readdir } from 'node:fs/promises';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import ConfluencePageCommentAdd from '../../../../../src/commands/atlassian/confluence/page/comment/add.js';
+import ConfluencePageCreate from '../../../../../src/commands/atlassian/confluence/page/create.js';
+import ConfluencePageDelete from '../../../../../src/commands/atlassian/confluence/page/delete.js';
+import ConfluencePageUpdate from '../../../../../src/commands/atlassian/confluence/page/update.js';
 import JiraIssueCommentAdd from '../../../../../src/commands/atlassian/jira/issue/comment/add.js';
 import JiraIssueCommentDelete from '../../../../../src/commands/atlassian/jira/issue/comment/delete.js';
 import JiraIssueCommentEdit from '../../../../../src/commands/atlassian/jira/issue/comment/edit.js';
@@ -42,6 +46,10 @@ afterEach(async () => {
   await server.close();
   delete process.env.ATLASSIAN_READ_ONLY;
 });
+
+function confluenceArgv(...extra: string[]): string[] {
+  return ['--confluence-url', server.baseUrl, '--confluence-personal-token', 'pat', ...extra];
+}
 
 function argv(...extra: string[]): string[] {
   return ['--jira-url', server.baseUrl, '--jira-personal-token', 'pat', ...extra];
@@ -79,6 +87,11 @@ describe('the read-only guard', () => {
         JiraIssueCommentAdd.run(argv('P-1', '--text', 't')),
         JiraIssueCommentEdit.run(argv('P-1', '1', '--text', 't')),
         JiraIssueCommentDelete.run(argv('P-1', '1', '--confirm')),
+        // Confluence writes take their own connection flags, so they get their own argv.
+        ConfluencePageCreate.run(confluenceArgv('--space', 'D', '--title', 'T', '--text', 'x')),
+        ConfluencePageUpdate.run(confluenceArgv('123', '--text', 'x')),
+        ConfluencePageDelete.run(confluenceArgv('123')),
+        ConfluencePageCommentAdd.run(confluenceArgv('123', '--text', 'x')),
       ].map(async (attempt) => attempt.catch((caught: unknown) => caught)),
     )) as Failure[];
 
@@ -228,6 +241,10 @@ describe('write-command coverage', () => {
 
     expect(declared.toSorted()).toEqual(
       [
+        'atlassian/confluence/page/comment/add.ts',
+        'atlassian/confluence/page/create.ts',
+        'atlassian/confluence/page/delete.ts',
+        'atlassian/confluence/page/update.ts',
         'atlassian/jira/issue/comment/add.ts',
         'atlassian/jira/issue/comment/delete.ts',
         'atlassian/jira/issue/comment/edit.ts',
