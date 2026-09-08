@@ -1,7 +1,7 @@
 {
   "name": "@simplysf/simply-atlassian-mcp",
   "description": "Model Context Protocol server that exposes the simply-atlassian CLI to AI agents",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "author": "@ClayChipps",
   "homepage": "https://github.com/SimplySF/simply-atlassian",
