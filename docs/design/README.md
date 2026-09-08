@@ -39,6 +39,7 @@ refactors that keep the public surface identical (though a short doc is welcome 
 | 0004 | [Write safety, and Jira issue writes](0004-write-safety-and-jira-issue-writes.md)                 | Implemented (PR #5) |
 | 0005 | [Mentions, user lookup, and comment editing](0005-mentions-user-lookup-and-comment-editing.md)    | Implemented (PR #6) |
 | 0006 | [Relating issues: subtasks and links](0006-relating-issues.md)                                    | Implemented (PR #7) |
+| 0007 | [MCP server wrapping the CLI](0007-mcp-server.md)                                                 | Draft               |
 
 ## Template
 

@@ -47,7 +47,7 @@ const compat = new FlatCompat({
 });
 
 // All published packages; every one carries the same Apache-2.0 header.
-const allPackages = ['packages/simply-atlassian'];
+const allPackages = ['packages/simply-atlassian', 'packages/simply-atlassian-mcp'];
 
 const headerRule = [
   2,
