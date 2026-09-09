@@ -24,3 +24,18 @@ Use the smallest relevant topic document rather than loading the whole directory
 
 The package [README](packages/simply-atlassian/README.md) is the generated user-facing command
 reference. Update command metadata first, then regenerate it as described in `CONTRIBUTING.md`.
+
+## Working conventions
+
+- A new command, user-visible flag/output/error change, or new shared module needs a design document
+  in `docs/design/` **before** implementation, following the process in
+  [docs/design/README.md](docs/design/README.md). After landing, correct the doc to match what
+  shipped and update its `Status` line and index row.
+- Before calling a command or flag change finished, work through the "Pull Requests" checklist in
+  `CONTRIBUTING.md`. Nothing local enforces two of its steps, so they are the ones most often
+  skipped: run `pnpm run readme` in the package and commit the regenerated README, and run
+  `pnpm run build` so `command-snapshot.json` regenerates and commit it. CI catches a stale
+  snapshot but not a stale README.
+- Command copy (summaries, descriptions, examples) lives inline as static class properties on the
+  command classes. There is no `messages/*.md` convention here; SimplySF's Salesforce CLI repos use
+  one via `@salesforce/core`, which does not apply to this project.
