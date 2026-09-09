@@ -55,6 +55,26 @@ describe('TOOLS catalogue', () => {
     expect(destructive.sort()).toEqual(['confluence_page_delete', 'jira_issue_comment_delete', 'jira_issue_delete']);
   });
 
+  /*
+   * The architectural rule is: implement in simply-atlassian-core, then expose through BOTH the
+   * CLI and this server. A capability that lives in core and reaches only the CLI is the failure
+   * mode worth a test — the tool schemas here are a closed allowlist, so a new input silently
+   * fails to reach an agent unless it is declared.
+   */
+  it('exposes Markdown bodies wherever the CLI accepts them', () => {
+    for (const name of ['confluence_page_create', 'confluence_page_update', 'confluence_page_comment_add']) {
+      const tool = TOOLS.find((t) => t.name === name);
+      expect(tool, name).toBeDefined();
+      expect(Object.keys(tool?.inputSchema ?? {}), name).toContain('markdown');
+    }
+  });
+
+  it('exposes append on page update, so an agent can add to a page without rewriting it', () => {
+    const update = TOOLS.find((t) => t.name === 'confluence_page_update');
+
+    expect(Object.keys(update?.inputSchema ?? {})).toContain('append');
+  });
+
   it('only demands confirm from a page delete that purges, matching the CLI', () => {
     const pageDelete = TOOLS.find((tool) => tool.name === 'confluence_page_delete');
     expect(pageDelete?.requiresConfirm?.({ page: '1' })).toBe(false);

@@ -138,6 +138,16 @@ const storageBody = z
   .optional()
   .describe('Body as raw Confluence storage-format XHTML, including Atlassian macro tags.');
 
+const storageMarkdown = z
+  .string()
+  .optional()
+  .describe(
+    'Body as Markdown, converted to storage format. Headings, emphasis, lists, links, tables, ' +
+      'blockquotes and fenced code blocks are supported; anything else — images, raw HTML, task ' +
+      'lists — is refused naming the line, rather than dropped. Confluence macros such as info ' +
+      'panels have no Markdown form: use body for those.',
+  );
+
 const WRITE_SHAPE = { dryRun } as const;
 const DESTRUCTIVE_SHAPE = { dryRun, confirm } as const;
 
@@ -629,6 +639,7 @@ export const TOOLS: readonly ToolSpec[] = [
       parent: z.string().optional().describe('Parent page id or URL; without it the page lands at the space root.'),
       text: storageText,
       body: storageBody,
+      markdown: storageMarkdown,
       ...WRITE_SHAPE,
     },
     run: (ctx, input) => {
@@ -641,7 +652,8 @@ export const TOOLS: readonly ToolSpec[] = [
     name: 'confluence_page_update',
     title: 'Confluence: update a page',
     description:
-      "REPLACE a page's body or title. The version is handled for you: the page is read and the " +
+      "Replace a page's body or title, or add to it with append. The version is handled for you: " +
+      'the page is read and the ' +
       'next version sent, and a conflicting edit by someone else fails rather than overwriting ' +
       'their work. Use dryRun to preview.',
     command: ['atlassian', 'confluence', 'page', 'update'],
@@ -651,6 +663,14 @@ export const TOOLS: readonly ToolSpec[] = [
       title: z.string().optional().describe("New title. Defaults to the page's current title."),
       text: storageText,
       body: storageBody,
+      markdown: storageMarkdown,
+      append: z
+        .boolean()
+        .optional()
+        .describe(
+          'Add the new body to the end of the page instead of replacing it. Use this to add a ' +
+            'section to an existing page — without it the whole body is replaced.',
+        ),
       ...WRITE_SHAPE,
     },
     run: async (ctx, input) => {
@@ -696,7 +716,7 @@ export const TOOLS: readonly ToolSpec[] = [
       'storage-format XHTML. Use dryRun to preview.',
     command: ['atlassian', 'confluence', 'page', 'comment', 'add'],
     kind: 'write',
-    inputSchema: { page: pageRef, text: storageText, body: storageBody, ...WRITE_SHAPE },
+    inputSchema: { page: pageRef, text: storageText, body: storageBody, markdown: storageMarkdown, ...WRITE_SHAPE },
     run: (ctx, input) => {
       const client = ctx.confluence();
       const request = buildPageCommentBody(pageIdForInstance(input.page, ctx.confluenceConfig().url), input);

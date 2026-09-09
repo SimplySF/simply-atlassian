@@ -32,6 +32,17 @@ reference. Update command metadata first, then regenerate it as described in `CO
 
 ## Working conventions
 
+- **Implement functionality in `@simplysf/simply-atlassian-core` first, then expose it through both
+  `simply-atlassian` (the CLI) and `simply-atlassian-mcp`.** The core package holds the behavior;
+  the other two are thin surfaces over it. Putting logic in a command means the MCP server cannot
+  reach it without a second implementation, and two implementations of the same rule drift — which
+  is the problem [0012](docs/design/0012-simply-atlassian-core.md) exists to solve.
+
+  Both surfaces are closed allowlists, so exposing is a real step rather than something that
+  happens for free: a CLI command declares its `flags`, and an MCP tool declares its `inputSchema`.
+  A capability that lives in core and reaches only one of them is the failure worth checking for.
+  Anything touching a terminal, a process, `process.argv`, stdout or stderr stays out of core.
+
 - A new command, user-visible flag/output/error change, or new shared module needs a design document
   in `docs/design/` **before** implementation, following the process in
   [docs/design/README.md](docs/design/README.md). After landing, correct the doc to match what
