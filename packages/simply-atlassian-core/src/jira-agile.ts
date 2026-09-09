@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ConfigError } from './errors.js';
+import { CliError, ConfigError } from './errors.js';
 import { type JiraClient, MAX_ISSUES_PER_SPRINT_MOVE } from './jira-client.js';
 
 /** What `sprint add` reports: the payload it would send, and after sending, how it was sent. */
@@ -61,4 +61,84 @@ export async function addIssuesToSprint(
   if (options.dryRun === true) return { sprint, issues };
   const result = await client.moveIssuesToSprint(sprint, issues);
   return { sprint, issues, ...result };
+}
+
+/** What a sprint create or update accepts. Dates are ISO-8601, as Jira returns them. */
+export interface SprintInput {
+  readonly name?: string;
+  readonly goal?: string;
+  readonly start?: string;
+  readonly end?: string;
+  readonly state?: string;
+}
+
+/** A sprint as the instance reports it. */
+export interface Sprint {
+  readonly id?: number | string;
+  readonly name?: string;
+  readonly state?: string;
+  readonly goal?: string;
+  readonly startDate?: string;
+  readonly endDate?: string;
+  readonly originBoardId?: number | string;
+}
+
+const SPRINT_STATES = new Set(['future', 'active', 'closed']);
+
+/** Jira's own field names, which differ from the flags a person would type. */
+function sprintPayload(input: SprintInput): Record<string, unknown> {
+  const payload: Record<string, unknown> = {};
+  if (input.name !== undefined) payload.name = input.name;
+  if (input.goal !== undefined) payload.goal = input.goal;
+  if (input.start !== undefined) payload.startDate = input.start;
+  if (input.end !== undefined) payload.endDate = input.end;
+  if (input.state !== undefined) payload.state = input.state;
+  return payload;
+}
+
+export function buildSprintCreateBody(boardId: string, input: SprintInput): Record<string, unknown> {
+  if (input.name === undefined || input.name.trim() === '') {
+    throw new ConfigError('A sprint needs a --name.');
+  }
+  assertState(input.state);
+  return { ...sprintPayload(input), originBoardId: Number(boardId) };
+}
+
+/**
+ * Merges an update onto the sprint's current state.
+ *
+ * `POST /sprint/{id}` is a full replacement: Jira clears any field the request omits, so sending
+ * only `--name` would blank the goal and the dates. The sprint is read first and the caller's
+ * changes applied on top — the same fetch-then-write shape as `page update` in 0008, for the same
+ * reason, and the read is what makes a partial flag set safe.
+ */
+export async function prepareSprintUpdate(
+  client: JiraClient,
+  sprintId: string,
+  input: SprintInput,
+): Promise<Record<string, unknown>> {
+  assertState(input.state);
+  if (Object.keys(sprintPayload(input)).length === 0) {
+    throw new ConfigError('Nothing to update. Pass --name, --goal, --start, --end, or --state.');
+  }
+
+  const current = (await client.getSprint(sprintId)) as Sprint;
+  if (current.name === undefined) {
+    throw new CliError(`The instance reported no name for sprint ${sprintId}, so it cannot be updated safely.`);
+  }
+
+  return {
+    name: input.name ?? current.name,
+    ...(current.goal === undefined ? {} : { goal: current.goal }),
+    ...(current.startDate === undefined ? {} : { startDate: current.startDate }),
+    ...(current.endDate === undefined ? {} : { endDate: current.endDate }),
+    ...(current.state === undefined ? {} : { state: current.state }),
+    ...sprintPayload(input),
+  };
+}
+
+function assertState(state: string | undefined): void {
+  if (state !== undefined && !SPRINT_STATES.has(state)) {
+    throw new ConfigError(`Sprint state must be one of ${[...SPRINT_STATES].join(', ')}; got "${state}".`);
+  }
 }

@@ -467,6 +467,75 @@ export class JiraClient {
     await this.request(`/issueLink/${encodeURIComponent(linkId)}`, { method: 'DELETE', mutating: true });
   }
 
+  /**
+   * Lists projects. Cloud paginates `/project/search`; Server/DC answers `GET /project` with the
+   * whole list and no paging, so the deployment difference is absorbed here as it is elsewhere.
+   */
+  public getProjects(options: { startAt?: number; maxResults?: number } = {}): Promise<unknown> {
+    if (this.deployment !== 'cloud') return this.request('/project', { method: 'GET' });
+    return this.request('/project/search', {
+      method: 'GET',
+      query: { startAt: options.startAt, maxResults: options.maxResults },
+    });
+  }
+
+  /**
+   * Lists every field, built-in and custom. Unpaginated on both deployments — a few hundred
+   * entries — which is why there is no limit parameter to pass on.
+   */
+  public getFields(): Promise<unknown> {
+    return this.request('/field', { method: 'GET' });
+  }
+
+  public getProjectVersions(projectKey: string): Promise<unknown> {
+    return this.request(`/project/${encodeURIComponent(projectKey)}/versions`, { method: 'GET' });
+  }
+
+  /** Agile endpoints share a base across deployments, so these use it rather than `apiBase`. */
+  public createSprint(body: Record<string, unknown>): Promise<unknown> {
+    return this.request('/sprint', { method: 'POST', body, mutating: true }, AGILE_BASE);
+  }
+
+  public getSprint(sprintId: string): Promise<unknown> {
+    return this.request(`/sprint/${encodeURIComponent(sprintId)}`, { method: 'GET' }, AGILE_BASE);
+  }
+
+  /**
+   * Updates a sprint. Jira treats `POST /sprint/{id}` as a full replacement and clears anything
+   * the caller omits, so the caller is expected to send the merged result — see
+   * `prepareSprintUpdate`.
+   */
+  public updateSprint(sprintId: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request(
+      `/sprint/${encodeURIComponent(sprintId)}`,
+      { method: 'POST', body, mutating: true },
+      AGILE_BASE,
+    );
+  }
+
+  /**
+   * Remote links: an issue's links to things outside Jira — a Confluence page, a document, a
+   * dashboard. Distinct from `issueLink`, which only ever joins two Jira issues.
+   */
+  public getRemoteLinks(issueKey: string): Promise<unknown> {
+    return this.request(`/issue/${encodeURIComponent(issueKey)}/remotelink`, { method: 'GET' });
+  }
+
+  public createRemoteLink(issueKey: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request(`/issue/${encodeURIComponent(issueKey)}/remotelink`, {
+      method: 'POST',
+      body,
+      mutating: true,
+    });
+  }
+
+  public async deleteRemoteLink(issueKey: string, linkId: string): Promise<void> {
+    await this.request(`/issue/${encodeURIComponent(issueKey)}/remotelink/${encodeURIComponent(linkId)}`, {
+      method: 'DELETE',
+      mutating: true,
+    });
+  }
+
   public getTransitions(issueKey: string): Promise<unknown> {
     return this.request(`/issue/${encodeURIComponent(issueKey)}/transitions`, { method: 'GET' });
   }
