@@ -58,11 +58,19 @@ export class ConfluenceClient {
    * Fetches one page. An empty `expand` list is honoured rather than replaced by the default,
    * so a caller that only wants metadata can avoid paying for the body.
    */
-  public getPage(pageId: string, options: { expand?: string[] } = {}): Promise<unknown> {
+  /**
+   * `status: 'any'` is how a trashed page is read at all: the default filter is
+   * `[current, archived]`, so a plain GET of a trashed id answers 404. Callers that need to know
+   * whether a page is in the trash — `page delete` does — have to ask for it explicitly.
+   */
+  public getPage(pageId: string, options: { expand?: string[]; status?: 'any' } = {}): Promise<unknown> {
     const expand = options.expand ?? ['body.storage', 'version', 'space'];
     return this.request(`/content/${encodeURIComponent(pageId)}`, {
       method: 'GET',
-      query: { expand: expand.length === 0 ? undefined : expand.join(',') },
+      query: {
+        expand: expand.length === 0 ? undefined : expand.join(','),
+        status: options.status,
+      },
     });
   }
 

@@ -19,7 +19,7 @@ import { ConfluenceCommand, writeFlags } from '../../../../shared/base-command.j
 import { resolveStorageBody } from '../../../../shared/confluence-body.js';
 import { CliError, ConfigError, HttpError } from '../../../../core/errors.js';
 import { formatKeyValue } from '../../../../shared/output.js';
-import { pageIdFromInput } from '../../../../shared/atlassian-url.js';
+import { pageIdForInstance } from '../../../../shared/atlassian-url.js';
 
 interface Page {
   readonly id?: string;
@@ -67,7 +67,7 @@ export default class ConfluencePageUpdate extends ConfluenceCommand<typeof Confl
 
   public async run(): Promise<unknown> {
     const client = this.confluence();
-    const pageId = pageIdFromInput(this.args.page);
+    const pageId = pageIdForInstance(this.args.page, this.confluenceConfig().url);
     const body = resolveStorageBody(this.flags);
 
     if (body === undefined && this.flags.title === undefined) {
@@ -82,8 +82,14 @@ export default class ConfluencePageUpdate extends ConfluenceCommand<typeof Confl
       throw new CliError(`The instance reported no version for page ${pageId}, so it cannot be updated safely.`);
     }
 
+    // 0008 covers pages. The instance decides what an id is, and echoing its answer back would
+    // quietly make this a comment editor — which is explicitly deferred to a later doc.
+    if (current.type !== undefined && current.type !== 'page') {
+      throw new ConfigError(`${pageId} is a ${current.type}, not a page. This command only updates pages.`);
+    }
+
     const payload: Record<string, unknown> = {
-      type: current.type ?? 'page',
+      type: 'page',
       title: this.flags.title ?? current.title,
       version: { number: version + 1 },
     };
@@ -101,7 +107,11 @@ export default class ConfluencePageUpdate extends ConfluenceCommand<typeof Confl
     } catch (error) {
       // 409 is the one failure worth naming: it means the page moved under us, which is a
       // different problem from a bad request and has a different fix — read it again and re-apply.
-      if (error instanceof HttpError && error.status === 409) {
+      // Only a version conflict gets the "someone else edited this" wording, and only because
+      // its remedy is to re-run. Confluence answers 409 for other reasons too — a duplicate
+      // title, for one — where re-running reproduces the same failure forever, which for an
+      // agent is an infinite loop. So the instance's own reason is always carried through.
+      if (error instanceof HttpError && error.status === 409 && /version/i.test(error.message)) {
         throw new CliError(
           `Page ${pageId} was changed by someone else while this ran (it is no longer at version ` +
             `${version}). Nothing was written. Re-run to apply your change on top of theirs.`,
@@ -112,7 +122,7 @@ export default class ConfluencePageUpdate extends ConfluenceCommand<typeof Confl
 
     this.log(
       formatKeyValue([
-        ['Updated', updated.id ?? pageId],
+        ['Updated', pageId],
         ['Title', updated.title],
         ['Version', updated.version?.number],
         ['URL', webUrl(updated)],

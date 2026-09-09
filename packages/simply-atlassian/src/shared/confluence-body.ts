@@ -16,6 +16,7 @@
 
 import { readFileSync } from 'node:fs';
 import { ConfigError } from '../core/errors.js';
+import { stripControl } from '../core/text.js';
 
 /** The shape Confluence expects for a page or comment body. */
 export interface StorageBody {
@@ -69,7 +70,11 @@ export function resolveStorageBody(flags: {
  * produce a body Confluence rejects — or worse, silently reinterprets as markup.
  */
 function paragraphs(text: string): string {
-  const blocks = text
+  // Stripped as well as escaped. Escaping stops caller text becoming markup; stripping stops it
+  // carrying terminal escapes or invisible characters into stored content that a later reader —
+  // a person, or a tool without this CLI's hardening — will ingest. This CLI removes exactly this
+  // class on the way out of the API; writing it in unremarked would make the tool the vector.
+  const blocks = stripControl(text)
     .split(/\n{2,}/)
     .map((block) => block.trim())
     .filter((block) => block !== '');

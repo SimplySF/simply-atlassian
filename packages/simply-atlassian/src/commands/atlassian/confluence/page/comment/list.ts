@@ -17,7 +17,7 @@
 import { Args, Flags } from '@oclif/core';
 import { ConfluenceCommand } from '../../../../../shared/base-command.js';
 import { formatTable } from '../../../../../shared/output.js';
-import { pageIdFromInput } from '../../../../../shared/atlassian-url.js';
+import { pageIdForInstance } from '../../../../../shared/atlassian-url.js';
 import { storageToMarkdown } from '../../../../../shared/storage-markdown.js';
 
 interface Comment {
@@ -74,7 +74,7 @@ export default class ConfluencePageCommentList extends ConfluenceCommand<typeof 
   };
 
   public async run(): Promise<unknown> {
-    const pageId = pageIdFromInput(this.args.page);
+    const pageId = pageIdForInstance(this.args.page, this.confluenceConfig().url);
     const response = (await this.confluence().getComments(pageId, {
       limit: this.flags.limit,
     })) as CommentsResponse;
@@ -101,9 +101,12 @@ export default class ConfluencePageCommentList extends ConfluenceCommand<typeof 
       ]),
     );
 
-    const total = response.size;
+    // Typed as a number but arriving from the instance, so it is checked rather than trusted:
+    // a string here would be interpolated straight into stdout, escaping the sanitising every
+    // other field on this path gets. The client guards the same field one file away.
+    const total = typeof response.size === 'number' ? response.size : undefined;
     const scope = total === undefined || total === comments.length ? '' : ` of ${total}`;
-    this.log(`\nShowing ${comments.length}${scope} comment(s).`);
+    this.logSafe(`\nShowing ${comments.length}${scope} comment(s).`);
     return response;
   }
 }

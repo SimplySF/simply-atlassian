@@ -18,7 +18,7 @@ import { Flags } from '@oclif/core';
 import { ConfluenceCommand, writeFlags } from '../../../../shared/base-command.js';
 import { resolveStorageBody } from '../../../../shared/confluence-body.js';
 import { formatKeyValue } from '../../../../shared/output.js';
-import { pageIdFromInput } from '../../../../shared/atlassian-url.js';
+import { pageIdForInstance } from '../../../../shared/atlassian-url.js';
 
 interface CreatedPage {
   readonly id?: string;
@@ -78,7 +78,7 @@ export default class ConfluencePageCreate extends ConfluenceCommand<typeof Confl
       body: body ?? { storage: { value: '', representation: 'storage' } },
     };
     if (this.flags.parent !== undefined) {
-      payload.ancestors = [{ id: pageIdFromInput(this.flags.parent) }];
+      payload.ancestors = [{ id: pageIdForInstance(this.flags.parent, this.confluenceConfig().url) }];
     }
 
     if (this.flags['dry-run']) {

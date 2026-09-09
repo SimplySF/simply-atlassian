@@ -19,7 +19,7 @@ import { ConfluenceCommand, writeFlags } from '../../../../../shared/base-comman
 import { resolveStorageBody } from '../../../../../shared/confluence-body.js';
 import { ConfigError } from '../../../../../core/errors.js';
 import { formatKeyValue } from '../../../../../shared/output.js';
-import { pageIdFromInput } from '../../../../../shared/atlassian-url.js';
+import { pageIdForInstance } from '../../../../../shared/atlassian-url.js';
 
 interface CreatedComment {
   readonly id?: string;
@@ -53,7 +53,7 @@ export default class ConfluencePageCommentAdd extends ConfluenceCommand<typeof C
   };
 
   public async run(): Promise<unknown> {
-    const pageId = pageIdFromInput(this.args.page);
+    const pageId = pageIdForInstance(this.args.page, this.confluenceConfig().url);
     const body = resolveStorageBody(this.flags);
     if (body === undefined) {
       throw new ConfigError('Nothing to post. Pass --text, --body, or --body-file.');
