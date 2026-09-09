@@ -24,6 +24,25 @@ const PAGE_ID_IN_PATH = /\/pages\/(?:viewpage\.action\?pageId=)?(\d+)/;
 /** `?pageId=123456`, the Server/DC viewpage form. */
 const PAGE_ID_IN_QUERY = /[?&]pageId=(\d+)/;
 
+function baseUrlWithoutTrailingSlash(baseUrl: string): string {
+  return baseUrl.replace(/\/+$/, '');
+}
+
+/** Builds the browser URL for a Jira issue. */
+export function issueUrl(baseUrl: string, issueKey: string): string {
+  return `${baseUrlWithoutTrailingSlash(baseUrl)}/browse/${encodeURIComponent(issueKey)}`;
+}
+
+/** Builds the browser URL for a Jira project, using the path shared by Cloud and Server/DC. */
+export function projectUrl(baseUrl: string, projectKey: string): string {
+  return `${baseUrlWithoutTrailingSlash(baseUrl)}/browse/${encodeURIComponent(projectKey)}`;
+}
+
+/** Builds the browser URL for a Confluence page on Cloud or Server/DC. */
+export function pageUrl(baseUrl: string, pageId: string): string {
+  return `${baseUrlWithoutTrailingSlash(baseUrl)}/pages/viewpage.action?pageId=${encodeURIComponent(pageId)}`;
+}
+
 /**
  * Accepts either a bare page id or a page URL, because people copy URLs out of a browser
  * rather than digging out ids — and an agent relaying what a person pasted has the same thing.

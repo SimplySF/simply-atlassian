@@ -40,6 +40,7 @@ refactors that keep the public surface identical (though a short doc is welcome 
 | 0005 | [Mentions, user lookup, and comment editing](0005-mentions-user-lookup-and-comment-editing.md)    | Implemented (PR #6) |
 | 0006 | [Relating issues: subtasks and links](0006-relating-issues.md)                                    | Implemented (PR #7) |
 | 0007 | [MCP server wrapping the CLI](0007-mcp-server.md)                                                 | Draft               |
+| 0010 | [Open Atlassian objects in the browser](0010-open-in-browser.md)                                  | Implemented         |
 
 ## Template
 
