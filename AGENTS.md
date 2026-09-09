@@ -19,6 +19,8 @@ Use the smallest relevant topic document rather than loading the whole directory
   commands, numeric-ID policy, agile pagination, and sprint-write limits.
 - [Open Atlassian objects in the browser](docs/design/0010-open-in-browser.md): `jira open` and
   `confluence open` URL construction, browser-launch and fallback behavior, and output modes.
+- [Jira issue history](docs/design/0011-jira-issue-history.md): changelog paging, completeness
+  reporting, and the split between normalized terminal output and raw JSON across Cloud and Server/DC.
 
 The package [README](packages/simply-atlassian/README.md) is the generated user-facing command
 reference. Update command metadata first, then regenerate it as described in `CONTRIBUTING.md`.

@@ -1,4 +1,4 @@
-# 0007 — Jira issue history
+# 0011 — Jira issue history
 
 **Status:** Implemented
 **Package:** `packages/simply-atlassian`
