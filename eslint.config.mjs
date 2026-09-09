@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2026, Clay Chipps.
+ * Copyright (c) 2026, SimplySF.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,8 +59,8 @@ const headerRule = [
   [
     '',
     {
-      pattern: ' \\* Copyright \\(c\\) \\d{4}, Clay Chipps\\.',
-      template: ' * Copyright (c) 2026, Clay Chipps.',
+      pattern: ' \\* Copyright \\(c\\) \\d{4}, SimplySF\\.',
+      template: ' * Copyright (c) 2026, SimplySF.',
     },
     ' *',
     ' * Licensed under the Apache License, Version 2.0 (the "License");',
