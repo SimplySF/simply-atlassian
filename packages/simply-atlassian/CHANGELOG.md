@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.4.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.3.0...%40simplysf%2Fsimply-atlassian%400.4.0) (2026-09-09)
+
+### Features
+
+- **simply-atlassian:** add Jira agile boards and sprints ([#14](https://github.com/SimplySF/simply-atlassian/issues/14)) ([619f644](https://github.com/SimplySF/simply-atlassian/commit/619f644035b6de55195a2a6e7815a2f469e599f1))
+
 # [0.3.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.2.1...%40simplysf%2Fsimply-atlassian%400.3.0) (2026-09-09)
 
 ### Features
