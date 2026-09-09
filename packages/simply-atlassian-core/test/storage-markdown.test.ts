@@ -15,7 +15,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { storageToMarkdown } from '../../src/shared/storage-markdown.js';
+import { storageToMarkdown } from '../src/storage-markdown.js';
 
 describe('storageToMarkdown', () => {
   it('renders headings at the matching level', () => {

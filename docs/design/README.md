@@ -41,9 +41,10 @@ refactors that keep the public surface identical (though a short doc is welcome 
 | 0006 | [Relating issues: subtasks and links](0006-relating-issues.md)                                    | Implemented (PR #7) |
 | 0007 | [MCP server wrapping the CLI](0007-mcp-server.md)                                                 | Draft               |
 | 0008 | [Confluence writes](0008-confluence-writes.md)                                                    | Draft               |
-| 0009 | [Jira agile boards and sprints](0009-jira-agile-boards-sprints.md)                                 | Implemented         |
+| 0009 | [Jira agile boards and sprints](0009-jira-agile-boards-sprints.md)                                | Implemented         |
 | 0010 | [Open Atlassian objects in the browser](0010-open-in-browser.md)                                  | Implemented         |
 | 0011 | [Jira issue history](0011-jira-issue-history.md)                                                  | Implemented         |
+| 0012 | [Splitting `simply-atlassian-core` out of `simply-atlassian`](0012-simply-atlassian-core.md)      | Phase 1 implemented |
 
 ## Template
 

@@ -18,15 +18,18 @@ import process from 'node:process';
 import { Command, Flags, type Interfaces } from '@oclif/core';
 import {
   type AtlassianConfig,
+  AuthError,
+  CliError,
+  ConfigError,
   type ConfigOverrides,
+  ConfluenceClient,
+  HttpError,
+  JiraClient,
+  loadEnvFile,
   resolveConfluenceConfig,
   resolveJiraConfig,
-} from '../core/config.js';
-import { ConfluenceClient } from '../core/confluence-client.js';
-import { loadEnvFile } from '../core/env-file.js';
-import { AuthError, CliError, ConfigError, HttpError } from '../core/errors.js';
-import { JiraClient } from '../core/jira-client.js';
-import { stripControl } from './output.js';
+  stripControl,
+} from '@simplysf/simply-atlassian-core';
 
 /**
  * Splits a comma-separated flag value, dropping blanks. `--fields ''` and `--fields 'a,'`

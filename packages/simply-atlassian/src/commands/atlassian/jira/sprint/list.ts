@@ -15,9 +15,8 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { ConfigError } from '../../../../core/errors.js';
+import { ConfigError, formatTable } from '@simplysf/simply-atlassian-core';
 import { JiraCommand } from '../../../../shared/base-command.js';
-import { formatTable } from '../../../../shared/output.js';
 
 interface Sprint {
   readonly id?: number | string;

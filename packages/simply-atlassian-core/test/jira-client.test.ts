@@ -15,8 +15,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { AtlassianConfig } from '../../src/core/config.js';
-import { JiraClient } from '../../src/core/jira-client.js';
+import type { AtlassianConfig } from '../src/config.js';
+import { JiraClient } from '../src/jira-client.js';
 import { respondJson, startTestServer, type TestServer } from './support.js';
 
 let server: TestServer;

@@ -18,8 +18,8 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loadEnvFile, parseEnvFile } from '../../src/core/env-file.js';
-import { ConfigError } from '../../src/core/errors.js';
+import { loadEnvFile, parseEnvFile } from '../src/env-file.js';
+import { ConfigError } from '../src/errors.js';
 
 function writeEnv(contents: string): string {
   const path = join(mkdtempSync(join(tmpdir(), 'simply-atlassian-')), '.env');

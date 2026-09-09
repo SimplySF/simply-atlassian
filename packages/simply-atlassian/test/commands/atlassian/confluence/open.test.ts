@@ -68,10 +68,7 @@ describe('confluence open', () => {
   });
 
   it('extracts the page id from a URL', async () => {
-    const outcome = await invoke([
-      'https://example.atlassian.net/wiki/spaces/DOCS/pages/98765/Runbook',
-      '--url',
-    ]);
+    const outcome = await invoke(['https://example.atlassian.net/wiki/spaces/DOCS/pages/98765/Runbook', '--url']);
 
     expect(outcome.logged).toEqual(['https://example.atlassian.net/wiki/pages/viewpage.action?pageId=98765']);
     expect(spawnMock).not.toHaveBeenCalled();

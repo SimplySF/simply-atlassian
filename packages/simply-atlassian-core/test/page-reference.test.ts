@@ -15,7 +15,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { pageIdForInstance, pageIdFromInput } from '../../src/shared/atlassian-url.js';
+import { pageIdForInstance, pageIdFromInput } from '../src/atlassian-url.js';
 
 /*
  * Page-reference ambiguity, kept in its own file rather than appended to atlassian-url.test.ts:

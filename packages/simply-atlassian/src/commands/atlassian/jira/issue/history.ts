@@ -15,9 +15,8 @@
  */
 
 import { Args, Flags } from '@oclif/core';
+import { formatKeyValue, type JiraChangelogEntry, type JiraChangelogItem } from '@simplysf/simply-atlassian-core';
 import { JiraCommand } from '../../../../shared/base-command.js';
-import { formatKeyValue } from '../../../../shared/output.js';
-import type { JiraChangelogEntry, JiraChangelogItem } from '../../../../core/jira-client.js';
 
 const DEFAULT_LIMIT = 50;
 
@@ -58,9 +57,10 @@ export default class JiraIssueHistory extends JiraCommand<typeof JiraIssueHistor
     const visible = { ...result, entries };
 
     if (this.jsonEnabled()) {
-      const rawEntries = field === undefined
-        ? result.rawEntries
-        : result.rawEntries.filter((_entry, index) => touchesField(result.entries[index], field));
+      const rawEntries =
+        field === undefined
+          ? result.rawEntries
+          : result.rawEntries.filter((_entry, index) => touchesField(result.entries[index], field));
       return { rawEntries, total: result.total, complete: result.complete };
     }
 

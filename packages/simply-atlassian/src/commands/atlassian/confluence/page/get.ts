@@ -15,10 +15,8 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { pageIdFromInput } from '../../../../shared/atlassian-url.js';
+import { formatKeyValue, pageIdFromInput, storageToMarkdown, stripControl } from '@simplysf/simply-atlassian-core';
 import { ConfluenceCommand, parseList } from '../../../../shared/base-command.js';
-import { formatKeyValue, stripControl } from '../../../../shared/output.js';
-import { storageToMarkdown } from '../../../../shared/storage-markdown.js';
 
 interface Page {
   readonly id?: string;

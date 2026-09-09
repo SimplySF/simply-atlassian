@@ -49,7 +49,9 @@ just handler bodies.
    codes) at the cost of a process per call and a dependency on the binary being installed.
    Importing the library is faster and type-safe but means re-deriving the command layer's
    behavior (flag defaults, output curation, write guards) in a second place, or extracting it into
-   a shared module first.
+   a shared module first. _[0012](0012-simply-atlassian-core.md) does that extraction: the client
+   layer moved to `@simplysf/simply-atlassian-core` in its phase 1, and the command layer follows
+   in phase 2 so this server can import rather than spawn._
 2. **Tool granularity.** One tool per CLI command (21 today) mirrors the CLI exactly and keeps
    `--help` text reusable as tool descriptions, but is a large tool list for a host to present. A
    smaller set of composite tools (`jira_issue` with an `action` argument) is friendlier to hosts

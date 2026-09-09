@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ConfigError } from '../core/errors.js';
+import { ConfigError } from './errors.js';
 
 const BARE_PAGE_ID = /^\d+$/;
 

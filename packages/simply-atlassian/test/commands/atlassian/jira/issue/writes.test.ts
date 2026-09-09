@@ -19,7 +19,7 @@ import JiraIssueCreate from '../../../../../src/commands/atlassian/jira/issue/cr
 import JiraIssueTransition from '../../../../../src/commands/atlassian/jira/issue/transition.js';
 import JiraIssueTransitions from '../../../../../src/commands/atlassian/jira/issue/transitions.js';
 import JiraIssueUpdate from '../../../../../src/commands/atlassian/jira/issue/update.js';
-import { respondJson, startTestServer, type TestServer } from '../../../../core/support.js';
+import { respondJson, startTestServer, type TestServer } from '../../../../support.js';
 
 let server: TestServer;
 

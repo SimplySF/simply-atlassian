@@ -20,7 +20,7 @@ import JiraIssueCommentAdd from '../../../../../../src/commands/atlassian/jira/i
 import JiraIssueCommentDelete from '../../../../../../src/commands/atlassian/jira/issue/comment/delete.js';
 import JiraIssueCommentEdit from '../../../../../../src/commands/atlassian/jira/issue/comment/edit.js';
 import JiraIssueCommentList from '../../../../../../src/commands/atlassian/jira/issue/comment/list.js';
-import { respondJson, startTestServer, type TestServer } from '../../../../../core/support.js';
+import { respondJson, startTestServer, type TestServer } from '../../../../../support.js';
 
 let server: TestServer;
 

@@ -15,11 +15,14 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { ConfigError } from '../../../../../core/errors.js';
+import {
+  appendMentions,
+  ConfigError,
+  formatKeyValue,
+  parseBodyInput,
+  resolveMentions,
+} from '@simplysf/simply-atlassian-core';
 import { JiraCommand, writeFlags } from '../../../../../shared/base-command.js';
-import { parseBodyInput } from '../../../../../shared/json-input.js';
-import { appendMentions, resolveMentions } from '../../../../../shared/mentions.js';
-import { formatKeyValue } from '../../../../../shared/output.js';
 
 interface Comment {
   readonly id?: string;

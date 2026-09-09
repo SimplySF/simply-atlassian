@@ -15,11 +15,8 @@
  */
 
 import { Args, Flags } from '@oclif/core';
+import { ConfigError, formatKeyValue, pageIdForInstance, resolveStorageBody } from '@simplysf/simply-atlassian-core';
 import { ConfluenceCommand, writeFlags } from '../../../../../shared/base-command.js';
-import { resolveStorageBody } from '../../../../../shared/confluence-body.js';
-import { ConfigError } from '../../../../../core/errors.js';
-import { formatKeyValue } from '../../../../../shared/output.js';
-import { pageIdForInstance } from '../../../../../shared/atlassian-url.js';
 
 interface CreatedComment {
   readonly id?: string;

@@ -15,7 +15,7 @@
  */
 
 import { Args } from '@oclif/core';
-import { ConfigError } from '../../../../../core/errors.js';
+import { ConfigError } from '@simplysf/simply-atlassian-core';
 import { confirmFlag, JiraCommand, writeFlags } from '../../../../../shared/base-command.js';
 
 export default class JiraIssueCommentDelete extends JiraCommand<typeof JiraIssueCommentDelete> {

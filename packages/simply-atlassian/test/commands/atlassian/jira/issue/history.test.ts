@@ -15,10 +15,10 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { AtlassianConfig } from '../../../../../src/core/config.js';
-import { JiraClient } from '../../../../../src/core/jira-client.js';
+import type { AtlassianConfig } from '@simplysf/simply-atlassian-core';
+import { JiraClient } from '@simplysf/simply-atlassian-core';
 import JiraIssueHistory from '../../../../../src/commands/atlassian/jira/issue/history.js';
-import { respondJson, startTestServer, type TestServer } from '../../../../core/support.js';
+import { respondJson, startTestServer, type TestServer } from '../../../../support.js';
 
 let server: TestServer;
 
@@ -50,20 +50,22 @@ describe('jira issue history', () => {
   it('renders grouped entries oldest first and strips control characters', async () => {
     server.route('/rest/api/2/issue/PROJ-1', (_req, res) => {
       respondJson(res, 200, {
-        changelog: { histories: [
-          {
-            id: '2',
-            author: { displayName: 'New\u001b[31m' },
-            created: '2026-09-08T02:00:00.000Z',
-            items: [{ field: 'summary', from: 'old\u0007', to: 'new' }],
-          },
-          {
-            id: '1',
-            author: { displayName: 'Old' },
-            created: '2026-09-08T01:00:00.000Z',
-            items: [{ field: 'status', fromString: 'Open', toString: 'Done', from: '1', to: '5' }],
-          },
-        ] },
+        changelog: {
+          histories: [
+            {
+              id: '2',
+              author: { displayName: 'New\u001b[31m' },
+              created: '2026-09-08T02:00:00.000Z',
+              items: [{ field: 'summary', from: 'old\u0007', to: 'new' }],
+            },
+            {
+              id: '1',
+              author: { displayName: 'Old' },
+              created: '2026-09-08T01:00:00.000Z',
+              items: [{ field: 'status', fromString: 'Open', toString: 'Done', from: '1', to: '5' }],
+            },
+          ],
+        },
       });
     });
 
@@ -88,20 +90,22 @@ describe('jira issue history', () => {
   it('filters entries by field case-insensitively', async () => {
     server.route('/rest/api/2/issue/PROJ-1', (_req, res) => {
       respondJson(res, 200, {
-        changelog: { histories: [
-          {
-            id: '1',
-            author: { displayName: 'Alice' },
-            created: '2026-09-08T01:00:00.000Z',
-            items: [{ field: 'status', fromString: 'Open', toString: 'Done' }],
-          },
-          {
-            id: '2',
-            author: { displayName: 'Bob' },
-            created: '2026-09-08T02:00:00.000Z',
-            items: [{ field: 'assignee', from: null, to: 'bob' }],
-          },
-        ] },
+        changelog: {
+          histories: [
+            {
+              id: '1',
+              author: { displayName: 'Alice' },
+              created: '2026-09-08T01:00:00.000Z',
+              items: [{ field: 'status', fromString: 'Open', toString: 'Done' }],
+            },
+            {
+              id: '2',
+              author: { displayName: 'Bob' },
+              created: '2026-09-08T02:00:00.000Z',
+              items: [{ field: 'assignee', from: null, to: 'bob' }],
+            },
+          ],
+        },
       });
     });
 

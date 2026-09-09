@@ -20,7 +20,7 @@ import ConfluencePageCommentList from '../../../../../src/commands/atlassian/con
 import ConfluencePageCreate from '../../../../../src/commands/atlassian/confluence/page/create.js';
 import ConfluencePageDelete from '../../../../../src/commands/atlassian/confluence/page/delete.js';
 import ConfluencePageUpdate from '../../../../../src/commands/atlassian/confluence/page/update.js';
-import { respondJson, startTestServer, type TestServer } from '../../../../core/support.js';
+import { respondJson, startTestServer, type TestServer } from '../../../../support.js';
 
 let server: TestServer;
 

@@ -40,10 +40,9 @@ afterEach(() => {
 
 async function invoke(extra: string[]): Promise<{ logged: string[]; result: unknown }> {
   const logged: string[] = [];
-  const command = new JiraOpen(
-    ['--jira-url', 'https://jira.example.gov', '--jira-personal-token', 'pat', ...extra],
-    { runHook: async () => ({ successes: [], failures: [] }) } as never,
-  );
+  const command = new JiraOpen(['--jira-url', 'https://jira.example.gov', '--jira-personal-token', 'pat', ...extra], {
+    runHook: async () => ({ successes: [], failures: [] }),
+  } as never);
   command.log = (message?: string): void => {
     logged.push(String(message));
   };

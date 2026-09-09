@@ -15,9 +15,8 @@
  */
 
 import { Args, Flags } from '@oclif/core';
+import { describeLinkFromIssue, formatTable, type IssueLink } from '@simplysf/simply-atlassian-core';
 import { JiraCommand } from '../../../../../shared/base-command.js';
-import { describeLinkFromIssue, type IssueLink } from '../../../../../shared/issue-links.js';
-import { formatTable } from '../../../../../shared/output.js';
 
 interface IssueWithLinks {
   readonly fields?: { readonly issuelinks?: IssueLink[] };

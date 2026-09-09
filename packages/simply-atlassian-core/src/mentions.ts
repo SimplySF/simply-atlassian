@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { ConfigError } from '../core/errors.js';
-import { stripControl, stripControlOneLine } from '../core/text.js';
-import type { JiraClient } from '../core/jira-client.js';
+import { ConfigError } from './errors.js';
+import { stripControl, stripControlOneLine } from './text.js';
+import type { JiraClient } from './jira-client.js';
 
 /** Enough of Jira's user shape to identify a person and tell two candidates apart. */
 interface JiraUser {

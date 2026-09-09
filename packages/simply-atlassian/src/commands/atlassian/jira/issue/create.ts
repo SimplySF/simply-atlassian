@@ -15,10 +15,8 @@
  */
 
 import { Flags } from '@oclif/core';
+import { ConfigError, formatKeyValue, mergeFields, parseBodyInput } from '@simplysf/simply-atlassian-core';
 import { JiraCommand, writeFlags } from '../../../../shared/base-command.js';
-import { mergeFields, parseBodyInput } from '../../../../shared/json-input.js';
-import { formatKeyValue } from '../../../../shared/output.js';
-import { ConfigError } from '../../../../core/errors.js';
 
 interface CreatedIssue {
   readonly key?: string;

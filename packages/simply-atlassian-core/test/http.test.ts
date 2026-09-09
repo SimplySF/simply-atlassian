@@ -15,8 +15,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { AuthError, HttpError, NetworkError } from '../../src/core/errors.js';
-import { HttpTransport, type TransportTarget } from '../../src/core/http.js';
+import { AuthError, HttpError, NetworkError } from '../src/errors.js';
+import { HttpTransport, type TransportTarget } from '../src/http.js';
 import { respondJson, startTestServer, type TestServer } from './support.js';
 
 let server: TestServer;

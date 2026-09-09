@@ -15,10 +15,8 @@
  */
 
 import { Args, Flags } from '@oclif/core';
+import { ConfigError, mergeFields, parseBodyInput, stripControlOneLine } from '@simplysf/simply-atlassian-core';
 import { JiraCommand, writeFlags } from '../../../../shared/base-command.js';
-import { mergeFields, parseBodyInput } from '../../../../shared/json-input.js';
-import { ConfigError } from '../../../../core/errors.js';
-import { stripControlOneLine } from '../../../../core/text.js';
 
 /** How many transitions an error lists before summarising the rest. */
 const MAX_LISTED = 20;
