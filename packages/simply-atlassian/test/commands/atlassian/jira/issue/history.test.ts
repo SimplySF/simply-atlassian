@@ -106,6 +106,32 @@ describe('jira issue history', () => {
     expect(logged.join('\n')).not.toContain('Bob');
   });
 
+  it('warns when Server/DC caps the expanded changelog', async () => {
+    server.route('/rest/api/2/issue/PROJ-1', (_req, res) => {
+      respondJson(res, 200, {
+        changelog: {
+          total: 3,
+          histories: [
+            { id: '1', author: { displayName: 'Alice' }, created: '2026-09-08T01:00:00.000Z', items: [] },
+            { id: '2', author: { displayName: 'Bob' }, created: '2026-09-08T02:00:00.000Z', items: [] },
+          ],
+        },
+      });
+    });
+
+    const logged: string[] = [];
+    const command = new JiraIssueHistory(argv('PROJ-1'), {
+      runHook: async () => ({ successes: [], failures: [] }),
+    } as never);
+    command.log = (message?: string): void => {
+      logged.push(String(message));
+    };
+    await command.init();
+    await command.run();
+
+    expect(logged).toContain('Warning: history is incomplete; Jira could not retrieve all changelog entries.');
+  });
+
   it('caps entries and returns raw changelog data for JSON callers', async () => {
     server.route('/rest/api/2/issue/PROJ-1', (_req, res) => {
       respondJson(res, 200, {

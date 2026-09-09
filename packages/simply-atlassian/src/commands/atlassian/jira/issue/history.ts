@@ -63,6 +63,10 @@ export default class JiraIssueHistory extends JiraCommand<typeof JiraIssueHistor
         : result.rawEntries.filter((_entry, index) => touchesField(result.entries[index], field));
     }
 
+    if (!result.complete) {
+      this.log('Warning: history is incomplete; Jira could not retrieve all changelog entries.');
+    }
+
     if (entries.length === 0) {
       this.log(field === undefined ? 'No history entries found.' : `No history entries changed ${field}.`);
       return visible;
