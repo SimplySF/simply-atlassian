@@ -15,7 +15,14 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { formatKeyValue, type JiraChangelogEntry, type JiraChangelogItem } from '@simplysf/simply-atlassian-core';
+import {
+  changelogJson,
+  compareCreated,
+  filterChangelog,
+  formatKeyValue,
+  type JiraChangelogItem,
+  normalizeField,
+} from '@simplysf/simply-atlassian-core';
 import { JiraCommand } from '../../../../shared/base-command.js';
 
 const DEFAULT_LIMIT = 50;
@@ -52,17 +59,12 @@ export default class JiraIssueHistory extends JiraCommand<typeof JiraIssueHistor
 
   public async run(): Promise<unknown> {
     const result = await this.jira().getAllChangelog(this.args.issue, this.flags.limit);
+    const filtered = filterChangelog(result, this.flags.field);
     const field = normalizeField(this.flags.field);
-    const entries = field === undefined ? result.entries : result.entries.filter((entry) => touchesField(entry, field));
+    const { entries } = filtered;
     const visible = { ...result, entries };
 
-    if (this.jsonEnabled()) {
-      const rawEntries =
-        field === undefined
-          ? result.rawEntries
-          : result.rawEntries.filter((_entry, index) => touchesField(result.entries[index], field));
-      return { rawEntries, total: result.total, complete: result.complete };
-    }
+    if (this.jsonEnabled()) return changelogJson(filtered);
 
     if (!result.complete) {
       this.log('Warning: history is incomplete; Jira could not retrieve all changelog entries.');
@@ -82,19 +84,6 @@ export default class JiraIssueHistory extends JiraCommand<typeof JiraIssueHistor
 
     return visible;
   }
-}
-
-function normalizeField(field: string | undefined): string | undefined {
-  const normalized = field?.trim().toLowerCase();
-  return normalized === '' ? undefined : normalized;
-}
-
-function touchesField(entry: JiraChangelogEntry, field: string): boolean {
-  return entry.items.some((item) => item.field.toLowerCase() === field);
-}
-
-function compareCreated(left: JiraChangelogEntry, right: JiraChangelogEntry): number {
-  return (left.created ?? '').localeCompare(right.created ?? '');
 }
 
 function formatChange(item: JiraChangelogItem): string {

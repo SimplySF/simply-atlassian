@@ -27,7 +27,12 @@ import {
   JiraClient,
   loadEnvFile,
   resolveConfluenceConfig,
+  assertWritesAllowed,
+  collectSecrets,
+  redactSecrets,
   resolveJiraConfig,
+  sanitiseDeep,
+  SECRET_ENV,
   stripControl,
 } from '@simplysf/simply-atlassian-core';
 
@@ -52,74 +57,23 @@ const SECRET_FLAGS = new Set([
   'confluence-api-token',
   'confluence-personal-token',
 ]);
-const SECRET_ENV = ['JIRA_API_TOKEN', 'JIRA_PERSONAL_TOKEN', 'CONFLUENCE_API_TOKEN', 'CONFLUENCE_PERSONAL_TOKEN'];
 
 /**
- * Blanks out any credential that could otherwise ride along in an error message. Values are
- * collected from the process arguments and environment rather than parsed flags, because the
- * errors most likely to echo an argument are the ones thrown before parsing finishes.
+ * Every credential that could otherwise ride along in an error message. Values are collected
+ * from the process arguments and environment rather than parsed flags, because the errors most
+ * likely to echo an argument are the ones thrown before parsing finishes. The redaction itself
+ * is the core package's, shared with the MCP server; only the argv half is this CLI's.
  */
-function redactSecrets(message: string): string {
-  const secrets = new Set<string>();
-  const remember = (value: string | undefined): void => {
-    // Short values would mangle unrelated text; real tokens are far longer than this.
-    if (value !== undefined && value.length >= 8) secrets.add(value);
-  };
-
+function secrets(): Set<string> {
+  const values: Array<string | undefined> = [];
   const argv = process.argv;
   for (const [index, arg] of argv.entries()) {
-    if (arg.startsWith('--') && SECRET_FLAGS.has(arg.slice(2))) remember(argv[index + 1]);
+    if (arg.startsWith('--') && SECRET_FLAGS.has(arg.slice(2))) values.push(argv[index + 1]);
     const inline = /^--([a-z-]+)=(.+)$/.exec(arg);
-    if (inline?.[1] !== undefined && SECRET_FLAGS.has(inline[1])) remember(inline[2]);
+    if (inline?.[1] !== undefined && SECRET_FLAGS.has(inline[1])) values.push(inline[2]);
   }
-  for (const name of SECRET_ENV) remember(process.env[name]);
-
-  let redacted = message;
-  for (const secret of secrets) redacted = redacted.replaceAll(secret, '<redacted>');
-  return redacted;
-}
-
-/**
- * Applies the same guards to a response body that the error message already gets.
- *
- * `message` was redacted and stripped while `body` — the same bytes from the same response —
- * went out untouched, which is a credential disclosure whenever the far side echoes the token
- * back: a captive portal, a proxy, or an agency gateway does exactly that. `JSON.stringify`
- * escapes C0 but not C1, U+2028/U+2029, or the invisible ranges, so a hostile body also reached
- * an agent's context with live escape sequences intact.
- *
- * Recursive because the body is arbitrary server JSON — Jira nests its messages under
- * `errorMessages` and `errors` — so guarding only a top-level string would miss the common case.
- */
-function sanitiseDeep(value: unknown, depth = 0): unknown {
-  // The body comes from the instance, so the walk is bounded rather than trusted to be shallow.
-  if (depth > 12) return undefined;
-  if (typeof value === 'string') return stripControl(redactSecrets(value));
-  if (Array.isArray(value)) return value.map((item) => sanitiseDeep(item, depth + 1));
-  if (typeof value === 'object' && value !== null) {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [stripControl(key), sanitiseDeep(item, depth + 1)]),
-    );
-  }
-  return value;
-}
-
-/**
- * Refuses a write when the environment says this context does not write.
- *
- * A guardrail, not a security boundary: an agent with shell access can unset the variable. It
- * exists for the different and real problem of a person, or an agent, running against the wrong
- * credentials or in the wrong context. The boundary that actually binds is a read-scoped
- * Atlassian token, which makes the instance refuse the write server-side.
- */
-export function assertWritesAllowed(): void {
-  const raw = process.env.ATLASSIAN_READ_ONLY;
-  if (raw !== undefined && TRUTHY.has(raw.trim().toLowerCase())) {
-    throw new ConfigError(
-      'ATLASSIAN_READ_ONLY is set, so this context does not make changes. Unset it, or pass a ' +
-        'credential file that is meant for writing, to proceed.',
-    );
-  }
+  for (const name of SECRET_ENV) values.push(process.env[name]);
+  return collectSecrets(values);
 }
 
 /** Names the failure for a machine reader: our own errors keep their class name. */
@@ -127,8 +81,6 @@ function errorName(error: unknown, oclifExit: number | undefined): string {
   if (error instanceof CliError) return error.name;
   return oclifExit === undefined ? 'Error' : 'UsageError';
 }
-
-const TRUTHY = new Set(['1', 'true', 'yes', 'on']);
 
 /**
  * Flags every write command shares, defined once so the wording cannot drift between them.
@@ -315,7 +267,8 @@ export abstract class AtlassianCommand<T extends typeof Command> extends Command
     // precisely, and flattening that runs the ids together. Server-supplied text is made
     // single-line where it is interpolated instead — see `formatSnippet` in core/http.ts and
     // the `describe` helpers in shared/mentions.ts and shared/issue-links.ts.
-    const message = stripControl(redactSecrets(error.message));
+    const redact = secrets();
+    const message = stripControl(redactSecrets(error.message, redact));
 
     if (this.jsonEnabled()) {
       // Written straight to the stream: oclif silences this.log/logToStderr under --json.
@@ -325,7 +278,7 @@ export abstract class AtlassianCommand<T extends typeof Command> extends Command
             name: errorName(error, oclifExit),
             message,
             exitCode,
-            ...(error instanceof HttpError ? { status: error.status, body: sanitiseDeep(error.body) } : {}),
+            ...(error instanceof HttpError ? { status: error.status, body: sanitiseDeep(error.body, redact) } : {}),
             ...(error instanceof AuthError ? { status: error.status } : {}),
           },
         })}\n`,
@@ -354,7 +307,7 @@ export abstract class AtlassianCommand<T extends typeof Command> extends Command
     // Redacted as well as stripped. `--body-file` reads any readable path and `--dry-run` prints
     // what would be sent, so a caller who points it at a `.env` by mistake would otherwise put a
     // live token on stdout — and, without --dry-run, onto a page other people load.
-    this.log(stripControl(redactSecrets(message)));
+    this.log(stripControl(redactSecrets(message, secrets())));
   }
 
   /** Narrowed accessor so subclasses read flags without casting at every use. */

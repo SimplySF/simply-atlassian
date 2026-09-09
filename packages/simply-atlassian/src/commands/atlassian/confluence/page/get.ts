@@ -15,32 +15,26 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { formatKeyValue, pageIdFromInput, storageToMarkdown, stripControl } from '@simplysf/simply-atlassian-core';
+import {
+  BODY_FORMATS,
+  type BodyFormat,
+  type ConfluencePageSummary,
+  formatKeyValue,
+  pageExpand,
+  pageIdFromInput,
+  renderPageBody,
+  stripControl,
+  webUrl,
+} from '@simplysf/simply-atlassian-core';
 import { ConfluenceCommand, parseList } from '../../../../shared/base-command.js';
 
-interface Page {
-  readonly id?: string;
-  readonly title?: string;
-  readonly type?: string;
-  readonly status?: string;
+interface Page extends ConfluencePageSummary {
   readonly space?: { readonly key?: string; readonly name?: string };
   readonly version?: {
     readonly number?: number;
     readonly when?: string;
     readonly by?: { readonly displayName?: string };
   };
-  readonly body?: { readonly storage?: { readonly value?: string } };
-  readonly _links?: { readonly base?: string; readonly webui?: string };
-}
-
-const BODY_FORMATS = ['markdown', 'storage', 'none'] as const;
-
-/** Confluence returns the browser URL split across two fields. */
-function webUrl(page: Page): string | undefined {
-  /* eslint-disable-next-line no-underscore-dangle -- Atlassian's field name */
-  const links = page._links;
-  if (links?.base === undefined || links.webui === undefined) return undefined;
-  return `${links.base}${links.webui}`;
 }
 
 export default class ConfluencePageGet extends ConfluenceCommand<typeof ConfluencePageGet> {
@@ -78,11 +72,8 @@ export default class ConfluencePageGet extends ConfluenceCommand<typeof Confluen
 
   public async run(): Promise<unknown> {
     const pageId = pageIdFromInput(this.args.page);
-    const format = this.flags['body-format'];
-
-    // 'none' skips the body expansion entirely rather than fetching and discarding it.
-    const expand =
-      parseList(this.flags.expand) ?? (format === 'none' ? ['version', 'space'] : ['body.storage', 'version', 'space']);
+    const format = this.flags['body-format'] as BodyFormat;
+    const expand = pageExpand(format, parseList(this.flags.expand));
 
     const page = (await this.confluence().getPage(pageId, { expand })) as Page;
 
@@ -100,11 +91,8 @@ export default class ConfluencePageGet extends ConfluenceCommand<typeof Confluen
       ]),
     );
 
-    const storage = page.body?.storage?.value;
-    if (format !== 'none' && storage !== undefined && storage.trim() !== '') {
-      const rendered = format === 'storage' ? storage : storageToMarkdown(storage);
-      this.log(`\n---\n\n${stripControl(rendered)}`);
-    }
+    const rendered = renderPageBody(page.body?.storage?.value, format);
+    if (rendered !== undefined) this.log(`\n---\n\n${stripControl(rendered)}`);
 
     return page;
   }

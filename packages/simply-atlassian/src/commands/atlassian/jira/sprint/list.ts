@@ -15,7 +15,7 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { ConfigError, formatTable } from '@simplysf/simply-atlassian-core';
+import { formatTable, numericId } from '@simplysf/simply-atlassian-core';
 import { JiraCommand } from '../../../../shared/base-command.js';
 
 interface Sprint {
@@ -72,11 +72,4 @@ export default class JiraSprintList extends JiraCommand<typeof JiraSprintList> {
     this.log(`\nShowing ${sprints.length} sprint(s).`);
     return result;
   }
-}
-
-export function numericId(label: string, value: string): string {
-  if (!/^\d+$/.test(value)) {
-    throw new ConfigError(`${label} id must be numeric; Jira agile commands do not resolve names yet: ${value}`);
-  }
-  return value;
 }

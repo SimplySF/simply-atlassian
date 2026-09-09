@@ -15,13 +15,7 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import {
-  appendMentions,
-  ConfigError,
-  formatKeyValue,
-  parseBodyInput,
-  resolveMentions,
-} from '@simplysf/simply-atlassian-core';
+import { buildCommentEditBody, formatKeyValue, parseBodyInput } from '@simplysf/simply-atlassian-core';
 import { JiraCommand, writeFlags } from '../../../../../shared/base-command.js';
 
 interface Comment {
@@ -66,23 +60,11 @@ export default class JiraIssueCommentEdit extends JiraCommand<typeof JiraIssueCo
     const client = this.jira();
     const { issue, comment } = this.args;
 
-    let body = parseBodyInput(this.flags.body, this.flags['body-file']) ?? {};
-    if (this.flags.text !== undefined) body.body = client.descriptionValue(this.flags.text);
-
-    // An edit replaces the body, so mentions alone would post a bare mention over whatever the
-    // comment said. Refusing is the only safe reading: nobody asks to edit a comment down to
-    // nothing but a name.
-    if (body.body === undefined) {
-      throw new ConfigError(
-        this.flags.mention === undefined
-          ? `Nothing to change on comment ${comment}. Pass --text, or a body.`
-          : 'An edit replaces the comment, so --mention alone would erase its text. Pass --text as well.',
-      );
-    }
-
-    if (this.flags.mention !== undefined) {
-      body = appendMentions(client, body, await resolveMentions(client, this.flags.mention));
-    }
+    const body = await buildCommentEditBody(client, comment, {
+      body: parseBodyInput(this.flags.body, this.flags['body-file']),
+      text: this.flags.text,
+      mentions: this.flags.mention,
+    });
 
     if (this.flags['dry-run']) {
       this.log('Dry run — not sent. Request body:');

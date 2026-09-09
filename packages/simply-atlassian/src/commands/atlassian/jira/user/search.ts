@@ -15,16 +15,8 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { formatTable } from '@simplysf/simply-atlassian-core';
+import { formatTable, userList } from '@simplysf/simply-atlassian-core';
 import { JiraCommand } from '../../../../shared/base-command.js';
-
-interface JiraUser {
-  readonly accountId?: string;
-  readonly name?: string;
-  readonly displayName?: string;
-  readonly emailAddress?: string;
-  readonly active?: boolean;
-}
 
 export default class JiraUserSearch extends JiraCommand<typeof JiraUserSearch> {
   public static override readonly summary = 'Find users by name or email.';
@@ -52,9 +44,8 @@ export default class JiraUserSearch extends JiraCommand<typeof JiraUserSearch> {
   };
 
   public async run(): Promise<unknown> {
-    const response = (await this.jira().searchUsers(this.args.query, this.flags.limit)) as
-      JiraUser[] | { values?: JiraUser[] };
-    const users = Array.isArray(response) ? response : (response.values ?? []);
+    const response = await this.jira().searchUsers(this.args.query, this.flags.limit);
+    const users = userList(response);
 
     if (users.length === 0) {
       this.log(`No users match "${this.args.query}".`);

@@ -15,7 +15,7 @@
  */
 
 import { Flags } from '@oclif/core';
-import { ConfigError, formatKeyValue, mergeFields, parseBodyInput } from '@simplysf/simply-atlassian-core';
+import { browseUrl, buildCreateIssueBody, formatKeyValue, parseBodyInput } from '@simplysf/simply-atlassian-core';
 import { JiraCommand, writeFlags } from '../../../../shared/base-command.js';
 
 interface CreatedIssue {
@@ -64,23 +64,17 @@ export default class JiraIssueCreate extends JiraCommand<typeof JiraIssueCreate>
 
   public async run(): Promise<unknown> {
     const client = this.jira();
-
-    const fields: Record<string, unknown> = {};
-    if (this.flags.project !== undefined) fields.project = { key: this.flags.project };
-    if (this.flags.type !== undefined) fields.issuetype = { name: this.flags.type };
-    if (this.flags.parent !== undefined) fields.parent = { key: this.flags.parent };
-    if (this.flags.summary !== undefined) fields.summary = this.flags.summary;
-    if (this.flags.description !== undefined) fields.description = client.descriptionValue(this.flags.description);
-    if (this.flags.assignee !== undefined)
-      fields.assignee = assigneeValue(this.flags.assignee, this.jiraConfig().deployment);
-    if (this.flags.priority !== undefined) fields.priority = { name: this.flags.priority };
-    if (this.flags.label !== undefined) fields.labels = this.flags.label;
-
-    const body = mergeFields(parseBodyInput(this.flags.body, this.flags['body-file']), fields);
-    const requested = body.fields as Record<string, unknown>;
-    if (Object.keys(requested).length === 0) {
-      throw new ConfigError('Nothing to create. Pass at least --project, --type and --summary, or a body.');
-    }
+    const body = buildCreateIssueBody(client, {
+      project: this.flags.project,
+      type: this.flags.type,
+      parent: this.flags.parent,
+      summary: this.flags.summary,
+      description: this.flags.description,
+      assignee: this.flags.assignee,
+      priority: this.flags.priority,
+      labels: this.flags.label,
+      body: parseBodyInput(this.flags.body, this.flags['body-file']),
+    });
 
     if (this.flags['dry-run']) {
       this.log('Dry run — not sent. Request body:');
@@ -97,20 +91,5 @@ export default class JiraIssueCreate extends JiraCommand<typeof JiraIssueCreate>
       ]),
     );
     return created;
-  }
-}
-
-/** Cloud identifies an account by id; Server/DC by name. */
-function assigneeValue(value: string, deployment: string): Record<string, string> {
-  return deployment === 'cloud' ? { id: value } : { name: value };
-}
-
-/** The API returns its own self link; the browse URL is what a person can actually open. */
-function browseUrl(issue: CreatedIssue): string | undefined {
-  if (issue.self === undefined || issue.key === undefined) return undefined;
-  try {
-    return `${new URL(issue.self).origin}/browse/${issue.key}`;
-  } catch {
-    return undefined;
   }
 }

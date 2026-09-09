@@ -15,21 +15,8 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { ConfigError, mergeFields, parseBodyInput, stripControlOneLine } from '@simplysf/simply-atlassian-core';
+import { buildTransitionBody, parseBodyInput, resolveTransitionId } from '@simplysf/simply-atlassian-core';
 import { JiraCommand, writeFlags } from '../../../../shared/base-command.js';
-
-/** How many transitions an error lists before summarising the rest. */
-const MAX_LISTED = 20;
-
-interface Transition {
-  readonly id?: string;
-  readonly name?: string;
-  readonly to?: { readonly name?: string };
-}
-
-interface TransitionsResponse {
-  readonly transitions?: Transition[];
-}
 
 export default class JiraIssueTransition extends JiraCommand<typeof JiraIssueTransition> {
   public static override isWrite = true;
@@ -70,26 +57,11 @@ export default class JiraIssueTransition extends JiraCommand<typeof JiraIssueTra
     const client = this.jira();
     const { issue, transition } = this.args;
 
-    const looksLikeId = !this.flags['by-name'] && /^\d+$/.test(transition);
-    const id = looksLikeId ? transition : await this.resolveByName(issue, transition);
-
-    const body = mergeFields(parseBodyInput(this.flags.body, this.flags['body-file']), {});
-    // `fields` is only meaningful here if the caller supplied some; an empty object confuses Jira.
-    if (Object.keys(body.fields as Record<string, unknown>).length === 0) delete body.fields;
-    body.transition = { id };
-    if (this.flags.comment !== undefined) {
-      // Pushed into any existing update block rather than replacing it: a caller can combine
-      // --comment with other operations supplied through --body.
-      const existing = body.update;
-      const update: Record<string, unknown> =
-        typeof existing === 'object' && existing !== null && !Array.isArray(existing)
-          ? { ...(existing as Record<string, unknown>) }
-          : {};
-      const comments = Array.isArray(update.comment) ? [...(update.comment as unknown[])] : [];
-      comments.push({ add: { body: client.descriptionValue(this.flags.comment) } });
-      update.comment = comments;
-      body.update = update;
-    }
+    const id = await resolveTransitionId(client, issue, transition, { byName: this.flags['by-name'] });
+    const body = buildTransitionBody(client, id, {
+      body: parseBodyInput(this.flags.body, this.flags['body-file']),
+      comment: this.flags.comment,
+    });
 
     if (this.flags['dry-run']) {
       this.log('Dry run — not sent. Request body:');
@@ -101,51 +73,5 @@ export default class JiraIssueTransition extends JiraCommand<typeof JiraIssueTra
     // The id can come from the instance's own transition list, so it goes out sanitised.
     this.logSafe(`Transitioned ${issue} using transition ${id}.`);
     return { issue, transition: id, transitioned: true };
-  }
-
-  /** Matches a name against what the workflow currently offers, and says so when it cannot. */
-  private async resolveByName(issue: string, name: string): Promise<string> {
-    const response = (await this.jira().getTransitions(issue)) as TransitionsResponse;
-    const available = response.transitions ?? [];
-    const wanted = name.trim().toLowerCase();
-    const matches = available.filter((t) => t.name?.trim().toLowerCase() === wanted);
-
-    // Workflow and status names are instance-supplied, so each is kept to one line: this string
-    // is interpolated into an error whose own newlines survive, and a name carrying one would
-    // forge a stderr line indistinguishable from this CLI's error object. Capped for the same
-    // reason the candidate lists elsewhere are: an instance with many transitions should not
-    // dump all of them into a caller's context.
-    const shown = available.slice(0, MAX_LISTED);
-    const listing =
-      shown
-        .map((t) => {
-          const label = stripControlOneLine(t.name ?? '?');
-          const id = stripControlOneLine(t.id ?? '?');
-          const to = t.to?.name === undefined ? '' : ` -> ${stripControlOneLine(t.to.name)}`;
-          return `${label} (id ${id}${to})`;
-        })
-        .join(', ') + (available.length > shown.length ? `, and ${available.length - shown.length} more` : '');
-    // Turning the most common failure into a self-correcting one matters most for an agent,
-    // which can retry with a name from this list rather than guessing again.
-    if (matches.length === 0) {
-      throw new ConfigError(
-        `No transition named "${name}" is available for ${issue}.` +
-          (listing === '' ? ' The issue has no available transitions.' : ` Available: ${listing}.`),
-      );
-    }
-    if (matches.length === 1) {
-      const matched = matches[0]?.id;
-      // Matched unambiguously but the instance gave no id, which is not the caller's problem
-      // to disambiguate — say what actually happened.
-      if (matched === undefined) {
-        throw new ConfigError(
-          `The instance reported no id for transition "${name}" on ${issue}, so it cannot be applied.`,
-        );
-      }
-      return matched;
-    }
-    throw new ConfigError(
-      `"${name}" matches more than one transition for ${issue}. Pass an id instead. Available: ${listing}.`,
-    );
   }
 }

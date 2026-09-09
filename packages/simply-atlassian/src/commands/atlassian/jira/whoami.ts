@@ -14,19 +14,8 @@
  * limitations under the License.
  */
 
-import { CliError, formatKeyValue } from '@simplysf/simply-atlassian-core';
+import { currentAccount, formatKeyValue } from '@simplysf/simply-atlassian-core';
 import { JiraCommand } from '../../../shared/base-command.js';
-
-/** Shape of the fields we surface from `/myself`; the raw payload carries far more. */
-interface CurrentUser {
-  readonly displayName?: string;
-  readonly emailAddress?: string;
-  readonly accountId?: string;
-  readonly name?: string;
-  readonly key?: string;
-  readonly active?: boolean;
-  readonly timeZone?: string;
-}
 
 export default class JiraWhoami extends JiraCommand<typeof JiraWhoami> {
   public static override readonly summary = 'Show the account the configured credentials belong to.';
@@ -41,18 +30,9 @@ export default class JiraWhoami extends JiraCommand<typeof JiraWhoami> {
   ];
 
   public async run(): Promise<unknown> {
-    const user = (await this.jira().getCurrentUser()) as CurrentUser;
-
-    // A 200 with no account in it means something answered that is not the Jira API — a login
-    // page or a captive proxy. Reporting success here would tell a caller it is authenticated
-    // when it is not, which is the one answer this command must never give.
-    if (user.accountId === undefined && user.name === undefined && user.key === undefined) {
-      throw new CliError(
-        'The instance returned a success response with no account details. Check that the URL ' +
-          'points at the Jira API rather than a login page or proxy.',
-        1,
-      );
-    }
+    // A success response with no account in it is refused inside the shared operation: reporting
+    // success there would tell a caller it is authenticated when it is not.
+    const user = await currentAccount(this.jira());
 
     this.log(
       formatKeyValue([

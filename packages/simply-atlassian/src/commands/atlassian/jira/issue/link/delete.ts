@@ -15,7 +15,7 @@
  */
 
 import { Args } from '@oclif/core';
-import { ConfigError, type IssueLink, stripControlOneLine } from '@simplysf/simply-atlassian-core';
+import { assertLinkId, deleteIssueLink } from '@simplysf/simply-atlassian-core';
 import { JiraCommand, writeFlags } from '../../../../../shared/base-command.js';
 
 export default class JiraIssueLinkDelete extends JiraCommand<typeof JiraIssueLinkDelete> {
@@ -41,47 +41,18 @@ export default class JiraIssueLinkDelete extends JiraCommand<typeof JiraIssueLin
   public static override readonly flags = { ...writeFlags };
 
   public async run(): Promise<unknown> {
-    const linkId = this.args['link-id'];
-    // A link id is always numeric. Checking the shape turns an issue key passed here by mistake
-    // into a usage error rather than a 404 that reads as though the link were already gone —
-    // the same check `issue delete` makes on its key.
-    if (!/^\d+$/.test(linkId)) {
-      throw new ConfigError(
-        `"${linkId}" is not a link id. Link ids are numeric and shown by "issue link list"; ` +
-          'this looks like an issue key.',
-      );
-    }
-
-    const client = this.jira();
-    const link = (await client.getIssueLink(linkId)) as IssueLink;
-    const relationship = describe(link);
+    // Shape-checked before the connection is resolved, so an issue key passed here by mistake is
+    // reported as such rather than as whatever is wrong with the credentials.
+    const linkId = assertLinkId(this.args['link-id']);
+    const result = await deleteIssueLink(this.jira(), linkId, { dryRun: this.flags['dry-run'] });
 
     if (this.flags['dry-run']) {
-      this.logSafe(`Dry run — not sent. Would delete link ${linkId}: ${relationship}.`);
-      return { linkId, relationship, deleted: false };
+      this.logSafe(`Dry run — not sent. Would delete link ${linkId}: ${result.relationship}.`);
+      return result;
     }
-
-    await client.deleteIssueLink(linkId);
     // Named, not just numbered: after this the link is gone from both issues, so this line is
     // the only remaining record of what it was.
-    this.logSafe(`Deleted link ${linkId}: ${relationship}.`);
-    return { linkId, relationship, deleted: true };
+    this.logSafe(`Deleted link ${linkId}: ${result.relationship}.`);
+    return result;
   }
-}
-
-/**
- * States the link as a sentence, for a payload that carries *both* ends.
- *
- * `GET /issueLink/{id}` differs from an issue's `issuelinks` field: it returns `inwardIssue` and
- * `outwardIssue` together, so there is no "which side am I on" to resolve. Per the mapping in
- * `shared/issue-links.ts`, the issue in `inwardIssue` is the subject of the outward phrase.
- */
-function describe(link: IssueLink): string {
-  // One line each. `logSafe` strips control characters but deliberately keeps newlines, so an
-  // administrator-defined outward phrase containing one would forge a whole line on stdout —
-  // with no prefix and no JSON escaping, it reads as this CLI's own output.
-  const subject = stripControlOneLine(link.inwardIssue?.key ?? '(unknown issue)');
-  const object = stripControlOneLine(link.outwardIssue?.key ?? '(unknown issue)');
-  const phrase = stripControlOneLine(link.type?.outward ?? '');
-  return `${subject} ${phrase === '' ? 'is linked to' : phrase} ${object}`;
 }

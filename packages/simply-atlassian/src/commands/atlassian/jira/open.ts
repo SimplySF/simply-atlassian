@@ -15,11 +15,9 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { issueUrl, projectUrl } from '@simplysf/simply-atlassian-core';
+import { jiraTargetUrl } from '@simplysf/simply-atlassian-core';
 import { JiraCommand } from '../../../shared/base-command.js';
 import { openInBrowser } from '../../../shared/open-in-browser.js';
-
-const ISSUE_KEY = /^[A-Za-z][A-Za-z0-9_]*-\d+$/;
 
 export default class JiraOpen extends JiraCommand<typeof JiraOpen> {
   public static override readonly summary = 'Open a Jira issue or project in the browser.';
@@ -49,9 +47,7 @@ export default class JiraOpen extends JiraCommand<typeof JiraOpen> {
   };
 
   public run(): Promise<{ url: string }> {
-    const target = this.args.target.trim();
-    const config = this.jiraConfig();
-    const url = ISSUE_KEY.test(target) ? issueUrl(config.url, target) : projectUrl(config.url, target);
+    const url = jiraTargetUrl(this.jiraConfig().url, this.args.target);
 
     if (!this.jsonEnabled()) {
       openInBrowser(url, { print: this.flags.print, log: (value) => this.log(value) });

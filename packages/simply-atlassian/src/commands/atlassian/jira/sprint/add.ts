@@ -15,10 +15,8 @@
  */
 
 import { Args } from '@oclif/core';
+import { addIssuesToSprint, sprintChunkSizes } from '@simplysf/simply-atlassian-core';
 import { JiraCommand, writeFlags } from '../../../../shared/base-command.js';
-import { numericId } from './list.js';
-
-const MAX_ISSUES_PER_REQUEST = 50;
 
 export default class JiraSprintAdd extends JiraCommand<typeof JiraSprintAdd> {
   public static override isWrite = true;
@@ -46,21 +44,18 @@ export default class JiraSprintAdd extends JiraCommand<typeof JiraSprintAdd> {
   public static override readonly flags = { ...writeFlags };
 
   public async run(): Promise<unknown> {
-    const sprint = numericId('Sprint', this.args.sprint);
     const issues = this.args.issue;
-    const payload = { issues };
+    const result = await addIssuesToSprint(this.jira(), this.args.sprint, issues, { dryRun: this.flags['dry-run'] });
 
-    if (this.flags['dry-run']) {
-      this.log(`Dry run — not sent. Target sprint: ${sprint}`);
-      this.log(JSON.stringify(payload, null, 2));
-      return { sprint, ...payload };
+    if (!('chunks' in result)) {
+      this.log(`Dry run — not sent. Target sprint: ${result.sprint}`);
+      this.log(JSON.stringify({ issues }, null, 2));
+      return result;
     }
 
-    const result = await this.jira().moveIssuesToSprint(sprint, issues);
-    for (let index = 0; index < result.chunks; index += 1) {
-      const chunkSize = Math.min(MAX_ISSUES_PER_REQUEST, issues.length - index * MAX_ISSUES_PER_REQUEST);
-      this.log(`Added ${chunkSize} issue(s) to sprint ${sprint} (chunk ${index + 1}/${result.chunks}).`);
-    }
-    return { sprint, ...payload, ...result };
+    sprintChunkSizes(issues.length).forEach((size, index) => {
+      this.log(`Added ${size} issue(s) to sprint ${result.sprint} (chunk ${index + 1}/${result.chunks}).`);
+    });
+    return result;
   }
 }
