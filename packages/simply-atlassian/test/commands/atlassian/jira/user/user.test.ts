@@ -15,9 +15,9 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { respondJson, startTestServer, type TestServer } from '@simplysf/simply-atlassian-core/testing';
 import JiraUserSearch from '../../../../../src/commands/atlassian/jira/user/search.js';
 import JiraUserView from '../../../../../src/commands/atlassian/jira/user/view.js';
-import { respondJson, startTestServer, type TestServer } from '../../../../support.js';
 
 let server: TestServer;
 

@@ -16,11 +16,11 @@
 
 import process from 'node:process';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { respondJson, startTestServer, type TestServer } from '@simplysf/simply-atlassian-core/testing';
 import JiraIssueCommentAdd from '../../../../../../src/commands/atlassian/jira/issue/comment/add.js';
 import JiraIssueCommentDelete from '../../../../../../src/commands/atlassian/jira/issue/comment/delete.js';
 import JiraIssueCommentEdit from '../../../../../../src/commands/atlassian/jira/issue/comment/edit.js';
 import JiraIssueCommentList from '../../../../../../src/commands/atlassian/jira/issue/comment/list.js';
-import { respondJson, startTestServer, type TestServer } from '../../../../../support.js';
 
 let server: TestServer;
 

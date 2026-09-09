@@ -15,8 +15,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { respondJson, startTestServer, type TestServer } from '@simplysf/simply-atlassian-core/testing';
 import JiraIssueView from '../../src/commands/atlassian/jira/issue/view.js';
-import { respondJson, startTestServer, type TestServer } from '../support.js';
 
 /*
  * The finding that mattered most in review, and it was reproduced against the built binary:

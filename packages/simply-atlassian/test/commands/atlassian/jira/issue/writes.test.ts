@@ -15,11 +15,11 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { respondJson, startTestServer, type TestServer } from '@simplysf/simply-atlassian-core/testing';
 import JiraIssueCreate from '../../../../../src/commands/atlassian/jira/issue/create.js';
 import JiraIssueTransition from '../../../../../src/commands/atlassian/jira/issue/transition.js';
 import JiraIssueTransitions from '../../../../../src/commands/atlassian/jira/issue/transitions.js';
 import JiraIssueUpdate from '../../../../../src/commands/atlassian/jira/issue/update.js';
-import { respondJson, startTestServer, type TestServer } from '../../../../support.js';
 
 let server: TestServer;
 

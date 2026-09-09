@@ -15,12 +15,12 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { respondJson, startTestServer, type TestServer } from '@simplysf/simply-atlassian-core/testing';
 import ConfluencePageCommentAdd from '../../../../../src/commands/atlassian/confluence/page/comment/add.js';
 import ConfluencePageCommentList from '../../../../../src/commands/atlassian/confluence/page/comment/list.js';
 import ConfluencePageCreate from '../../../../../src/commands/atlassian/confluence/page/create.js';
 import ConfluencePageDelete from '../../../../../src/commands/atlassian/confluence/page/delete.js';
 import ConfluencePageUpdate from '../../../../../src/commands/atlassian/confluence/page/update.js';
-import { respondJson, startTestServer, type TestServer } from '../../../../support.js';
 
 let server: TestServer;
 

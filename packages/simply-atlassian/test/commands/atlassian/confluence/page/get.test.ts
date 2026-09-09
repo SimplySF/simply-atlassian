@@ -15,8 +15,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { respondJson, startTestServer, type TestServer } from '@simplysf/simply-atlassian-core/testing';
 import ConfluencePageGet from '../../../../../src/commands/atlassian/confluence/page/get.js';
-import { respondJson, startTestServer, type TestServer } from '../../../../support.js';
 
 let server: TestServer;
 
