@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.9.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.8.1...%40simplysf%2Fsimply-atlassian%400.9.0) (2026-09-09)
+
+### Features
+
+- **simply-atlassian-core:** accept Markdown page bodies, and add --append ([#20](https://github.com/SimplySF/simply-atlassian/issues/20)) ([baa52e8](https://github.com/SimplySF/simply-atlassian/commit/baa52e81847279f27b0e350259e02009874a4321)), closes [0012/#18](https://github.com/SimplySF/simply-atlassian/issues/18)
+
 ## [0.8.1](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.8.0...%40simplysf%2Fsimply-atlassian%400.8.1) (2026-09-09)
 
 **Note:** Version bump only for package @simplysf/simply-atlassian

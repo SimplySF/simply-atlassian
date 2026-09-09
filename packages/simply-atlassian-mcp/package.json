@@ -1,7 +1,7 @@
 {
   "name": "@simplysf/simply-atlassian-mcp",
   "description": "Model Context Protocol server exposing Jira and Confluence to AI agents, built on @simplysf/simply-atlassian-core",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "author": "@ClayChipps",
   "homepage": "https://github.com/SimplySF/simply-atlassian",
   "bugs": "https://github.com/SimplySF/simply-atlassian/issues",
@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "@simplysf/simply-atlassian-core": "workspace:^0.3.1",
+    "@simplysf/simply-atlassian-core": "workspace:^0.4.0",
     "zod": "^4.5.4"
   },
   "devDependencies": {
