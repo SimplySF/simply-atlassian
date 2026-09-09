@@ -16,16 +16,8 @@
 
 import { Flags } from '@oclif/core';
 import { JiraCommand, parseList } from '../../../../shared/base-command.js';
+import { jiraIssueColumns, type JiraIssueRow } from '../../../../shared/issue-table.js';
 import { formatTable } from '../../../../shared/output.js';
-
-interface SearchedIssue {
-  readonly key?: string;
-  readonly fields?: {
-    readonly summary?: string;
-    readonly status?: { readonly name?: string };
-    readonly assignee?: { readonly displayName?: string };
-  };
-}
 
 const DEFAULT_LIMIT = 50;
 
@@ -68,20 +60,13 @@ export default class JiraIssueSearch extends JiraCommand<typeof JiraIssueSearch>
       this.flags.limit,
     );
 
-    const issues = result.issues as SearchedIssue[];
+    const issues = result.issues as JiraIssueRow[];
     if (issues.length === 0) {
       this.log('No issues matched.');
       return result;
     }
 
-    this.log(
-      formatTable(issues, [
-        { header: 'KEY', value: (issue): string | undefined => issue.key },
-        { header: 'STATUS', value: (issue): string | undefined => issue.fields?.status?.name },
-        { header: 'ASSIGNEE', value: (issue): string | undefined => issue.fields?.assignee?.displayName },
-        { header: 'SUMMARY', value: (issue): string | undefined => issue.fields?.summary },
-      ]),
-    );
+    this.log(formatTable(issues, jiraIssueColumns));
 
     // Say plainly whether anything was left behind, so a truncated list is never mistaken
     // for the whole answer — by a person or by an agent.

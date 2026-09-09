@@ -237,6 +237,7 @@ describe('write-command coverage', () => {
         'atlassian/jira/issue/link/delete.ts',
         'atlassian/jira/issue/transition.ts',
         'atlassian/jira/issue/update.ts',
+        'atlassian/jira/sprint/add.ts',
       ].toSorted(),
     );
   });

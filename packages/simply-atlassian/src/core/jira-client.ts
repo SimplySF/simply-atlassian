@@ -48,6 +48,14 @@ export interface JiraSearchPage {
   readonly total?: number;
 }
 
+export interface JiraAgileResult {
+  readonly values: unknown[];
+  readonly total?: number;
+  readonly pages: number;
+  /** False when the caller's limit cut the results short. */
+  readonly complete: boolean;
+}
+
 interface CloudSearchResponse {
   readonly issues?: unknown[];
   readonly nextPageToken?: string;
@@ -62,6 +70,7 @@ interface ServerSearchResponse {
 }
 
 const DEFAULT_MAX_RESULTS = 50;
+const MAX_ISSUES_PER_SPRINT_MOVE = 50;
 const AGILE_BASE = '/rest/agile/1.0';
 
 /**
@@ -305,17 +314,145 @@ export class JiraClient {
   }
 
   /** Agile endpoints share a base across both deployments, so they use it instead of `apiBase`. */
-  public getBoards(options: { startAt?: number; maxResults?: number } = {}): Promise<unknown> {
-    return this.request(
-      '/board',
-      { method: 'GET', query: { startAt: options.startAt, maxResults: options.maxResults } },
-      AGILE_BASE,
+  public getBoards(
+    options: {
+      readonly projectKeyOrId?: string;
+      readonly type?: string;
+      readonly startAt?: number;
+      readonly maxResults?: number;
+      readonly limit?: number;
+    } = {},
+  ): Promise<JiraAgileResult> {
+    return getAllAgile(
+      (startAt, maxResults) =>
+        this.request<AgilePage>(
+          '/board',
+          {
+            method: 'GET',
+            query: {
+              projectKeyOrId: options.projectKeyOrId,
+              type: options.type,
+              startAt,
+              maxResults,
+            },
+          },
+          AGILE_BASE,
+        ),
+      options,
     );
+  }
+
+  public getSprints(
+    boardId: string,
+    options: {
+      readonly state?: string;
+      readonly startAt?: number;
+      readonly maxResults?: number;
+      readonly limit?: number;
+    } = {},
+  ): Promise<JiraAgileResult> {
+    return getAllAgile(
+      (startAt, maxResults) =>
+        this.request<AgilePage>(
+          `/board/${encodeURIComponent(boardId)}/sprint`,
+          {
+            method: 'GET',
+            query: { state: options.state, startAt, maxResults },
+          },
+          AGILE_BASE,
+        ),
+      options,
+    );
+  }
+
+  public getSprintIssues(
+    sprintId: string,
+    options: {
+      readonly fields?: string[];
+      readonly startAt?: number;
+      readonly maxResults?: number;
+      readonly limit?: number;
+    } = {},
+  ): Promise<JiraAgileResult> {
+    return getAllAgile(
+      (startAt, maxResults) =>
+        this.request<AgilePage>(
+          `/sprint/${encodeURIComponent(sprintId)}/issue`,
+          {
+            method: 'GET',
+            query: { fields: joinFields(options.fields), startAt, maxResults },
+          },
+          AGILE_BASE,
+        ),
+      options,
+      (page) => page.issues ?? [],
+    );
+  }
+
+  public async moveIssuesToSprint(
+    sprintId: string,
+    issueKeys: readonly string[],
+  ): Promise<{ readonly chunks: number; readonly issueCount: number }> {
+    let chunks = 0;
+    /* eslint-disable no-await-in-loop -- Jira requires each chunk to be sent as its own request. */
+    for (let index = 0; index < issueKeys.length; index += MAX_ISSUES_PER_SPRINT_MOVE) {
+      const issues = issueKeys.slice(index, index + MAX_ISSUES_PER_SPRINT_MOVE);
+      await this.request(
+        `/sprint/${encodeURIComponent(sprintId)}/issue`,
+        {
+          method: 'POST',
+          body: { issues },
+          mutating: true,
+        },
+        AGILE_BASE,
+      );
+      chunks += 1;
+    }
+    /* eslint-enable no-await-in-loop */
+    return { chunks, issueCount: issueKeys.length };
   }
 
   private request<T>(path: string, call: Omit<JsonCall, 'path'>, base = this.apiBase): Promise<T> {
     return this.transport.json<T>({ ...call, path: `${base}${path}` });
   }
+}
+
+interface AgilePage {
+  readonly issues?: unknown[];
+  readonly values?: unknown[];
+  readonly isLast?: boolean;
+  readonly total?: number;
+}
+
+async function getAllAgile(
+  fetchPage: (startAt: number, maxResults: number) => Promise<AgilePage>,
+  options: { readonly startAt?: number; readonly maxResults?: number; readonly limit?: number },
+  readItems: (page: AgilePage) => unknown[] = (page) => page.values ?? [],
+): Promise<JiraAgileResult> {
+  const values: unknown[] = [];
+  const limit = options.limit ?? Number.POSITIVE_INFINITY;
+  const pageSize = options.maxResults ?? DEFAULT_MAX_RESULTS;
+  let startAt = options.startAt ?? 0;
+  let total: number | undefined;
+  let pages = 0;
+
+  /* eslint-disable no-await-in-loop -- each page supplies the next page's cursor. */
+  while (values.length < limit) {
+    const page = await fetchPage(startAt, Math.min(pageSize, limit - values.length));
+    pages += 1;
+    const pageValues = readItems(page);
+    values.push(...pageValues);
+    total = typeof page.total === 'number' ? page.total : total;
+
+    const nextStartAt = startAt + pageValues.length;
+    const isLast = page.isLast ?? pageValues.length < pageSize;
+    const exhausted = isLast || pageValues.length === 0 || nextStartAt <= startAt;
+    if (exhausted) return { values: values.slice(0, limit), total, pages, complete: true };
+    startAt = nextStartAt;
+  }
+  /* eslint-enable no-await-in-loop */
+
+  return { values: values.slice(0, limit), total, pages, complete: false };
 }
 
 /**
