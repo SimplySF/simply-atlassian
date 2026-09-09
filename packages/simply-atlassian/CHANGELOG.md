@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.6.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.5.0...%40simplysf%2Fsimply-atlassian%400.6.0) (2026-09-09)
+
+### Features
+
+- **simply-atlassian:** add confluence page create, update, delete, and comments ([#16](https://github.com/SimplySF/simply-atlassian/issues/16)) ([a59c1a6](https://github.com/SimplySF/simply-atlassian/commit/a59c1a6d30c045f4e9fd8e47766d705f6a814cbd))
+
 # [0.5.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.4.0...%40simplysf%2Fsimply-atlassian%400.5.0) (2026-09-09)
 
 ### Features
