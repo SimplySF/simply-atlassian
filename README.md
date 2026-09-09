@@ -5,10 +5,15 @@
 Simply Atlassian is a command-line interface built by [SimplySF](https://github.com/SimplySF) for working
 with Atlassian products (Jira, Confluence, and friends).
 
+It covers Jira issues (search, view, create, update, transition, delete, history), comments with
+@-mentions, issue links, users, agile boards and sprints, and Confluence pages (read, search, create,
+update from storage format or Markdown, delete, comments) — plus opening any of them in a browser.
+Output is human-readable by default and raw JSON with `--json`, every write takes `--dry-run`, and
+the same capabilities are available to AI agents as an MCP server.
+
 This repo is a Lerna/pnpm monorepo, following the same conventions as SimplySF's
 [`simply-node`](https://github.com/SimplySF/simply-node) and [`simply-plugins`](https://github.com/SimplySF/simply-plugins)
-repos. Right now it's just the framework — tooling, lint/build/test wiring, and a single placeholder
-command proving the pipeline works end to end. Real Atlassian commands land next.
+repos.
 
 ## Packages
 
@@ -31,7 +36,7 @@ simply atlassian --help
 ## Documentation
 
 The [documentation site](https://simplysf.github.io/simply-atlassian/) has a getting-started guide, guides to
-credentials, write safety, and scripting, and the full command reference. The same command reference is in the
+credentials, write safety, scripting, and the MCP server, and the full command reference. The same command reference is in the
 [package README](packages/simply-atlassian/README.md#commands).
 
 ## Contributing

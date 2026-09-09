@@ -89,7 +89,9 @@ Each tool's inputs are the command's arguments and flags in camel case; see the 
 [command reference](https://simplysf.github.io/simply-atlassian/reference/) for what each does.
 `fields` on the issue tools matters as much here as in the CLI: raw issue payloads are large, and
 an agent pays for every token it reads. The two `open` tools return the URL rather than launching
-a browser.
+a browser. The Confluence write tools take a page or comment body as `text`, raw storage-format
+`body`, or `markdown` (converted to storage format), and `confluence_page_update` takes `append`
+to add to a page instead of replacing it.
 
 ## Results and errors
 

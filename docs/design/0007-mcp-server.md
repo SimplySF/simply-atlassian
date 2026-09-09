@@ -1,6 +1,6 @@
 # 0007 — MCP server on the core library
 
-**Status:** Implemented (scaffold PR #10; in-process tools on `feat/mcp-in-process`, PR pending).
+**Status:** Implemented (scaffold PR #10; in-process tools on the core library PR #18; Markdown bodies and `append` PR #21)
 Supersedes the spawn-the-CLI design of PR #11, which never merged.
 **Package:** `packages/simply-atlassian-mcp`, on `packages/simply-atlassian-core`
 **Date:** 2026-09-08, revised 2026-09-09

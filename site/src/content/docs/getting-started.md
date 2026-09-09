@@ -53,6 +53,8 @@ Add `--json` to either to get the raw API payload instead of the formatted table
 - [Write safety](/guides/write-safety/) explains `--confirm`, `--dry-run`, `ATLASSIAN_READ_ONLY`,
   and why a read-scoped token is the only one of those that actually binds.
 - [Scripts and agents](/guides/scripting/) covers the `--json` contract and exit codes.
+- [MCP server](/guides/mcp-server/) gives an AI agent the same commands as tools, read-only by
+  default.
 - Want to contribute? See
   [CONTRIBUTING.md](https://github.com/SimplySF/simply-atlassian/blob/main/CONTRIBUTING.md) in the
   repo.

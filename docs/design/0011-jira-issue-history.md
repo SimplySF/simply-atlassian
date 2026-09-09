@@ -1,6 +1,6 @@
 # 0011 — Jira issue history
 
-**Status:** Implemented
+**Status:** Implemented (PR #15)
 **Package:** `packages/simply-atlassian`
 **Date:** 2026-09-08
 
@@ -21,10 +21,10 @@ machine consumers cannot mistake a capped or limit-truncated history for a compl
 
 The Jira client owns the deployment difference:
 
-| Deployment | Request | Paging |
-| --- | --- | --- |
-| Cloud | `GET /rest/api/3/issue/{key}/changelog` | `startAt` and `maxResults`; response `values`/`isLast` |
-| Server/DC | `GET /rest/api/2/issue/{key}?expand=changelog` | One expanded issue response with `changelog.histories`, `startAt`, `maxResults`, and `total` |
+| Deployment | Request                                        | Paging                                                                                       |
+| ---------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Cloud      | `GET /rest/api/3/issue/{key}/changelog`        | `startAt` and `maxResults`; response `values`/`isLast`                                       |
+| Server/DC  | `GET /rest/api/2/issue/{key}?expand=changelog` | One expanded issue response with `changelog.histories`, `startAt`, `maxResults`, and `total` |
 
 Both paths normalize to `JiraChangelogEntry[]` for terminal rendering, while retaining the original
 entries for JSON. A normalized entry has an id, display-name author, creation timestamp, and
