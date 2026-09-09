@@ -95,7 +95,7 @@ importers:
         specifier: ^4.11.2
         version: 4.14.0
       '@simplysf/simply-atlassian-core':
-        specifier: workspace:^0.3.0
+        specifier: workspace:^0.3.1
         version: link:../simply-atlassian-core
     devDependencies:
       '@oclif/plugin-command-snapshot':
@@ -123,7 +123,7 @@ importers:
         specifier: ^1.30.0
         version: 1.30.0(supports-color@8.1.1)(zod@4.5.4)
       '@simplysf/simply-atlassian-core':
-        specifier: workspace:^0.3.0
+        specifier: workspace:^0.3.1
         version: link:../simply-atlassian-core
       zod:
         specifier: ^4.5.4
