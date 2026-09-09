@@ -74,6 +74,7 @@ describe('@simplysf/simply-atlassian-core', () => {
         'resolveLinkDirection',
         'resolveMentions',
         'resolveStorageBody',
+        'markdownToStorage',
         'storageToMarkdown',
         // operations
         'BODY_FORMATS',

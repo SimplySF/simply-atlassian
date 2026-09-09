@@ -17,6 +17,7 @@
 import { readFileSync } from 'node:fs';
 import { ConfigError } from './errors.js';
 import { stripControl } from './text.js';
+import { markdownToStorage } from './markdown-storage.js';
 
 /** The shape Confluence expects for a page or comment body. */
 export interface StorageBody {
@@ -44,11 +45,15 @@ export function resolveStorageBody(flags: {
   text?: string;
   body?: string;
   'body-file'?: string;
+  markdown?: string;
+  'markdown-file'?: string;
 }): StorageBody | undefined {
   const supplied = [
     ['--text', flags.text],
     ['--body', flags.body],
     ['--body-file', flags['body-file']],
+    ['--markdown', flags.markdown],
+    ['--markdown-file', flags['markdown-file']],
   ].filter((entry): entry is [string, string] => entry[1] !== undefined);
 
   if (supplied.length > 1) {
@@ -57,8 +62,23 @@ export function resolveStorageBody(flags: {
   if (supplied.length === 0) return undefined;
 
   const [name, value] = supplied[0];
-  const storage = name === '--text' ? paragraphs(value) : name === '--body' ? value : readBodyFile(value);
-  return { storage: { value: storage, representation: 'storage' } };
+  return { storage: { value: convert(name, value), representation: 'storage' } };
+}
+
+/** Maps each body flag to the storage it produces. */
+function convert(name: string, value: string): string {
+  switch (name) {
+    case '--text':
+      return paragraphs(value);
+    case '--body':
+      return value;
+    case '--body-file':
+      return readBodyFile(value);
+    case '--markdown':
+      return markdownToStorage(value);
+    default:
+      return markdownToStorage(readBodyFile(value));
+  }
 }
 
 /**
