@@ -150,8 +150,11 @@ Anything not in the barrel is internal.
   `../packages/simply-atlassian-core/lib/index.js`. The CLI's export surface is not shrunk in this
   doc; whether it is stubbed out to `export default {}` (the `simply-plugins` shape) is an open
   question below.
-- `wireit`: `compile`, `test:compile`, and `lint` gain
-  `"dependencies": ["../simply-atlassian-core:compile"]`. `lerna run build` already orders by
+- `wireit`: `compile`, `test:compile`, `lint`, and every vitest entry point (`test:only`,
+  `test:coverage`, and `test:watch`, the latter two becoming wireit tasks) gain
+  `"dependencies": ["../simply-atlassian-core:compile"]`. Vitest resolves the package through its
+  compiled `lib/`, so a test task without the dependency races its siblings on a clean checkout;
+  `test.yml` runs the CLI's `test:only` before any build to keep that from regressing. `lerna run build` already orders by
   workspace dependency, but without this a package-local `pnpm run build` in the CLI directory
   fails on a cold checkout, and wireit's cache for the CLI would not know core's `lib/` changed.
   `simply-node` gets away without it because its consumers live in another repo.

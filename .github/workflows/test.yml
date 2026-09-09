@@ -29,6 +29,13 @@ jobs:
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
 
+      # The CLI's tests resolve @simplysf/simply-atlassian-core through its compiled lib/, which
+      # does not exist on a fresh checkout. Running the CLI's unit tests here, before any build,
+      # proves the wireit dependency on core's compile is wired for every vitest entry point;
+      # without it this step races and fails.
+      - name: CLI tests from a clean checkout
+        run: pnpm --filter @simplysf/simply-atlassian run test:only
+
       - run: pnpm run build
 
       - name: pnpm test

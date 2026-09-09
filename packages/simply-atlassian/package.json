@@ -104,9 +104,9 @@
     "lint": "wireit",
     "readme": "oclif readme --no-aliases",
     "test": "wireit",
-    "test:coverage": "vitest run --coverage --project simply-atlassian",
+    "test:coverage": "wireit",
     "test:only": "wireit",
-    "test:watch": "vitest watch --project simply-atlassian"
+    "test:watch": "wireit"
   },
   "wireit": {
     "build": {
@@ -201,7 +201,40 @@
         "vitest.config.ts",
         "!*.nut.ts"
       ],
-      "output": []
+      "output": [],
+      "dependencies": [
+        "../simply-atlassian-core:compile"
+      ]
+    },
+    "test:coverage": {
+      "command": "vitest run --coverage --project simply-atlassian",
+      "env": {
+        "FORCE_COLOR": "2"
+      },
+      "dependencies": [
+        "../simply-atlassian-core:compile"
+      ],
+      "files": [
+        "test/**/*.ts",
+        "src/**/*.ts",
+        "**/tsconfig.json",
+        "../../tsconfig.json",
+        "vitest.config.ts",
+        "!*.nut.ts"
+      ],
+      "output": [
+        "coverage/**"
+      ]
+    },
+    "test:watch": {
+      "command": "vitest watch --project simply-atlassian",
+      "env": {
+        "FORCE_COLOR": "2"
+      },
+      "dependencies": [
+        "../simply-atlassian-core:compile"
+      ],
+      "service": true
     }
   }
 }
