@@ -78,6 +78,50 @@ describe('JiraClient on Cloud', () => {
     expect(second.isLast).toBe(true);
     expect(server.requests.every((request) => request.method === 'POST')).toBe(true);
   });
+
+  it('pages and normalizes the changelog endpoint', async () => {
+    server.route('/rest/api/3/issue/PROJ-1/changelog', (req, res) => {
+      const startAt = Number(new URL(req.url ?? '/', 'http://127.0.0.1').searchParams.get('startAt'));
+      if (startAt === 1) {
+        respondJson(res, 200, {
+          values: [{ id: '2', author: { displayName: 'Bob' }, created: '2026-09-08T02:00:00.000Z', items: [] }],
+          total: 2,
+          isLast: true,
+        });
+        return;
+      }
+      respondJson(res, 200, {
+        values: [
+          {
+            id: '1',
+            author: { displayName: 'Alice' },
+            created: '2026-09-08T01:00:00.000Z',
+            items: [{ field: 'status', fromString: 'Open', toString: 'Done', from: '1', to: '5' }],
+          },
+        ],
+        total: 2,
+        isLast: false,
+      });
+    });
+
+    const result = await new JiraClient(makeConfig('cloud')).getAllChangelog('PROJ-1', 2);
+
+    expect(result.entries).toEqual([
+      {
+        id: '1',
+        author: 'Alice',
+        created: '2026-09-08T01:00:00.000Z',
+        items: [{ field: 'status', fromString: 'Open', toString: 'Done', from: '1', to: '5' }],
+      },
+      { id: '2', author: 'Bob', created: '2026-09-08T02:00:00.000Z', items: [] },
+    ]);
+    expect(result.total).toBe(2);
+    expect(result.complete).toBe(true);
+    expect(server.requests.map((request) => new URL(request.url, 'http://127.0.0.1').pathname)).toEqual([
+      '/rest/api/3/issue/PROJ-1/changelog',
+      '/rest/api/3/issue/PROJ-1/changelog',
+    ]);
+  });
 });
 
 describe('JiraClient on Server/DC', () => {
@@ -93,6 +137,84 @@ describe('JiraClient on Server/DC', () => {
 
     expect(issue.key).toBe('PROJ-1');
     expect(issue.authorization).toBe('Bearer pat');
+  });
+
+  it('reads and normalizes the expanded issue changelog response', async () => {
+    server.route('/rest/api/2/issue/PROJ-1', (req, res) => {
+      const url = new URL(req.url ?? '/', 'http://127.0.0.1');
+      expect(url.searchParams.get('expand')).toBe('changelog');
+      respondJson(res, 200, {
+        key: 'PROJ-1',
+        changelog: {
+          startAt: 0,
+          maxResults: 2,
+          total: 2,
+          histories: [
+            {
+              id: '7',
+              author: { displayName: 'Alice', name: 'alice', emailAddress: 'alice@example.test' },
+              created: '2026-09-08T01:00:00.000Z',
+              historyMetadata: { type: 'automation' },
+              items: [{ field: 'assignee', from: null, to: 'alice' }],
+            },
+            { id: '8', author: { displayName: 'Bob' }, created: '2026-09-08T02:00:00.000Z', items: [] },
+          ],
+        },
+      });
+    });
+
+    const result = await new JiraClient(makeConfig('server')).getAllChangelog('PROJ-1', 50);
+
+    expect(result).toEqual({
+      entries: [
+        {
+          id: '7',
+          author: 'Alice',
+          created: '2026-09-08T01:00:00.000Z',
+          items: [{ field: 'assignee', fromString: undefined, toString: undefined, from: null, to: 'alice' }],
+        },
+        { id: '8', author: 'Bob', created: '2026-09-08T02:00:00.000Z', items: [] },
+      ],
+      rawEntries: [
+        {
+          id: '7',
+          author: { displayName: 'Alice', name: 'alice', emailAddress: 'alice@example.test' },
+          created: '2026-09-08T01:00:00.000Z',
+          historyMetadata: { type: 'automation' },
+          items: [{ field: 'assignee', from: null, to: 'alice' }],
+        },
+        { id: '8', author: { displayName: 'Bob' }, created: '2026-09-08T02:00:00.000Z', items: [] },
+      ],
+      total: 2,
+      pages: 1,
+      complete: true,
+    });
+    expect(server.requests.map((request) => new URL(request.url, 'http://127.0.0.1').pathname)).toEqual([
+      '/rest/api/2/issue/PROJ-1',
+    ]);
+  });
+
+  it('reports a capped expanded changelog as incomplete', async () => {
+    server.route('/rest/api/2/issue/PROJ-1', (_req, res) => {
+      respondJson(res, 200, {
+        changelog: {
+          startAt: 0,
+          maxResults: 2,
+          total: 3,
+          histories: [
+            { id: '7', author: { displayName: 'Alice' }, items: [] },
+            { id: '8', author: { displayName: 'Bob' }, items: [] },
+          ],
+        },
+      });
+    });
+
+    const result = await new JiraClient(makeConfig('server')).getAllChangelog('PROJ-1', 50);
+
+    expect(result.entries.map((entry) => entry.id)).toEqual(['7', '8']);
+    expect(result.total).toBe(3);
+    expect(result.complete).toBe(false);
+    expect(result.pages).toBe(1);
   });
 
   it('searches via GET /search and pages with startAt against total', async () => {

@@ -42,6 +42,7 @@ refactors that keep the public surface identical (though a short doc is welcome 
 | 0007 | [MCP server wrapping the CLI](0007-mcp-server.md)                                                 | Draft               |
 | 0009 | [Jira agile boards and sprints](0009-jira-agile-boards-sprints.md)                                 | Implemented         |
 | 0010 | [Open Atlassian objects in the browser](0010-open-in-browser.md)                                  | Implemented         |
+| 0011 | [Jira issue history](0011-jira-issue-history.md)                                                  | Implemented         |
 
 ## Template
 
