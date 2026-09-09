@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.3.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-mcp%400.2.2...%40simplysf%2Fsimply-atlassian-mcp%400.3.0) (2026-09-09)
+
+### Features
+
+- **simply-atlassian-mcp:** expose Markdown bodies and append as MCP tools ([#21](https://github.com/SimplySF/simply-atlassian/issues/21)) ([ff64fae](https://github.com/SimplySF/simply-atlassian/commit/ff64faebe11ee1e923951cefab1271dae9e4841a))
+
 ## [0.2.2](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-mcp%400.2.1...%40simplysf%2Fsimply-atlassian-mcp%400.2.2) (2026-09-09)
 
 **Note:** Version bump only for package @simplysf/simply-atlassian-mcp
