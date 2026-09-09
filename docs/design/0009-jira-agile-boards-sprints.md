@@ -58,9 +58,24 @@ the read-only write guard.
 
 ## Operational verification
 
-Live Scrum-board end-to-end verification is blocked pending a configured Jira connection and a
-designated safe issue to move. On 2026-09-08, `node packages/simply-atlassian/bin/run.js atlassian
-jira board list --limit 1` exited before making a request with `Jira URL is not configured. Set
-JIRA_URL or pass --jira-url.` No accessible `atlassian.env`, `atlassian-write.env`, or configured
-`JIRA_URL` was available. Do not record the required board list, sprint list, sprint issues, or
-add-to-sprint exercises as completed until those inputs are supplied.
+Completed 2026-09-08 against a live Jira Cloud site, using a company-managed **Scrum** project
+created for this purpose (key `CST`, board id 4 `type: scrum`, auto-created sprint id 2
+"CST Sprint 1"). The site's pre-existing projects are team-managed and cannot enable Sprints
+("Requires Backlog"), so a company-managed Scrum project is the canonical board this feature
+targets. All four commands and both guards were exercised end to end:
+
+| Exercise | Command | Result |
+| --- | --- | --- |
+| Boards | `jira board list` | Lists boards; `CST board` reports `type: scrum`. |
+| Sprints | `jira sprint list 4 --state active,future,closed` | Lists "CST Sprint 1" (future). |
+| Sprint issues (empty) | `jira sprint issues 2` | "No issues in sprint 2." |
+| Add (dry run) | `jira sprint add 2 CST-2 --dry-run` | Prints target + `{ issues: ["CST-2"] }`; sends nothing. |
+| Add (write) | `jira sprint add 2 CST-2` | "Added 1 issue(s) to sprint 2 (chunk 1/1)." |
+| Sprint issues (non-empty) | `jira sprint issues 2` | Lists `CST-2`, confirming the response is parsed from the API's `issues` array. |
+| Read-only guard | `ATLASSIAN_READ_ONLY=1 jira sprint add 2 CST-3` | Refused with `ConfigError` (exit 2); no write performed. |
+| JSON passthrough | `jira sprint issues 2 --json` | Raw aggregate `{ values, total, pages, complete }` with the one issue. |
+
+The unsupported-endpoint path was also observed live: `jira sprint list` against a team-managed
+board returns Jira's own `400 The board does not support sprints` through `HttpError`, as intended.
+The add-to-sprint exercise is reversible (the issue can be moved back to the backlog); `CST-2`
+was left in the sprint in the disposable test project.
