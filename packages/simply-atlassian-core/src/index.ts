@@ -24,6 +24,7 @@
 // nothing written to stdout or stderr. `process.env` is read only through an injectable `env`
 // parameter that defaults to it. The repo's lint config enforces the import side of that rule.
 
+// --- Configuration, transport, clients, errors ---
 export { buildAuthHeaders } from './auth.js';
 export {
   resolveConfluenceConfig,
@@ -42,6 +43,7 @@ export { AuthError, CliError, ConfigError, HttpError, NetworkError } from './err
 export { HttpTransport, type JsonCall, type QueryValue, type TransportTarget } from './http.js';
 export {
   JiraClient,
+  MAX_ISSUES_PER_SPRINT_MOVE,
   type JiraAgileResult,
   type JiraChangelogEntry,
   type JiraChangelogItem,
@@ -53,7 +55,20 @@ export {
 } from './jira-client.js';
 export { stripControl, stripControlOneLine } from './text.js';
 
-export { issueUrl, pageIdForInstance, pageIdFromInput, pageUrl, projectUrl } from './atlassian-url.js';
+// --- Safety: the read-only guard and credential redaction, shared by every consumer ---
+export { assertWritesAllowed, isReadOnly, READ_ONLY_ENV } from './write-safety.js';
+export { collectSecrets, redactSecrets, sanitiseDeep, SECRET_ENV, secretValues } from './redaction.js';
+
+// --- Shared input handling and rendering ---
+export {
+  isIssueKey,
+  issueUrl,
+  jiraTargetUrl,
+  pageIdForInstance,
+  pageIdFromInput,
+  pageUrl,
+  projectUrl,
+} from './atlassian-url.js';
 export { resolveStorageBody, type StorageBody } from './confluence-body.js';
 export {
   describeLinkFromIssue,
@@ -69,3 +84,73 @@ export { mergeFields, parseBodyInput } from './json-input.js';
 export { appendMentions, resolveMentions, type ResolvedMention } from './mentions.js';
 export { formatKeyValue, formatTable, type Column, type Pair } from './output.js';
 export { storageToMarkdown } from './storage-markdown.js';
+
+// --- Operations: what each command does between parsing its input and rendering its result ---
+export { addIssuesToSprint, numericId, sprintChunkSizes, type SprintAddResult } from './jira-agile.js';
+export {
+  buildCommentBody,
+  buildCommentEditBody,
+  deleteComment,
+  type CommentInput,
+  type DeleteCommentInput,
+  type DeleteCommentResult,
+} from './jira-comments.js';
+export {
+  changelogJson,
+  compareCreated,
+  filterChangelog,
+  normalizeField,
+  touchesField,
+  type ChangelogJson,
+} from './jira-history.js';
+export {
+  assertIssueKey,
+  browseUrl,
+  buildCreateIssueBody,
+  buildUpdateIssueBody,
+  deleteIssue,
+  readBackIssue,
+  type CreateIssueInput,
+  type DeleteIssueInput,
+  type DeleteIssueResult,
+  type IssueFieldInput,
+  type IssueReadBack,
+  type UpdateIssueInput,
+} from './jira-issues.js';
+export {
+  assertLinkId,
+  buildIssueLinkBody,
+  deleteIssueLink,
+  describeIssueLink,
+  issueLinkCreated,
+  type DeleteIssueLinkResult,
+  type IssueLinkCreated,
+  type IssueLinkRequest,
+} from './jira-links.js';
+export {
+  buildTransitionBody,
+  resolveTransitionId,
+  type Transition,
+  type TransitionInput,
+  type TransitionsResponse,
+} from './jira-transitions.js';
+export { assertAccount, currentAccount, userList, type JiraUser } from './jira-users.js';
+export {
+  BODY_FORMATS,
+  buildPageCommentBody,
+  buildPageCreateBody,
+  deletePage,
+  pageExpand,
+  preparePageUpdate,
+  renderPageBody,
+  updatePage,
+  webUrl,
+  type BodyFormat,
+  type ConfluencePageSummary,
+  type CreatePageInput,
+  type DeletePageInput,
+  type DeletePageResult,
+  type PageBodyInput,
+  type PageUpdatePlan,
+  type UpdatePageInput,
+} from './confluence-pages.js';

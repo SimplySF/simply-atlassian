@@ -77,10 +77,10 @@ export async function startTestServer(): Promise<TestServer> {
   return {
     baseUrl,
     requests,
-    route: (pathname, handler) => {
+    route: (pathname, handler): void => {
       routes.set(pathname, handler);
     },
-    close: () =>
+    close: (): Promise<void> =>
       new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));
       }),

@@ -18,7 +18,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ConfigError } from '../src/errors.js';
 import { JiraClient } from '../src/jira-client.js';
 import { appendMentions, resolveMentions } from '../src/mentions.js';
-import { respondJson, startTestServer, type TestServer } from './support.js';
+import { respondJson, startTestServer, type TestServer } from '../src/testing.js';
 
 let server: TestServer;
 
