@@ -30,6 +30,10 @@
     ".": {
       "types": "./lib/index.d.ts",
       "default": "./lib/index.js"
+    },
+    "./testing": {
+      "types": "./lib/testing.d.ts",
+      "default": "./lib/testing.js"
     }
   },
   "dependencies": {},

@@ -108,6 +108,42 @@ internal.
 | `stripControl(text)`, `stripControlOneLine(text)`                                                                                               | Remove terminal control and invisible characters from instance-supplied text; the one-line variant also collapses whitespace.                |
 | `LinkType`, `LinkTypesResponse`, `ResolvedLink`, `IssueLink`, `LinkedIssue`, `ResolvedMention`, `StorageBody`, `Pair`, `Column`, `JiraIssueRow` | Types for the above.                                                                                                                         |
 
+### Safety
+
+| Export                                                           | Description                                                                                                        |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `assertWritesAllowed(env?)`, `isReadOnly(env?)`, `READ_ONLY_ENV` | The `ATLASSIAN_READ_ONLY` guard the CLI applies before any write command and the MCP server before any write tool. |
+| `secretValues(env?)`, `collectSecrets(values)`, `SECRET_ENV`     | The credential values worth redacting: the `*_TOKEN` variables, plus whatever else a caller collected.             |
+| `redactSecrets(message, secrets)`                                | Blanks every occurrence of every secret out of a message.                                                          |
+| `sanitiseDeep(value, secrets)`                                   | Redacts and control-strips an arbitrary response body, recursively and bounded.                                    |
+
+### Operations
+
+What each CLI command does between parsing its input and rendering its result, so the MCP server
+and any other consumer get the same request assembly, dry runs, and consent checks. Each returns
+what the matching command returns under `--json`.
+
+| Export                                                                                                                                                                                         | Description                                                                                                |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `buildCreateIssueBody(client, input)`, `buildUpdateIssueBody(client, issue, input)`                                                                                                            | Typed fields merged over a raw body in the deployment's shapes; refuse an empty request.                   |
+| `readBackIssue(client, issue)`                                                                                                                                                                 | Re-reads an issue after an update, reporting a failure instead of throwing it.                             |
+| `deleteIssue(client, input)`, `assertIssueKey(value)`, `browseUrl(issue)`                                                                                                                      | The key-shape check, dry run, consent check, and delete, in that order.                                    |
+| `resolveTransitionId(client, issue, transition, options?)`, `buildTransitionBody(client, id, input)`                                                                                           | Name-or-id resolution with the candidate listing, and the request with an optional comment.                |
+| `buildCommentBody(client, issue, input)`, `buildCommentEditBody(client, comment, input)`, `deleteComment(client, input)`                                                                       | Comment bodies with mentions resolved, and the gated delete.                                               |
+| `buildIssueLinkBody(client, from, type, to, comment?)`, `issueLinkCreated(from, to, resolved)`, `deleteIssueLink(client, linkId, options?)`, `describeIssueLink(link)`, `assertLinkId(value)`  | Link creation stated the natural way round, and deletion that names what it removed.                       |
+| `addIssuesToSprint(client, sprint, issues, options?)`, `numericId(label, value)`, `sprintChunkSizes(count)`                                                                                    | Agile ids and chunked sprint moves.                                                                        |
+| `currentAccount(client)`, `assertAccount(user)`, `userList(response)`                                                                                                                          | Identity that refuses a login page, and user-search normalisation.                                         |
+| `filterChangelog(result, field)`, `changelogJson(result)`, `normalizeField`, `touchesField`, `compareCreated`                                                                                  | Issue history filtering and its machine-readable view.                                                     |
+| `buildPageCreateBody(input, instanceUrl)`, `preparePageUpdate(client, pageId, input)`, `updatePage(client, plan)`, `deletePage(client, pageId, input?)`, `buildPageCommentBody(pageId, input)` | Confluence page and comment writes: versioned updates with conflict detection, and trash-or-purge deletes. |
+| `webUrl(page)`, `pageExpand(format, expand?)`, `renderPageBody(storage, format)`, `BODY_FORMATS`                                                                                               | Page reads: the browser URL, which expansions a body format needs, and rendering.                          |
+| `isIssueKey(value)`, `jiraTargetUrl(baseUrl, target)`, `MAX_ISSUES_PER_SPRINT_MOVE`                                                                                                            | Small helpers the above share.                                                                             |
+
+### Testing helpers
+
+`@simplysf/simply-atlassian-core/testing` exports `startTestServer()` and `respondJson()`: a tiny
+local HTTP server that records every request and answers per pathname, used by this package's,
+the CLI's, and the MCP server's tests to exercise real requests rather than mocked `fetch`.
+
 ## Issues
 
 Please report any issues at https://github.com/SimplySF/simply-atlassian/issues

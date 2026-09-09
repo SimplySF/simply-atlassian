@@ -17,8 +17,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { AtlassianConfig } from '@simplysf/simply-atlassian-core';
 import { JiraClient } from '@simplysf/simply-atlassian-core';
+import { respondJson, startTestServer, type TestServer } from '@simplysf/simply-atlassian-core/testing';
 import JiraIssueHistory from '../../../../../src/commands/atlassian/jira/issue/history.js';
-import { respondJson, startTestServer, type TestServer } from '../../../../support.js';
 
 let server: TestServer;
 

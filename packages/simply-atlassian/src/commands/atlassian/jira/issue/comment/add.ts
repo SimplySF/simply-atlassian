@@ -15,13 +15,7 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import {
-  appendMentions,
-  ConfigError,
-  formatKeyValue,
-  parseBodyInput,
-  resolveMentions,
-} from '@simplysf/simply-atlassian-core';
+import { buildCommentBody, formatKeyValue, parseBodyInput } from '@simplysf/simply-atlassian-core';
 import { JiraCommand, writeFlags } from '../../../../../shared/base-command.js';
 
 interface Comment {
@@ -68,14 +62,11 @@ export default class JiraIssueCommentAdd extends JiraCommand<typeof JiraIssueCom
     const client = this.jira();
     const { issue } = this.args;
 
-    let body = parseBodyInput(this.flags.body, this.flags['body-file']) ?? {};
-    if (this.flags.text !== undefined) body.body = client.descriptionValue(this.flags.text);
-    if (this.flags.mention !== undefined) {
-      body = appendMentions(client, body, await resolveMentions(client, this.flags.mention));
-    }
-    if (body.body === undefined) {
-      throw new ConfigError(`Nothing to comment on ${issue}. Pass --text, or a body containing one.`);
-    }
+    const body = await buildCommentBody(client, issue, {
+      body: parseBodyInput(this.flags.body, this.flags['body-file']),
+      text: this.flags.text,
+      mentions: this.flags.mention,
+    });
 
     if (this.flags['dry-run']) {
       this.log('Dry run — not sent. Request body:');

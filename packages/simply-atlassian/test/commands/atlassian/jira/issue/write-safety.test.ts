@@ -20,6 +20,7 @@ import { join } from 'node:path';
 import process from 'node:process';
 import { readdir } from 'node:fs/promises';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { respondJson, startTestServer, type TestServer } from '@simplysf/simply-atlassian-core/testing';
 import ConfluencePageCommentAdd from '../../../../../src/commands/atlassian/confluence/page/comment/add.js';
 import ConfluencePageCreate from '../../../../../src/commands/atlassian/confluence/page/create.js';
 import ConfluencePageDelete from '../../../../../src/commands/atlassian/confluence/page/delete.js';
@@ -34,7 +35,6 @@ import JiraIssueCreate from '../../../../../src/commands/atlassian/jira/issue/cr
 import JiraIssueDelete from '../../../../../src/commands/atlassian/jira/issue/delete.js';
 import JiraIssueUpdate from '../../../../../src/commands/atlassian/jira/issue/update.js';
 import JiraWhoami from '../../../../../src/commands/atlassian/jira/whoami.js';
-import { respondJson, startTestServer, type TestServer } from '../../../../support.js';
 
 let server: TestServer;
 

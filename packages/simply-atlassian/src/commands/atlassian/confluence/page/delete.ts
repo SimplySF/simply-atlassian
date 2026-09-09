@@ -15,14 +15,8 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { CliError, ConfigError, pageIdForInstance, stripControlOneLine } from '@simplysf/simply-atlassian-core';
+import { deletePage, pageIdForInstance } from '@simplysf/simply-atlassian-core';
 import { ConfluenceCommand, confirmFlag, writeFlags } from '../../../../shared/base-command.js';
-
-interface Page {
-  readonly id?: string;
-  readonly title?: string;
-  readonly status?: string;
-}
 
 export default class ConfluencePageDelete extends ConfluenceCommand<typeof ConfluencePageDelete> {
   public static override isWrite = true;
@@ -58,60 +52,29 @@ export default class ConfluencePageDelete extends ConfluenceCommand<typeof Confl
     const pageId = pageIdForInstance(this.args.page, this.confluenceConfig().url);
     const purge = this.flags.purge;
 
-    // Read first so both the confirmation and the result can name the page. A page id identifies
-    // nothing to a person, and after a purge this line is the only remaining record of what went.
-    // `status: 'any'` is load-bearing: the default filter is [current, archived], so a plain GET
-    // of a trashed page answers 404. Without it the already-trashed branch below is unreachable
-    // and `--purge` on a trashed page fails at the read rather than finishing the job — which is
-    // exactly the state a half-failed purge leaves behind.
-    const page = (await client.getPage(pageId, { expand: [], status: 'any' })) as Page;
-    // Rendered as a JSON string rather than dropped between bare quotes: control characters are
-    // already stripped, but a title containing a quote could otherwise close ours and narrate a
-    // false outcome on the same line ("... Nothing was deleted; the page is intact").
-    const title = JSON.stringify(stripControlOneLine(page.title ?? '(untitled)'));
-    const alreadyTrashed = page.status === 'trashed';
-
-    if (purge && this.flags.confirm !== true) {
-      throw new ConfigError(
-        `Refusing to permanently destroy page ${pageId} (${title}) without --confirm. ` +
-          'Omit --purge to move it to the trash instead, which is reversible.',
-      );
-    }
+    // The page is read first so every line below can name it; a page id identifies nothing to
+    // a person, and after a purge that line is the only remaining record of what went.
+    const result = await deletePage(client, pageId, {
+      purge,
+      confirm: this.flags.confirm,
+      dryRun: this.flags['dry-run'],
+    });
+    const { title } = result;
 
     if (this.flags['dry-run']) {
       const effect = purge ? 'permanently destroy' : 'move to the trash';
       this.logSafe(`Dry run — not sent. Would ${effect} page ${pageId} (${title}).`);
-      return { pageId, title, purge, deleted: false };
+      return result;
     }
-
     if (purge) {
-      // Confluence only purges content that is already trashed, so an untrashed page needs both
-      // steps. Doing them together is the point: "--purge" is one intent, and leaving a caller
-      // half-done would let them believe a page was destroyed when it is sitting in the trash.
-      if (!alreadyTrashed) await client.deleteContent(pageId);
-      try {
-        await client.deleteContent(pageId, { purge: true });
-      } catch (error) {
-        // The page has already left the space at this point. Surfacing only the purge failure
-        // would read as "the operation did not happen" while every link to the page is broken,
-        // so the partial outcome is stated first and the underlying reason carried through.
-        const reason = error instanceof Error ? error.message : String(error);
-        throw new CliError(
-          `Page ${pageId} (${title}) was moved to the trash but could NOT be permanently ` +
-            `deleted, so it is still recoverable from there. Reason: ${reason}`,
-        );
-      }
       this.logSafe(`Permanently deleted page ${pageId} (${title}).`);
-      return { pageId, title, purge: true, deleted: true };
+      return result;
     }
-
-    if (alreadyTrashed) {
+    if (!result.deleted) {
       this.logSafe(`Page ${pageId} (${title}) is already in the trash. Use --purge --confirm to destroy it.`);
-      return { pageId, title, purge: false, deleted: false };
+      return result;
     }
-
-    await client.deleteContent(pageId);
     this.logSafe(`Moved page ${pageId} (${title}) to the trash. It can be restored from there.`);
-    return { pageId, title, purge: false, deleted: true };
+    return result;
   }
 }

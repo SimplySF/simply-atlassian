@@ -15,23 +15,13 @@
  */
 
 import { Flags } from '@oclif/core';
-import { formatKeyValue, pageIdForInstance, resolveStorageBody } from '@simplysf/simply-atlassian-core';
+import {
+  buildPageCreateBody,
+  type ConfluencePageSummary,
+  formatKeyValue,
+  webUrl,
+} from '@simplysf/simply-atlassian-core';
 import { ConfluenceCommand, writeFlags } from '../../../../shared/base-command.js';
-
-interface CreatedPage {
-  readonly id?: string;
-  readonly title?: string;
-  readonly version?: { readonly number?: number };
-  readonly _links?: { readonly base?: string; readonly webui?: string };
-}
-
-/** Confluence returns the browser URL split across two fields. */
-function webUrl(page: CreatedPage): string | undefined {
-  /* eslint-disable-next-line no-underscore-dangle -- Atlassian's field name */
-  const links = page._links;
-  if (links?.base === undefined || links.webui === undefined) return undefined;
-  return `${links.base}${links.webui}`;
-}
 
 export default class ConfluencePageCreate extends ConfluenceCommand<typeof ConfluencePageCreate> {
   public static override isWrite = true;
@@ -65,19 +55,17 @@ export default class ConfluencePageCreate extends ConfluenceCommand<typeof Confl
 
   public async run(): Promise<unknown> {
     const client = this.confluence();
-    const body = resolveStorageBody(this.flags);
-
-    const payload: Record<string, unknown> = {
-      type: 'page',
-      title: this.flags.title,
-      space: { key: this.flags.space },
-      // A page with no body is legitimate — a placeholder someone fills in later — so an absent
-      // body is an empty one rather than an error.
-      body: body ?? { storage: { value: '', representation: 'storage' } },
-    };
-    if (this.flags.parent !== undefined) {
-      payload.ancestors = [{ id: pageIdForInstance(this.flags.parent, this.confluenceConfig().url) }];
-    }
+    const payload = buildPageCreateBody(
+      {
+        space: this.flags.space,
+        title: this.flags.title,
+        parent: this.flags.parent,
+        text: this.flags.text,
+        body: this.flags.body,
+        'body-file': this.flags['body-file'],
+      },
+      this.confluenceConfig().url,
+    );
 
     if (this.flags['dry-run']) {
       this.log('Dry run — not sent. Request body:');
@@ -85,7 +73,7 @@ export default class ConfluencePageCreate extends ConfluenceCommand<typeof Confl
       return payload;
     }
 
-    const created = (await client.createContent(payload)) as CreatedPage;
+    const created = (await client.createContent(payload)) as ConfluencePageSummary;
     this.log(
       formatKeyValue([
         ['Created', created.id],

@@ -1,6 +1,6 @@
 # 0012 — Splitting `simply-atlassian-core` out of `simply-atlassian`
 
-**Status:** Phase 1 implemented on `feat/simply-atlassian-core` (PR pending); phases 2 and 3 planned
+**Status:** Phase 1 implemented (PR #17); phases 2 and 3 implemented together on `feat/mcp-in-process` (PR pending)
 **Package:** new `packages/simply-atlassian-core`; `packages/simply-atlassian` (CLI, slimmed);
 `packages/simply-atlassian-mcp` (consumer, in a follow-up to 0007)
 **Date:** 2026-09-09
@@ -226,6 +226,30 @@ from the repo at test time; it just stops being a runtime dependency.
 The seven agile/open/history commands that landed after PR #11 branched (28 commands today, 21
 in its catalogue) get tools in that follow-up as well; `open` tools return the URL rather than
 launching a browser, which is why `atlassian-url.ts` is in core and `open-in-browser.ts` is not.
+
+### What phases 2 and 3 actually landed
+
+Both landed in one PR series rather than five, because the MCP server was the consumer that made
+every hoist immediately testable from a second surface. Module names differ from the table above
+where the code found its own grouping:
+
+| Planned                | Landed                                                                                                                |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `write-safety.ts`      | `write-safety.ts` (`assertWritesAllowed`, `isReadOnly`, `READ_ONLY_ENV`)                                              |
+| `redaction.ts`         | `redaction.ts` (`SECRET_ENV`, `collectSecrets`, `secretValues`, `redactSecrets`, `sanitiseDeep`)                      |
+| `issue-writes.ts`      | `jira-issues.ts` (create/update bodies, `readBackIssue`, `deleteIssue`, `browseUrl`)                                  |
+| `transitions.ts`       | `jira-transitions.ts`                                                                                                 |
+| `comments.ts`          | `jira-comments.ts`                                                                                                    |
+| `adf.ts`, `account.ts` | `jira-users.ts` (`assertAccount`, `currentAccount`, `userList`); ADF-to-text stayed in the CLI, since it is rendering |
+| `history.ts`           | `jira-history.ts`                                                                                                     |
+| `agile.ts`             | `jira-agile.ts`; `MAX_ISSUES_PER_SPRINT_MOVE` exported from the client                                                |
+| `confluence-pages.ts`  | `confluence-pages.ts` (create/update/delete/comment, `webUrl`, `pageExpand`, `renderPageBody`)                        |
+| link helpers (audit)   | `jira-links.ts` (`buildIssueLinkBody`, `deleteIssueLink`, `describeIssueLink`, `assertLinkId`)                        |
+
+The fake HTTP server became the `@simplysf/simply-atlassian-core/testing` subpath export once the
+MCP tests were its third consumer, as planned. One ordering change was accepted knowingly: a
+dry run of `issue delete`, `comment delete`, or `sprint add` now resolves the connection settings
+first, as every other write command already did, instead of answering without them.
 
 ## Alternatives considered
 

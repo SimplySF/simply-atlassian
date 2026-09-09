@@ -15,7 +15,7 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { ConfigError, formatKeyValue, pageIdForInstance, resolveStorageBody } from '@simplysf/simply-atlassian-core';
+import { buildPageCommentBody, formatKeyValue, pageIdForInstance } from '@simplysf/simply-atlassian-core';
 import { ConfluenceCommand, writeFlags } from '../../../../../shared/base-command.js';
 
 interface CreatedComment {
@@ -51,17 +51,11 @@ export default class ConfluencePageCommentAdd extends ConfluenceCommand<typeof C
 
   public async run(): Promise<unknown> {
     const pageId = pageIdForInstance(this.args.page, this.confluenceConfig().url);
-    const body = resolveStorageBody(this.flags);
-    if (body === undefined) {
-      throw new ConfigError('Nothing to post. Pass --text, --body, or --body-file.');
-    }
-
-    const payload: Record<string, unknown> = {
-      type: 'comment',
-      // The container is what makes this a comment *on* the page rather than loose content.
-      container: { id: pageId, type: 'page' },
-      body,
-    };
+    const payload = buildPageCommentBody(pageId, {
+      text: this.flags.text,
+      body: this.flags.body,
+      'body-file': this.flags['body-file'],
+    });
 
     if (this.flags['dry-run']) {
       this.log(`Dry run — not sent. Would comment on page ${pageId}:`);

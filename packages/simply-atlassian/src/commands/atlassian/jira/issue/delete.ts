@@ -15,7 +15,7 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { ConfigError } from '@simplysf/simply-atlassian-core';
+import { deleteIssue } from '@simplysf/simply-atlassian-core';
 import { confirmFlag, JiraCommand, writeFlags } from '../../../../shared/base-command.js';
 
 export default class JiraIssueDelete extends JiraCommand<typeof JiraIssueDelete> {
@@ -47,27 +47,21 @@ export default class JiraIssueDelete extends JiraCommand<typeof JiraIssueDelete>
   };
 
   public async run(): Promise<unknown> {
-    const { issue } = this.args;
+    // The key's shape is checked, the dry run answered, and consent examined — in that order —
+    // inside the shared operation, so `--confirm=false` (which oclif turns into a true flag plus
+    // a bogus argument) is refused the same way here and in the MCP server.
+    const result = await deleteIssue(this.jira(), {
+      issue: this.args.issue,
+      deleteSubtasks: this.flags['delete-subtasks'],
+      confirm: this.flags.confirm,
+      dryRun: this.flags['dry-run'],
+    });
 
-    // `--confirm=false` makes oclif consume "false" as this argument while setting the flag
-    // true, so a shape check is what stops a confused invocation from sending a DELETE for a
-    // nonsense key. It also catches an ordinary typo before anything is destroyed.
-    if (!/^[A-Za-z][A-Za-z0-9_]*-\d+$/.test(issue)) {
-      throw new ConfigError(`"${issue}" is not an issue key. Pass a key such as PROJ-123.`);
+    if ('dryRun' in result) {
+      this.log(`Dry run — not sent. Would delete ${result.issue}${result.deleteSubtasks ? ' and its subtasks' : ''}.`);
+      return result;
     }
-
-    if (this.flags['dry-run']) {
-      this.log(`Dry run — not sent. Would delete ${issue}${this.flags['delete-subtasks'] ? ' and its subtasks' : ''}.`);
-      return { issue, deleteSubtasks: this.flags['delete-subtasks'], dryRun: true };
-    }
-
-    // Named in the message so a caller that meant a different issue notices before retrying.
-    if (!this.flags.confirm) {
-      throw new ConfigError(`Deleting ${issue} cannot be undone. Pass --confirm to proceed.`);
-    }
-
-    await this.jira().deleteIssue(issue, { deleteSubtasks: this.flags['delete-subtasks'] });
-    this.log(`Deleted ${issue}.`);
-    return { issue, deleted: true };
+    this.log(`Deleted ${result.issue}.`);
+    return result;
   }
 }

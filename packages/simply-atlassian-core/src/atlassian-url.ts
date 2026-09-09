@@ -24,8 +24,22 @@ const PAGE_ID_IN_PATH = /\/pages\/(?:viewpage\.action\?pageId=)?(\d+)/;
 /** `?pageId=123456`, the Server/DC viewpage form. */
 const PAGE_ID_IN_QUERY = /[?&]pageId=(\d+)/;
 
+/** `PROJ-123`: a project key, a dash, and a number. */
+const ISSUE_KEY = /^[A-Za-z][A-Za-z0-9_]*-\d+$/;
+
+/** Whether a value is shaped like an issue key rather than a project key or something else. */
+export function isIssueKey(value: string): boolean {
+  return ISSUE_KEY.test(value);
+}
+
 function baseUrlWithoutTrailingSlash(baseUrl: string): string {
   return baseUrl.replace(/\/+$/, '');
+}
+
+/** The browser URL for whatever a Jira target is: an issue key opens the issue, anything else a project. */
+export function jiraTargetUrl(baseUrl: string, target: string): string {
+  const trimmed = target.trim();
+  return isIssueKey(trimmed) ? issueUrl(baseUrl, trimmed) : projectUrl(baseUrl, trimmed);
 }
 
 /** Builds the browser URL for a Jira issue. */

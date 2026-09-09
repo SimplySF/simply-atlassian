@@ -15,9 +15,8 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { formatTable, jiraIssueColumns, type JiraIssueRow } from '@simplysf/simply-atlassian-core';
+import { formatTable, jiraIssueColumns, type JiraIssueRow, numericId } from '@simplysf/simply-atlassian-core';
 import { JiraCommand, parseList } from '../../../../shared/base-command.js';
-import { numericId } from './list.js';
 
 export default class JiraSprintIssues extends JiraCommand<typeof JiraSprintIssues> {
   public static override readonly summary = 'List issues in a sprint.';

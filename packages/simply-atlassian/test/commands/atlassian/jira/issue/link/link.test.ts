@@ -15,12 +15,12 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { respondJson, startTestServer, type TestServer } from '@simplysf/simply-atlassian-core/testing';
 import JiraIssueCreate from '../../../../../../src/commands/atlassian/jira/issue/create.js';
 import JiraIssueLinkCreate from '../../../../../../src/commands/atlassian/jira/issue/link/create.js';
 import JiraIssueLinkDelete from '../../../../../../src/commands/atlassian/jira/issue/link/delete.js';
 import JiraIssueLinkList from '../../../../../../src/commands/atlassian/jira/issue/link/list.js';
 import JiraIssueLinkTypes from '../../../../../../src/commands/atlassian/jira/issue/link/types.js';
-import { respondJson, startTestServer, type TestServer } from '../../../../../support.js';
 
 let server: TestServer;
 

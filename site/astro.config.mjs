@@ -37,6 +37,7 @@ export default defineConfig({
             { label: 'Credentials', slug: 'guides/credentials' },
             { label: 'Write safety', slug: 'guides/write-safety' },
             { label: 'Scripts and agents', slug: 'guides/scripting' },
+            { label: 'MCP server', slug: 'guides/mcp-server' },
           ],
         },
         {

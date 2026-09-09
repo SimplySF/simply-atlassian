@@ -16,8 +16,8 @@
 
 import process from 'node:process';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { respondJson, startTestServer, type TestServer } from '@simplysf/simply-atlassian-core/testing';
 import JiraWhoami from '../../../../src/commands/atlassian/jira/whoami.js';
-import { respondJson, startTestServer, type TestServer } from '../../../support.js';
 
 let server: TestServer;
 

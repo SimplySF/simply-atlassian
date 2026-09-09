@@ -16,29 +16,14 @@
 
 import { Args, Flags } from '@oclif/core';
 import {
-  CliError,
-  ConfigError,
+  type ConfluencePageSummary,
   formatKeyValue,
-  HttpError,
   pageIdForInstance,
-  resolveStorageBody,
+  preparePageUpdate,
+  updatePage,
+  webUrl,
 } from '@simplysf/simply-atlassian-core';
 import { ConfluenceCommand, writeFlags } from '../../../../shared/base-command.js';
-
-interface Page {
-  readonly id?: string;
-  readonly title?: string;
-  readonly type?: string;
-  readonly version?: { readonly number?: number };
-  readonly _links?: { readonly base?: string; readonly webui?: string };
-}
-
-function webUrl(page: Page): string | undefined {
-  /* eslint-disable-next-line no-underscore-dangle -- Atlassian's field name */
-  const links = page._links;
-  if (links?.base === undefined || links.webui === undefined) return undefined;
-  return `${links.base}${links.webui}`;
-}
 
 export default class ConfluencePageUpdate extends ConfluenceCommand<typeof ConfluencePageUpdate> {
   public static override isWrite = true;
@@ -72,58 +57,21 @@ export default class ConfluencePageUpdate extends ConfluenceCommand<typeof Confl
   public async run(): Promise<unknown> {
     const client = this.confluence();
     const pageId = pageIdForInstance(this.args.page, this.confluenceConfig().url);
-    const body = resolveStorageBody(this.flags);
 
-    if (body === undefined && this.flags.title === undefined) {
-      throw new ConfigError('Nothing to update. Pass --title, or a body with --text, --body, or --body-file.');
-    }
-
-    // Confluence requires both the next version number and the title on every update, even when
-    // the title is unchanged, so the current state has to be read either way.
-    const current = (await client.getPage(pageId, { expand: ['version'] })) as Page;
-    const version = current.version?.number;
-    if (typeof version !== 'number') {
-      throw new CliError(`The instance reported no version for page ${pageId}, so it cannot be updated safely.`);
-    }
-
-    // 0008 covers pages. The instance decides what an id is, and echoing its answer back would
-    // quietly make this a comment editor — which is explicitly deferred to a later doc.
-    if (current.type !== undefined && current.type !== 'page') {
-      throw new ConfigError(`${pageId} is a ${current.type}, not a page. This command only updates pages.`);
-    }
-
-    const payload: Record<string, unknown> = {
-      type: 'page',
-      title: this.flags.title ?? current.title,
-      version: { number: version + 1 },
-    };
-    if (body !== undefined) payload.body = body;
+    const plan = await preparePageUpdate(client, pageId, {
+      title: this.flags.title,
+      text: this.flags.text,
+      body: this.flags.body,
+      'body-file': this.flags['body-file'],
+    });
 
     if (this.flags['dry-run']) {
-      this.log(`Dry run — not sent. Would update page ${pageId} from version ${version} to ${version + 1}:`);
-      this.logSafe(JSON.stringify(payload, null, 2));
-      return payload;
+      this.log(`Dry run — not sent. Would update page ${pageId} from version ${plan.version} to ${plan.version + 1}:`);
+      this.logSafe(JSON.stringify(plan.payload, null, 2));
+      return plan.payload;
     }
 
-    let updated: Page;
-    try {
-      updated = (await client.updateContent(pageId, payload)) as Page;
-    } catch (error) {
-      // 409 is the one failure worth naming: it means the page moved under us, which is a
-      // different problem from a bad request and has a different fix — read it again and re-apply.
-      // Only a version conflict gets the "someone else edited this" wording, and only because
-      // its remedy is to re-run. Confluence answers 409 for other reasons too — a duplicate
-      // title, for one — where re-running reproduces the same failure forever, which for an
-      // agent is an infinite loop. So the instance's own reason is always carried through.
-      if (error instanceof HttpError && error.status === 409 && /version/i.test(error.message)) {
-        throw new CliError(
-          `Page ${pageId} was changed by someone else while this ran (it is no longer at version ` +
-            `${version}). Nothing was written. Re-run to apply your change on top of theirs.`,
-        );
-      }
-      throw error;
-    }
-
+    const updated = (await updatePage(client, plan)) as ConfluencePageSummary;
     this.log(
       formatKeyValue([
         ['Updated', pageId],

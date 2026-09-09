@@ -141,7 +141,8 @@ interface ServerIssueResponse {
 }
 
 const DEFAULT_MAX_RESULTS = 50;
-const MAX_ISSUES_PER_SPRINT_MOVE = 50;
+/** Jira accepts at most this many issue keys per sprint-move request; longer lists are chunked. */
+export const MAX_ISSUES_PER_SPRINT_MOVE = 50;
 const AGILE_BASE = '/rest/agile/1.0';
 
 /**

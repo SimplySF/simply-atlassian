@@ -15,7 +15,7 @@
  */
 
 import { Args } from '@oclif/core';
-import { ConfigError } from '@simplysf/simply-atlassian-core';
+import { deleteComment } from '@simplysf/simply-atlassian-core';
 import { confirmFlag, JiraCommand, writeFlags } from '../../../../../shared/base-command.js';
 
 export default class JiraIssueCommentDelete extends JiraCommand<typeof JiraIssueCommentDelete> {
@@ -40,19 +40,18 @@ export default class JiraIssueCommentDelete extends JiraCommand<typeof JiraIssue
 
   public async run(): Promise<unknown> {
     const { issue, comment } = this.args;
+    const result = await deleteComment(this.jira(), {
+      issue,
+      comment,
+      confirm: this.flags.confirm,
+      dryRun: this.flags['dry-run'],
+    });
 
-    if (this.flags['dry-run']) {
+    if ('dryRun' in result) {
       this.log(`Dry run — not sent. Would delete comment ${comment} on ${issue}.`);
-      return { issue, comment, dryRun: true };
+      return result;
     }
-
-    // Both ids are named, so a caller that meant a different comment notices before retrying.
-    if (!this.flags.confirm) {
-      throw new ConfigError(`Deleting comment ${comment} on ${issue} cannot be undone. Pass --confirm to proceed.`);
-    }
-
-    await this.jira().deleteComment(issue, comment);
     this.log(`Deleted comment ${comment} on ${issue}.`);
-    return { issue, comment, deleted: true };
+    return result;
   }
 }

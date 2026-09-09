@@ -15,7 +15,7 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { type LinkTypesResponse, resolveLinkDirection, stripControlOneLine } from '@simplysf/simply-atlassian-core';
+import { buildIssueLinkBody, issueLinkCreated, stripControlOneLine } from '@simplysf/simply-atlassian-core';
 import { JiraCommand, writeFlags } from '../../../../../shared/base-command.js';
 
 export default class JiraIssueLinkCreate extends JiraCommand<typeof JiraIssueLinkCreate> {
@@ -51,19 +51,7 @@ export default class JiraIssueLinkCreate extends JiraCommand<typeof JiraIssueLin
     const client = this.jira();
     const { from, type, to } = this.args;
 
-    const response = (await client.getLinkTypes()) as LinkTypesResponse;
-    const resolved = resolveLinkDirection(response.issueLinkTypes ?? [], from, type, to);
-
-    const body: Record<string, unknown> = {
-      // Sent by id when the instance gave one. A name is a mutable string the server re-resolves,
-      // so posting it reopens the question the phrase match just answered: a rename between the
-      // lookup and the post, or two types sharing a name, would land a different relationship
-      // than the one matched.
-      type: resolved.type.id === undefined ? { name: resolved.type.name } : { id: resolved.type.id },
-      inwardIssue: { key: resolved.inwardIssue },
-      outwardIssue: { key: resolved.outwardIssue },
-    };
-    if (this.flags.comment !== undefined) body.comment = { body: client.descriptionValue(this.flags.comment) };
+    const { body, resolved } = await buildIssueLinkBody(client, from, type, to, this.flags.comment);
 
     if (this.flags['dry-run']) {
       this.log('Dry run — not sent. Request body:');
@@ -75,12 +63,9 @@ export default class JiraIssueLinkCreate extends JiraCommand<typeof JiraIssueLin
     }
 
     await client.createIssueLink(body);
-    // Echoed as the caller said it, not as the payload is shaped: inward/outward is exactly the
-    // framing this command exists to hide, and repeating it back would invite doubt about
-    // whether the right thing was sent.
     // The phrase is the instance's own canonical wording, so it is kept to one line: logSafe
     // keeps newlines, and a forged line on stdout reads as this CLI's own output.
     this.logSafe(`Linked: ${from} ${stripControlOneLine(resolved.phrase)} ${to}.`);
-    return { from, to, type: resolved.type.name ?? resolved.type.id, phrase: resolved.phrase, linked: true };
+    return issueLinkCreated(from, to, resolved);
   }
 }

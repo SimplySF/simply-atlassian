@@ -22,7 +22,7 @@ what's specific to it — read this file first, then that one.
 | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | [`@simplysf/simply-atlassian`](packages/simply-atlassian)           | The `atlassian` CLI                                                                     |
 | [`@simplysf/simply-atlassian-core`](packages/simply-atlassian-core) | Configuration, auth, HTTP clients, and shared logic the CLI and MCP server are built on |
-| [`@simplysf/simply-atlassian-mcp`](packages/simply-atlassian-mcp)   | MCP server exposing the CLI to AI agents (scaffold, unpublished)                        |
+| [`@simplysf/simply-atlassian-mcp`](packages/simply-atlassian-mcp)   | MCP server exposing Jira and Confluence to AI agents, one tool per CLI command          |
 
 Tooling:
 

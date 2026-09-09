@@ -15,7 +15,7 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { ConfigError, formatKeyValue, mergeFields, parseBodyInput } from '@simplysf/simply-atlassian-core';
+import { buildUpdateIssueBody, formatKeyValue, parseBodyInput, readBackIssue } from '@simplysf/simply-atlassian-core';
 import { JiraCommand, writeFlags } from '../../../../shared/base-command.js';
 
 interface Issue {
@@ -70,20 +70,14 @@ export default class JiraIssueUpdate extends JiraCommand<typeof JiraIssueUpdate>
     const client = this.jira();
     const { issue } = this.args;
 
-    const fields: Record<string, unknown> = {};
-    if (this.flags.summary !== undefined) fields.summary = this.flags.summary;
-    if (this.flags.description !== undefined) fields.description = client.descriptionValue(this.flags.description);
-    if (this.flags.assignee !== undefined) {
-      fields.assignee =
-        this.jiraConfig().deployment === 'cloud' ? { id: this.flags.assignee } : { name: this.flags.assignee };
-    }
-    if (this.flags.priority !== undefined) fields.priority = { name: this.flags.priority };
-    if (this.flags.label !== undefined) fields.labels = this.flags.label;
-
-    const body = mergeFields(parseBodyInput(this.flags.body, this.flags['body-file']), fields);
-    if (Object.keys(body.fields as Record<string, unknown>).length === 0) {
-      throw new ConfigError(`Nothing to update on ${issue}. Pass a field flag, or a body.`);
-    }
+    const body = buildUpdateIssueBody(client, issue, {
+      summary: this.flags.summary,
+      description: this.flags.description,
+      assignee: this.flags.assignee,
+      priority: this.flags.priority,
+      labels: this.flags.label,
+      body: parseBodyInput(this.flags.body, this.flags['body-file']),
+    });
 
     if (this.flags['dry-run']) {
       this.log('Dry run — not sent. Request body:');
@@ -98,19 +92,14 @@ export default class JiraIssueUpdate extends JiraCommand<typeof JiraIssueUpdate>
       return { issue, updated: true };
     }
 
-    // The write already succeeded. If reading it back fails — a token that can write but not
-    // browse, an issue that moved projects mid-call — saying so beats reporting a failure the
-    // caller would then retry.
-    let updated: Issue;
-    try {
-      updated = (await client.getIssue(issue)) as Issue;
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : 'unknown reason';
+    const readBack = await readBackIssue(client, issue);
+    if (!readBack.ok) {
       // The reason quotes a server response body, so it goes out sanitised.
-      this.logSafe(`Updated ${issue}. Could not re-read it to verify: ${reason}`);
+      this.logSafe(`Updated ${issue}. Could not re-read it to verify: ${readBack.reason}`);
       return { issue, updated: true, verified: false };
     }
 
+    const updated = readBack.issue as Issue;
     const f = updated.fields ?? {};
     this.log(`Updated ${issue}.`);
     this.log(
