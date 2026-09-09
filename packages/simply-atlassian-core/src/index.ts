@@ -83,6 +83,9 @@ export { jiraIssueColumns, type JiraIssueRow } from './issue-table.js';
 export { mergeFields, parseBodyInput } from './json-input.js';
 export { appendMentions, resolveMentions, type ResolvedMention } from './mentions.js';
 export { formatKeyValue, formatTable, type Column, type Pair } from './output.js';
+export { fieldType, listFields, type FieldFilter, type JiraField } from './jira-discovery.js';
+export { buildSprintCreateBody, prepareSprintUpdate, type Sprint, type SprintInput } from './jira-agile.js';
+export { buildRemoteLinkBody, describeRemoteLink, type RemoteLink, type RemoteLinkInput } from './jira-remote-links.js';
 export { markdownToStorage } from './markdown-storage.js';
 export { storageToMarkdown } from './storage-markdown.js';
 

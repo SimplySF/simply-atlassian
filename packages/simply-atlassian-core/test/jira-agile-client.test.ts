@@ -16,6 +16,8 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { AtlassianConfig } from '../src/config.js';
+import { ConfigError } from '../src/errors.js';
+import { buildSprintCreateBody, prepareSprintUpdate } from '../src/jira-agile.js';
 import { JiraClient } from '../src/jira-client.js';
 import { respondJson, startTestServer, type TestServer } from '../src/testing.js';
 
@@ -100,5 +102,93 @@ describe('JiraClient agile endpoints', () => {
     expect(sent).toHaveLength(2);
     expect(sent[0]).toHaveLength(50);
     expect(sent[1]).toEqual(['PROJ-51']);
+  });
+});
+
+describe('sprint create', () => {
+  it('builds the payload Jira expects, with the board as originBoardId', () => {
+    expect(buildSprintCreateBody('42', { name: 'Sprint 7', goal: 'Ship it' })).toEqual({
+      name: 'Sprint 7',
+      goal: 'Ship it',
+      originBoardId: 42,
+    });
+  });
+
+  it("maps the date flags onto Jira's own field names", () => {
+    expect(buildSprintCreateBody('42', { name: 'S', start: '2026-09-15', end: '2026-09-29' })).toMatchObject({
+      startDate: '2026-09-15',
+      endDate: '2026-09-29',
+    });
+  });
+
+  it('refuses a sprint with no name', () => {
+    expect(() => buildSprintCreateBody('42', {})).toThrow(/needs a --name/);
+    expect(() => buildSprintCreateBody('42', { name: '  ' })).toThrow(ConfigError);
+  });
+
+  it('refuses a state Jira does not accept', () => {
+    expect(() => buildSprintCreateBody('42', { name: 'S', state: 'paused' })).toThrow(/must be one of/);
+  });
+});
+
+describe('sprint update', () => {
+  function routeSprint(sprint: Record<string, unknown>): void {
+    server.route('/rest/agile/1.0/sprint/101', (_req, res) => respondJson(res, 200, sprint));
+  }
+
+  /*
+   * The assertion the command rests on. `POST /sprint/{id}` is a full replacement: Jira clears
+   * anything the request omits, so sending only --name would blank the goal and both dates. The
+   * sprint is read first and the change applied on top.
+   */
+  it('merges onto the current sprint rather than clearing what it did not send', async () => {
+    routeSprint({
+      id: 101,
+      name: 'Old',
+      goal: 'Keep me',
+      startDate: '2026-09-01',
+      endDate: '2026-09-14',
+      state: 'active',
+    });
+
+    const payload = await prepareSprintUpdate(makeClient(), '101', { name: 'New' });
+
+    expect(payload).toEqual({
+      name: 'New',
+      goal: 'Keep me',
+      startDate: '2026-09-01',
+      endDate: '2026-09-14',
+      state: 'active',
+    });
+  });
+
+  it('lets a change win over the current value', async () => {
+    routeSprint({ id: 101, name: 'S', state: 'active' });
+
+    expect(await prepareSprintUpdate(makeClient(), '101', { state: 'closed' })).toMatchObject({ state: 'closed' });
+  });
+
+  it('omits fields the sprint does not have rather than sending undefined', async () => {
+    routeSprint({ id: 101, name: 'S' });
+
+    const payload = await prepareSprintUpdate(makeClient(), '101', { goal: 'g' });
+
+    expect(payload).toEqual({ name: 'S', goal: 'g' });
+  });
+
+  it('refuses an update with nothing to change, before reading the sprint', async () => {
+    await expect(prepareSprintUpdate(makeClient(), '101', {})).rejects.toThrow(/Nothing to update/);
+    expect(server.requests).toHaveLength(0);
+  });
+
+  it('refuses an invalid state before reading the sprint', async () => {
+    await expect(prepareSprintUpdate(makeClient(), '101', { state: 'done' })).rejects.toThrow(/must be one of/);
+    expect(server.requests).toHaveLength(0);
+  });
+
+  it('refuses when the instance reports a sprint with no name', async () => {
+    routeSprint({ id: 101 });
+
+    await expect(prepareSprintUpdate(makeClient(), '101', { goal: 'g' })).rejects.toThrow(/no name/);
   });
 });

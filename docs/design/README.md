@@ -46,6 +46,7 @@ refactors that keep the public surface identical (though a short doc is welcome 
 | 0011 | [Jira issue history](0011-jira-issue-history.md)                                                  | Implemented         |
 | 0012 | [Splitting `simply-atlassian-core` out of `simply-atlassian`](0012-simply-atlassian-core.md)      | Phase 1 implemented |
 | 0013 | [Markdown page bodies](0013-markdown-page-bodies.md)                                              | Draft               |
+| 0014 | [Discovery, labels, sprint writes, and remote links](0014-discovery-labels-and-sprint-writes.md)  | Draft               |
 
 ## Template
 

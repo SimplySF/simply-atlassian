@@ -113,6 +113,12 @@ describe('@simplysf/simply-atlassian-core', () => {
         'updatePage',
         'userList',
         'webUrl',
+        'buildRemoteLinkBody',
+        'buildSprintCreateBody',
+        'describeRemoteLink',
+        'fieldType',
+        'listFields',
+        'prepareSprintUpdate',
       ].sort(),
     );
   });

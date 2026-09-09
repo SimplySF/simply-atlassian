@@ -58,11 +58,17 @@
       "atlassian:jira:user": {
         "description": "Look up Jira users."
       },
+      "atlassian:jira:project": {
+        "description": "Read project metadata."
+      },
       "atlassian:jira:issue": {
         "description": "Read and manage Jira issues."
       },
       "atlassian:jira:issue:comment": {
         "description": "Read and add issue comments."
+      },
+      "atlassian:jira:issue:remotelink": {
+        "description": "Link issues to things outside Jira."
       },
       "atlassian:jira:issue:link": {
         "description": "Relate issues to one another."
@@ -75,6 +81,9 @@
       },
       "atlassian:confluence": {
         "description": "Work with Confluence spaces and pages."
+      },
+      "atlassian:confluence:page:label": {
+        "description": "Read and add page labels."
       },
       "atlassian:confluence:page:comment": {
         "description": "Read and add page comments."
