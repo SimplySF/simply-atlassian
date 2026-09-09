@@ -1,8 +1,7 @@
 {
   "name": "@simplysf/simply-atlassian-mcp",
-  "description": "Model Context Protocol server that exposes the simply-atlassian CLI to AI agents",
+  "description": "Model Context Protocol server exposing Jira and Confluence to AI agents, built on @simplysf/simply-atlassian-core",
   "version": "0.1.0",
-  "private": true,
   "author": "@ClayChipps",
   "homepage": "https://github.com/SimplySF/simply-atlassian",
   "bugs": "https://github.com/SimplySF/simply-atlassian/issues",
@@ -34,6 +33,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
+    "@simplysf/simply-atlassian-core": "workspace:^0.2.0",
     "zod": "^4.5.4"
   },
   "devDependencies": {
@@ -50,9 +50,9 @@
     "format": "wireit",
     "lint": "wireit",
     "test": "wireit",
-    "test:coverage": "vitest run --coverage --project simply-atlassian-mcp",
+    "test:coverage": "wireit",
     "test:only": "wireit",
-    "test:watch": "vitest watch --project simply-atlassian-mcp"
+    "test:watch": "wireit"
   },
   "wireit": {
     "build": {
@@ -72,7 +72,10 @@
         "lib/**",
         "*.tsbuildinfo"
       ],
-      "clean": "if-file-deleted"
+      "clean": "if-file-deleted",
+      "dependencies": [
+        "../simply-atlassian-core:compile"
+      ]
     },
     "format": {
       "command": "prettier --write \"+(src|test)/**/*.+(ts|js|json)\"",
@@ -93,7 +96,10 @@
         "../../eslint.config.mjs",
         "../../tsconfig.json"
       ],
-      "output": []
+      "output": [],
+      "dependencies": [
+        "../simply-atlassian-core:compile"
+      ]
     },
     "test": {
       "dependencies": [
@@ -109,7 +115,10 @@
         "**/tsconfig.json",
         "../../tsconfig.json"
       ],
-      "output": []
+      "output": [],
+      "dependencies": [
+        "../simply-atlassian-core:compile"
+      ]
     },
     "test:only": {
       "command": "vitest run --project simply-atlassian-mcp",
@@ -123,7 +132,39 @@
         "../../tsconfig.json",
         "vitest.config.ts"
       ],
-      "output": []
+      "output": [],
+      "dependencies": [
+        "../simply-atlassian-core:compile"
+      ]
+    },
+    "test:coverage": {
+      "command": "vitest run --coverage --project simply-atlassian-mcp",
+      "env": {
+        "FORCE_COLOR": "2"
+      },
+      "dependencies": [
+        "../simply-atlassian-core:compile"
+      ],
+      "files": [
+        "test/**/*.ts",
+        "src/**/*.ts",
+        "**/tsconfig.json",
+        "../../tsconfig.json",
+        "vitest.config.ts"
+      ],
+      "output": [
+        "coverage/**"
+      ]
+    },
+    "test:watch": {
+      "command": "vitest watch --project simply-atlassian-mcp",
+      "env": {
+        "FORCE_COLOR": "2"
+      },
+      "dependencies": [
+        "../simply-atlassian-core:compile"
+      ],
+      "service": true
     }
   }
 }

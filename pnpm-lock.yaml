@@ -122,6 +122,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
         version: 1.30.0(supports-color@8.1.1)(zod@4.5.4)
+      '@simplysf/simply-atlassian-core':
+        specifier: workspace:^0.2.0
+        version: link:../simply-atlassian-core
       zod:
         specifier: ^4.5.4
         version: 4.5.4

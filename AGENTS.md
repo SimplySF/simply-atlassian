@@ -21,6 +21,8 @@ Use the smallest relevant topic document rather than loading the whole directory
   `confluence open` URL construction, browser-launch and fallback behavior, and output modes.
 - [Jira issue history](docs/design/0011-jira-issue-history.md): changelog paging, completeness
   reporting, and the split between normalized terminal output and raw JSON across Cloud and Server/DC.
+- [MCP server](docs/design/0007-mcp-server.md): the tool catalogue and its parity with the CLI,
+  the read-only default and `--allow-writes`, the confirm gate, and error mapping.
 - [The core library package](docs/design/0012-simply-atlassian-core.md): what lives in
   `@simplysf/simply-atlassian-core` versus the CLI, the no-terminal rule, and the phased plan for
   the MCP server to call it in-process.

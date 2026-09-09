@@ -17,4 +17,16 @@
 // Everything exported from this file is this package's public API. The package is a stdio MCP
 // server first (see bin/run.js); the programmatic surface exists so a host process can embed the
 // same server over a transport of its choosing, and so tests can drive it in-memory.
-export { SERVER_NAME, SERVER_VERSION, createServer, startServer } from './server.js';
+export { createContext, type ServerOptions, type ToolContext } from './context.js';
+export {
+  createServer,
+  invokeTool,
+  mapError,
+  selectTools,
+  SERVER_NAME,
+  SERVER_VERSION,
+  startServer,
+  type ToolError,
+  type ToolErrorCode,
+} from './server.js';
+export { TOOLS, type ToolKind, type ToolSpec } from './tools.js';
