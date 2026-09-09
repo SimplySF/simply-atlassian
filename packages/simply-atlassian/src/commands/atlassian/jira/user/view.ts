@@ -15,8 +15,8 @@
  */
 
 import { Args } from '@oclif/core';
+import { formatKeyValue } from '@simplysf/simply-atlassian-core';
 import { JiraCommand } from '../../../../shared/base-command.js';
-import { formatKeyValue } from '../../../../shared/output.js';
 
 interface JiraUser {
   readonly accountId?: string;

@@ -261,7 +261,13 @@ export class JiraClient {
     }
     /* eslint-enable no-await-in-loop */
 
-    return { entries: collected.slice(0, limit), rawEntries: rawEntries.slice(0, limit), total, pages, complete: false };
+    return {
+      entries: collected.slice(0, limit),
+      rawEntries: rawEntries.slice(0, limit),
+      total,
+      pages,
+      complete: false,
+    };
   }
 
   public async searchIssues(options: JiraSearchOptions): Promise<JiraSearchPage> {

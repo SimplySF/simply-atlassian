@@ -15,8 +15,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { AtlassianConfig } from '../../src/core/config.js';
-import { JiraClient } from '../../src/core/jira-client.js';
+import type { AtlassianConfig } from '../src/config.js';
+import { JiraClient } from '../src/jira-client.js';
 import { respondJson, startTestServer, type TestServer } from './support.js';
 
 let server: TestServer;
@@ -79,10 +79,9 @@ describe('JiraClient agile endpoints', () => {
     expect((await makeClient().getSprints('7', { state: 'active,future' })).values).toEqual([
       { id: 11, name: 'Current' },
     ]);
-    expect((await makeClient().getSprintIssues('11', { fields: ['summary', 'status'], maxResults: 1 })).values).toEqual([
-      { key: 'PROJ-1' },
-      { key: 'PROJ-2' },
-    ]);
+    expect((await makeClient().getSprintIssues('11', { fields: ['summary', 'status'], maxResults: 1 })).values).toEqual(
+      [{ key: 'PROJ-1' }, { key: 'PROJ-2' }],
+    );
   });
 
   it("chunks sprint writes at Jira's 50-issue limit", async () => {

@@ -16,8 +16,8 @@
 
 import { Buffer } from 'node:buffer';
 import { describe, expect, it } from 'vitest';
-import { buildAuthHeaders } from '../../src/core/auth.js';
-import type { AtlassianConfig } from '../../src/core/config.js';
+import { buildAuthHeaders } from '../src/auth.js';
+import type { AtlassianConfig } from '../src/config.js';
 
 function makeConfig(auth: AtlassianConfig['auth']): AtlassianConfig {
   return { url: 'https://example.atlassian.net', deployment: 'cloud', auth };

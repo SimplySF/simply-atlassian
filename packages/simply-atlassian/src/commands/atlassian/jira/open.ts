@@ -15,7 +15,7 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { issueUrl, projectUrl } from '../../../shared/atlassian-url.js';
+import { issueUrl, projectUrl } from '@simplysf/simply-atlassian-core';
 import { JiraCommand } from '../../../shared/base-command.js';
 import { openInBrowser } from '../../../shared/open-in-browser.js';
 

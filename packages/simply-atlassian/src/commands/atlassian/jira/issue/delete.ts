@@ -15,8 +15,8 @@
  */
 
 import { Args, Flags } from '@oclif/core';
+import { ConfigError } from '@simplysf/simply-atlassian-core';
 import { confirmFlag, JiraCommand, writeFlags } from '../../../../shared/base-command.js';
-import { ConfigError } from '../../../../core/errors.js';
 
 export default class JiraIssueDelete extends JiraCommand<typeof JiraIssueDelete> {
   public static override isWrite = true;

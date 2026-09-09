@@ -17,7 +17,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import JiraUserSearch from '../../../../../src/commands/atlassian/jira/user/search.js';
 import JiraUserView from '../../../../../src/commands/atlassian/jira/user/view.js';
-import { respondJson, startTestServer, type TestServer } from '../../../../core/support.js';
+import { respondJson, startTestServer, type TestServer } from '../../../../support.js';
 
 let server: TestServer;
 

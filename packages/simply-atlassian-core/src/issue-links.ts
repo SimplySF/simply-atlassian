@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { ConfigError } from '../core/errors.js';
-import { stripControlOneLine } from '../core/text.js';
+import { ConfigError } from './errors.js';
+import { stripControlOneLine } from './text.js';
 
 /** A link type as the instance reports it. Both phrases are configurable per instance. */
 export interface LinkType {

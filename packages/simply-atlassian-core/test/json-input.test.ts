@@ -18,8 +18,8 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ConfigError } from '../../src/core/errors.js';
-import { mergeFields, parseBodyInput } from '../../src/shared/json-input.js';
+import { ConfigError } from '../src/errors.js';
+import { mergeFields, parseBodyInput } from '../src/json-input.js';
 
 function writeBody(contents: string): string {
   const path = join(mkdtempSync(join(tmpdir(), 'simply-body-')), 'body.json');

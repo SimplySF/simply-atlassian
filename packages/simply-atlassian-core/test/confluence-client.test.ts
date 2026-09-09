@@ -15,8 +15,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { AtlassianConfig } from '../../src/core/config.js';
-import { ConfluenceClient } from '../../src/core/confluence-client.js';
+import type { AtlassianConfig } from '../src/config.js';
+import { ConfluenceClient } from '../src/confluence-client.js';
 import { respondJson, startTestServer, type TestServer } from './support.js';
 
 let server: TestServer;

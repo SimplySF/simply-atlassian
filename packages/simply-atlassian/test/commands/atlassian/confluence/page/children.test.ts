@@ -16,7 +16,7 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import ConfluencePageChildren from '../../../../../src/commands/atlassian/confluence/page/children.js';
-import { respondJson, startTestServer, type TestServer } from '../../../../core/support.js';
+import { respondJson, startTestServer, type TestServer } from '../../../../support.js';
 
 let server: TestServer;
 

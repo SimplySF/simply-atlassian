@@ -85,7 +85,8 @@
     }
   },
   "dependencies": {
-    "@oclif/core": "^4.11.2"
+    "@oclif/core": "^4.11.2",
+    "@simplysf/simply-atlassian-core": "workspace:^0.1.0"
   },
   "devDependencies": {
     "@oclif/plugin-command-snapshot": "^5.4.0",
@@ -126,7 +127,10 @@
         "lib/**",
         "*.tsbuildinfo"
       ],
-      "clean": "if-file-deleted"
+      "clean": "if-file-deleted",
+      "dependencies": [
+        "../simply-atlassian-core:compile"
+      ]
     },
     "format": {
       "command": "prettier --write \"+(src|test)/**/*.+(ts|js|json)|command-snapshot.json\"",
@@ -148,7 +152,10 @@
         "../../eslint.config.mjs",
         "../../tsconfig.json"
       ],
-      "output": []
+      "output": [],
+      "dependencies": [
+        "../simply-atlassian-core:compile"
+      ]
     },
     "test": {
       "dependencies": [
@@ -176,7 +183,10 @@
         "**/tsconfig.json",
         "../../tsconfig.json"
       ],
-      "output": []
+      "output": [],
+      "dependencies": [
+        "../simply-atlassian-core:compile"
+      ]
     },
     "test:only": {
       "command": "vitest run --project simply-atlassian",

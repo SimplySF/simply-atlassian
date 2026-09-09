@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+// The library surface this package used to own now lives in `@simplysf/simply-atlassian-core`
+// (docs/design/0012-simply-atlassian-core.md). These re-exports keep the names this package has
+// always exported so an existing import keeps working; new code should import the core package
+// directly, which is where anything added from here on will appear.
 export {
   resolveConfluenceConfig,
   resolveJiraConfig,
@@ -24,7 +28,13 @@ export {
   type ConfigOverrides,
   type Deployment,
   type EnvLike,
-} from './core/config.js';
-export { ConfluenceClient } from './core/confluence-client.js';
-export { AuthError, CliError, ConfigError, HttpError, NetworkError } from './core/errors.js';
-export { JiraClient, type JiraSearchOptions, type JiraSearchPage } from './core/jira-client.js';
+  ConfluenceClient,
+  AuthError,
+  CliError,
+  ConfigError,
+  HttpError,
+  NetworkError,
+  JiraClient,
+  type JiraSearchOptions,
+  type JiraSearchPage,
+} from '@simplysf/simply-atlassian-core';

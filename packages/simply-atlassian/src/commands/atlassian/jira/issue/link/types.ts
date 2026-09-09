@@ -15,9 +15,8 @@
  */
 
 import { Flags } from '@oclif/core';
+import { formatTable, type LinkType, type LinkTypesResponse } from '@simplysf/simply-atlassian-core';
 import { JiraCommand } from '../../../../../shared/base-command.js';
-import type { LinkType, LinkTypesResponse } from '../../../../../shared/issue-links.js';
-import { formatTable } from '../../../../../shared/output.js';
 
 export default class JiraIssueLinkTypes extends JiraCommand<typeof JiraIssueLinkTypes> {
   public static override readonly summary = 'List the issue link types this instance offers.';

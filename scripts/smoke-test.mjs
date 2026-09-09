@@ -16,7 +16,7 @@
 
 // Live smoke test for the Atlassian client core. Reads the same env vars the CLI will use.
 // Read-only: it calls /myself, one JQL search, and (if configured) one Confluence CQL search.
-// Usage: node scripts/smoke-test.mjs   (after `pnpm run compile` in packages/simply-atlassian)
+// Usage: node scripts/smoke-test.mjs   (after `pnpm run compile` in packages/simply-atlassian-core)
 
 import {
   resolveJiraConfig,
@@ -24,7 +24,7 @@ import {
   JiraClient,
   ConfluenceClient,
   ConfigError,
-} from '../packages/simply-atlassian/lib/index.js';
+} from '../packages/simply-atlassian-core/lib/index.js';
 
 function section(title) {
   console.log(`\n=== ${title} ===`);

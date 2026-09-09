@@ -15,8 +15,8 @@
  */
 
 import { Args } from '@oclif/core';
+import { formatTable } from '@simplysf/simply-atlassian-core';
 import { JiraCommand } from '../../../../shared/base-command.js';
-import { formatTable } from '../../../../shared/output.js';
 
 interface Transition {
   readonly id?: string;

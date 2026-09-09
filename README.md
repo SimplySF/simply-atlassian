@@ -12,10 +12,11 @@ command proving the pipeline works end to end. Real Atlassian commands land next
 
 ## Packages
 
-| Package                                                           | Description                                                      |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------- |
-| [`@simplysf/simply-atlassian`](packages/simply-atlassian)         | The `atlassian` CLI                                              |
-| [`@simplysf/simply-atlassian-mcp`](packages/simply-atlassian-mcp) | MCP server exposing the CLI to AI agents (scaffold, unpublished) |
+| Package                                                             | Description                                                                             |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| [`@simplysf/simply-atlassian`](packages/simply-atlassian)           | The `atlassian` CLI                                                                     |
+| [`@simplysf/simply-atlassian-core`](packages/simply-atlassian-core) | Configuration, auth, HTTP clients, and shared logic the CLI and MCP server are built on |
+| [`@simplysf/simply-atlassian-mcp`](packages/simply-atlassian-mcp)   | MCP server exposing the CLI to AI agents (scaffold, unpublished)                        |
 
 ## Installation
 

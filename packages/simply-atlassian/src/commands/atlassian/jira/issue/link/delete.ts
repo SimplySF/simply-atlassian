@@ -15,10 +15,8 @@
  */
 
 import { Args } from '@oclif/core';
+import { ConfigError, type IssueLink, stripControlOneLine } from '@simplysf/simply-atlassian-core';
 import { JiraCommand, writeFlags } from '../../../../../shared/base-command.js';
-import { ConfigError } from '../../../../../core/errors.js';
-import type { IssueLink } from '../../../../../shared/issue-links.js';
-import { stripControlOneLine } from '../../../../../core/text.js';
 
 export default class JiraIssueLinkDelete extends JiraCommand<typeof JiraIssueLinkDelete> {
   public static override isWrite = true;

@@ -18,8 +18,8 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ConfigError } from '../../src/core/errors.js';
-import { resolveStorageBody } from '../../src/shared/confluence-body.js';
+import { ConfigError } from '../src/errors.js';
+import { resolveStorageBody } from '../src/confluence-body.js';
 
 describe('resolveStorageBody', () => {
   it('returns nothing when no source is given, since an empty body is legitimate', () => {

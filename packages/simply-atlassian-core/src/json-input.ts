@@ -15,7 +15,7 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { ConfigError } from '../core/errors.js';
+import { ConfigError } from './errors.js';
 
 /**
  * Reads a raw JSON request body from a flag or a file. The field surface of a Jira issue is

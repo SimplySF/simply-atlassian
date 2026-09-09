@@ -34,7 +34,7 @@ import JiraIssueCreate from '../../../../../src/commands/atlassian/jira/issue/cr
 import JiraIssueDelete from '../../../../../src/commands/atlassian/jira/issue/delete.js';
 import JiraIssueUpdate from '../../../../../src/commands/atlassian/jira/issue/update.js';
 import JiraWhoami from '../../../../../src/commands/atlassian/jira/whoami.js';
-import { respondJson, startTestServer, type TestServer } from '../../../../core/support.js';
+import { respondJson, startTestServer, type TestServer } from '../../../../support.js';
 
 let server: TestServer;
 

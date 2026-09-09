@@ -15,9 +15,8 @@
  */
 
 import { Flags } from '@oclif/core';
+import { formatTable, jiraIssueColumns, type JiraIssueRow } from '@simplysf/simply-atlassian-core';
 import { JiraCommand, parseList } from '../../../../shared/base-command.js';
-import { jiraIssueColumns, type JiraIssueRow } from '../../../../shared/issue-table.js';
-import { formatTable } from '../../../../shared/output.js';
 
 const DEFAULT_LIMIT = 50;
 

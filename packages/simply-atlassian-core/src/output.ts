@@ -24,9 +24,9 @@ export interface Column<Row> {
 
 const EM_DASH = '—';
 
-import { stripControl, stripControlOneLine } from '../core/text.js';
+import { stripControl, stripControlOneLine } from './text.js';
 
-export { stripControl, stripControlOneLine } from '../core/text.js';
+export { stripControl, stripControlOneLine } from './text.js';
 
 /** Renders any API value as one line of terminal text; missing values read as an em dash. */
 function cell(value: unknown): string {

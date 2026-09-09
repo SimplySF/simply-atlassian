@@ -15,7 +15,7 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { pageIdFromInput, pageUrl } from '../../../shared/atlassian-url.js';
+import { pageIdFromInput, pageUrl } from '@simplysf/simply-atlassian-core';
 import { ConfluenceCommand } from '../../../shared/base-command.js';
 import { openInBrowser } from '../../../shared/open-in-browser.js';
 

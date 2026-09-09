@@ -15,9 +15,8 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import { pageIdFromInput } from '../../../../shared/atlassian-url.js';
+import { formatTable, pageIdFromInput } from '@simplysf/simply-atlassian-core';
 import { ConfluenceCommand } from '../../../../shared/base-command.js';
-import { formatTable } from '../../../../shared/output.js';
 
 interface ChildPage {
   readonly id?: string;

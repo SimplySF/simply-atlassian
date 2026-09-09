@@ -15,8 +15,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { parseList } from '../../src/shared/base-command.js';
-import { formatKeyValue, formatTable, stripControl, stripControlOneLine } from '../../src/shared/output.js';
+import { formatKeyValue, formatTable, stripControl, stripControlOneLine } from '../src/output.js';
 
 describe('stripControl', () => {
   it('removes escape sequences that could rewrite the terminal', () => {
@@ -84,20 +83,6 @@ describe('stripControlOneLine', () => {
 
   it('still removes what stripControl removes', () => {
     expect(stripControlOneLine('c1\u009b[31m')).toBe('c1[31m');
-  });
-});
-
-describe('parseList', () => {
-  it('trims entries and drops blanks so no empty field name reaches the API', () => {
-    expect(parseList('summary, status ')).toEqual(['summary', 'status']);
-    // A trailing comma is what an agent templating a field list emits; Jira rejects `fields=`.
-    expect(parseList('summary,')).toEqual(['summary']);
-  });
-
-  it('returns undefined for a value with nothing usable in it', () => {
-    expect(parseList('')).toBeUndefined();
-    expect(parseList(' , ')).toBeUndefined();
-    expect(parseList(undefined)).toBeUndefined();
   });
 });
 

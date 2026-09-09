@@ -47,7 +47,11 @@ const compat = new FlatCompat({
 });
 
 // All published packages; every one carries the same Apache-2.0 header.
-const allPackages = ['packages/simply-atlassian', 'packages/simply-atlassian-mcp'];
+const allPackages = ['packages/simply-atlassian', 'packages/simply-atlassian-core', 'packages/simply-atlassian-mcp'];
+
+// The library package never touches a terminal or a process (docs/design/0012). Enforced here
+// rather than by convention, because a package boundary is what makes the rule bite.
+const corePackage = ['packages/simply-atlassian-core'];
 
 const headerRule = [
   2,
@@ -241,6 +245,35 @@ export default [
       '@typescript-eslint/restrict-template-expressions': [
         'error',
         { allowNullish: false, allowBoolean: true, allowNumber: true },
+      ],
+    },
+  },
+  {
+    files: toProductionFiles(corePackage),
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['src/**'],
+              message: "imports from this repo's src folder should be a relative path",
+            },
+            {
+              group: ['**/../lib/**', 'lib/**'],
+              message: 'import from /src not from /lib. /lib is a build artifact',
+            },
+            {
+              group: ['@oclif/*', 'oclif'],
+              message: 'simply-atlassian-core is a library: no oclif here. Command concerns belong in the CLI package.',
+            },
+            {
+              group: ['node:child_process', 'child_process'],
+              message:
+                'simply-atlassian-core never spawns a process. Browser launching and CLI wrapping belong in the consumers.',
+            },
+          ],
+        },
       ],
     },
   },

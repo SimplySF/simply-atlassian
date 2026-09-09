@@ -15,8 +15,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { issueUrl, pageIdFromInput, pageUrl, projectUrl } from '../../src/shared/atlassian-url.js';
-import { ConfigError } from '../../src/core/errors.js';
+import { issueUrl, pageIdFromInput, pageUrl, projectUrl } from '../src/atlassian-url.js';
+import { ConfigError } from '../src/errors.js';
 
 describe('browser URL builders', () => {
   it('builds an encoded issue URL without a duplicate trailing slash', () => {

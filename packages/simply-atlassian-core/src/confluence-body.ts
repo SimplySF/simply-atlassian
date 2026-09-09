@@ -15,8 +15,8 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { ConfigError } from '../core/errors.js';
-import { stripControl } from '../core/text.js';
+import { ConfigError } from './errors.js';
+import { stripControl } from './text.js';
 
 /** The shape Confluence expects for a page or comment body. */
 export interface StorageBody {

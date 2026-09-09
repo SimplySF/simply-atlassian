@@ -15,8 +15,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { resolveConfluenceConfig, resolveJiraConfig } from '../../src/core/config.js';
-import { ConfigError } from '../../src/core/errors.js';
+import { resolveConfluenceConfig, resolveJiraConfig } from '../src/config.js';
+import { ConfigError } from '../src/errors.js';
 
 const CLOUD_ENV = {
   JIRA_URL: 'https://example.atlassian.net',

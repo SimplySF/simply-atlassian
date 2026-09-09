@@ -15,10 +15,8 @@
  */
 
 import { Args, Flags } from '@oclif/core';
+import { CliError, ConfigError, pageIdForInstance, stripControlOneLine } from '@simplysf/simply-atlassian-core';
 import { ConfluenceCommand, confirmFlag, writeFlags } from '../../../../shared/base-command.js';
-import { CliError, ConfigError } from '../../../../core/errors.js';
-import { pageIdForInstance } from '../../../../shared/atlassian-url.js';
-import { stripControlOneLine } from '../../../../core/text.js';
 
 interface Page {
   readonly id?: string;

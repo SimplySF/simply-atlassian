@@ -15,8 +15,8 @@
  */
 
 import { Flags } from '@oclif/core';
+import { formatTable } from '@simplysf/simply-atlassian-core';
 import { ConfluenceCommand } from '../../../../shared/base-command.js';
-import { formatTable } from '../../../../shared/output.js';
 
 interface SearchedPage {
   readonly id?: string;

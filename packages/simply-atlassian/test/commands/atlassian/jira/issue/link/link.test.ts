@@ -20,7 +20,7 @@ import JiraIssueLinkCreate from '../../../../../../src/commands/atlassian/jira/i
 import JiraIssueLinkDelete from '../../../../../../src/commands/atlassian/jira/issue/link/delete.js';
 import JiraIssueLinkList from '../../../../../../src/commands/atlassian/jira/issue/link/list.js';
 import JiraIssueLinkTypes from '../../../../../../src/commands/atlassian/jira/issue/link/types.js';
-import { respondJson, startTestServer, type TestServer } from '../../../../../core/support.js';
+import { respondJson, startTestServer, type TestServer } from '../../../../../support.js';
 
 let server: TestServer;
 

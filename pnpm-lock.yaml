@@ -94,10 +94,22 @@ importers:
       '@oclif/core':
         specifier: ^4.11.2
         version: 4.14.0
+      '@simplysf/simply-atlassian-core':
+        specifier: workspace:^0.1.0
+        version: link:../simply-atlassian-core
     devDependencies:
       '@oclif/plugin-command-snapshot':
         specifier: ^5.4.0
         version: 5.4.0
+      '@vitest/coverage-v8':
+        specifier: ^4.1.10
+        version: 4.1.11(vitest@4.1.11)
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.11(@types/node@26.4.1)(@vitest/coverage-v8@4.1.11)(vite@8.2.2(@types/node@26.4.1)(esbuild@0.28.2)(jiti@2.6.1)(yaml@2.9.0))
+
+  packages/simply-atlassian-core:
+    devDependencies:
       '@vitest/coverage-v8':
         specifier: ^4.1.10
         version: 4.1.11(vitest@4.1.11)

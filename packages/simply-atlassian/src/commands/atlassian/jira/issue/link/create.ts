@@ -15,9 +15,8 @@
  */
 
 import { Args, Flags } from '@oclif/core';
+import { type LinkTypesResponse, resolveLinkDirection, stripControlOneLine } from '@simplysf/simply-atlassian-core';
 import { JiraCommand, writeFlags } from '../../../../../shared/base-command.js';
-import { resolveLinkDirection, type LinkTypesResponse } from '../../../../../shared/issue-links.js';
-import { stripControlOneLine } from '../../../../../core/text.js';
 
 export default class JiraIssueLinkCreate extends JiraCommand<typeof JiraIssueLinkCreate> {
   public static override isWrite = true;

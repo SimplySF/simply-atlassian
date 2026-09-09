@@ -14,8 +14,36 @@
  * limitations under the License.
  */
 
-import { describe, it } from 'vitest';
+import * as core from '@simplysf/simply-atlassian-core';
+import { describe, expect, it } from 'vitest';
+import * as api from '../src/index.js';
 
-describe('simply-atlassian', () => {
-  it.todo('add test coverage for simply-atlassian');
+/**
+ * The library surface moved to `@simplysf/simply-atlassian-core` (design doc 0012). This package
+ * promised to keep exporting the names it always had, so that promise is asserted: the same
+ * keys, and the same objects, not copies.
+ */
+describe('@simplysf/simply-atlassian compatibility exports', () => {
+  it('still exports the names it did before the core split', () => {
+    expect(Object.keys(api).sort()).toStrictEqual(
+      [
+        'AuthError',
+        'CliError',
+        'ConfigError',
+        'ConfluenceClient',
+        'HttpError',
+        'JiraClient',
+        'NetworkError',
+        'resolveConfluenceConfig',
+        'resolveJiraConfig',
+      ].sort(),
+    );
+  });
+
+  it('re-exports the core package objects themselves, so instanceof checks agree across both', () => {
+    expect(api.JiraClient).toBe(core.JiraClient);
+    expect(api.ConfluenceClient).toBe(core.ConfluenceClient);
+    expect(api.ConfigError).toBe(core.ConfigError);
+    expect(api.resolveJiraConfig).toBe(core.resolveJiraConfig);
+  });
 });

@@ -15,10 +15,10 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ConfigError } from '../../src/core/errors.js';
-import { JiraClient } from '../../src/core/jira-client.js';
-import { appendMentions, resolveMentions } from '../../src/shared/mentions.js';
-import { respondJson, startTestServer, type TestServer } from '../core/support.js';
+import { ConfigError } from '../src/errors.js';
+import { JiraClient } from '../src/jira-client.js';
+import { appendMentions, resolveMentions } from '../src/mentions.js';
+import { respondJson, startTestServer, type TestServer } from './support.js';
 
 let server: TestServer;
 

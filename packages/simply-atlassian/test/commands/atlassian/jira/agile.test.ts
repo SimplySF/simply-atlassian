@@ -20,7 +20,7 @@ import JiraBoardList from '../../../../src/commands/atlassian/jira/board/list.js
 import JiraSprintAdd from '../../../../src/commands/atlassian/jira/sprint/add.js';
 import JiraSprintIssues from '../../../../src/commands/atlassian/jira/sprint/issues.js';
 import JiraSprintList from '../../../../src/commands/atlassian/jira/sprint/list.js';
-import { respondJson, startTestServer, type TestServer } from '../../../core/support.js';
+import { respondJson, startTestServer, type TestServer } from '../../../support.js';
 
 let server: TestServer;
 

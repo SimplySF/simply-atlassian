@@ -119,7 +119,9 @@ formatted error output, never a stack trace, for expected failure modes.
   gone, the dependency with it, and users who set the variable get an error naming the CA
   bundle fix.
 - **A separate `packages/atlassian-core` package** — premature while there is one consumer.
-  The module boundary inside `src/core/` keeps extraction cheap later.
+  The module boundary inside `src/core/` keeps extraction cheap later. _Superseded by
+  [0012](0012-simply-atlassian-core.md) once the MCP server became a second consumer; the module
+  now lives in `packages/simply-atlassian-core`._
 
 ## Implementation plan
 

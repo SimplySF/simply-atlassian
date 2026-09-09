@@ -15,8 +15,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { ConfigError } from '../../src/core/errors.js';
-import { describeLinkFromIssue, resolveLinkDirection, type LinkType } from '../../src/shared/issue-links.js';
+import { ConfigError } from '../src/errors.js';
+import { describeLinkFromIssue, resolveLinkDirection, type LinkType } from '../src/issue-links.js';
 
 const BLOCKS: LinkType = { id: '10000', name: 'Blocks', inward: 'is blocked by', outward: 'blocks' };
 const DUPLICATE: LinkType = { id: '10001', name: 'Duplicate', inward: 'is duplicated by', outward: 'duplicates' };
