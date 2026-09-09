@@ -129,6 +129,7 @@ interface CloudChangelogResponse {
 
 interface ServerChangelogResponse {
   readonly histories?: RawChangelogEntry[];
+  readonly startAt?: number;
   readonly total?: number;
   /** The instance's effective page size, which may be smaller than what was asked for. */
   readonly maxResults?: number;
@@ -191,12 +192,14 @@ export class JiraClient {
       });
       const changelog = response.changelog;
       const rawEntries = changelog?.histories ?? [];
+      const responseStartAt = changelog?.startAt ?? 0;
       return {
         entries: normalizeChangelogEntries(rawEntries),
         rawEntries,
         total: changelog?.total,
-        // Server/DC's expanded issue response contains its changelog in one response.
-        isLast: true,
+        // Expanded Server/DC changelogs have no supported follow-up endpoint. A capped response
+        // must remain visibly incomplete instead of being presented as a complete history.
+        isLast: changelog?.total === undefined || responseStartAt + rawEntries.length >= changelog.total,
       };
     }
 
@@ -248,7 +251,10 @@ export class JiraClient {
           rawEntries: rawEntries.slice(0, limit),
           total,
           pages,
-          complete: !reachedLimit || !moreEntries,
+          // A Server/DC expanded response can state that more history exists but offer no
+          // supported cursor. Preserve that incomplete state for callers instead of claiming
+          // the truncated response is the full audit trail.
+          complete: page.isLast && (!reachedLimit || !moreEntries),
         };
       }
       startAt = nextStartAt;

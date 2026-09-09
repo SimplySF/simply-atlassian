@@ -194,6 +194,29 @@ describe('JiraClient on Server/DC', () => {
     ]);
   });
 
+  it('reports a capped expanded changelog as incomplete', async () => {
+    server.route('/rest/api/2/issue/PROJ-1', (_req, res) => {
+      respondJson(res, 200, {
+        changelog: {
+          startAt: 0,
+          maxResults: 2,
+          total: 3,
+          histories: [
+            { id: '7', author: { displayName: 'Alice' }, items: [] },
+            { id: '8', author: { displayName: 'Bob' }, items: [] },
+          ],
+        },
+      });
+    });
+
+    const result = await new JiraClient(makeConfig('server')).getAllChangelog('PROJ-1', 50);
+
+    expect(result.entries.map((entry) => entry.id)).toEqual(['7', '8']);
+    expect(result.total).toBe(3);
+    expect(result.complete).toBe(false);
+    expect(result.pages).toBe(1);
+  });
+
   it('searches via GET /search and pages with startAt against total', async () => {
     server.route('/rest/api/2/search', (req, res) => {
       const url = new URL(req.url ?? '/', 'http://127.0.0.1');
