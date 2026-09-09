@@ -102,6 +102,28 @@ export class ConfluenceClient {
    * A comment is content in its own right, not a sub-resource of the page, so it is read from the
    * page's comment children rather than from a `/comment` path under it.
    */
+  public getLabels(pageId: string, options: { limit?: number } = {}): Promise<unknown> {
+    return this.request(`/content/${encodeURIComponent(pageId)}/label`, {
+      method: 'GET',
+      query: { limit: options.limit ?? DEFAULT_LIMIT },
+    });
+  }
+
+  /**
+   * Adds labels. The endpoint takes an array rather than an object, which the transport allows
+   * because it types a request body as `unknown` — no cast needed.
+   *
+   * Labels are additive and idempotent: posting one the page already carries is accepted, and the
+   * response is the page's full label set rather than only what was new.
+   */
+  public addLabels(pageId: string, labels: ReadonlyArray<Record<string, unknown>>): Promise<unknown> {
+    return this.request(`/content/${encodeURIComponent(pageId)}/label`, {
+      method: 'POST',
+      body: labels,
+      mutating: true,
+    });
+  }
+
   public getComments(pageId: string, options: { limit?: number; start?: number } = {}): Promise<unknown> {
     return this.request(`/content/${encodeURIComponent(pageId)}/child/comment`, {
       method: 'GET',

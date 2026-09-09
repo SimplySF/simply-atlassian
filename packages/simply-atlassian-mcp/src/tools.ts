@@ -27,12 +27,16 @@ import {
   buildUpdateIssueBody,
   changelogJson,
   currentAccount,
+  buildRemoteLinkBody,
+  buildSprintCreateBody,
   deleteComment,
   deleteIssue,
   deleteIssueLink,
   deletePage,
+  describeRemoteLink,
   filterChangelog,
   issueLinkCreated,
+  listFields,
   jiraTargetUrl,
   numericId,
   pageExpand,
@@ -40,8 +44,10 @@ import {
   pageIdFromInput,
   pageUrl,
   preparePageUpdate,
+  prepareSprintUpdate,
   readBackIssue,
   resolveTransitionId,
+  type RemoteLink,
   updatePage,
 } from '@simplysf/simply-atlassian-core';
 import { z } from 'zod';
@@ -721,6 +727,182 @@ export const TOOLS: readonly ToolSpec[] = [
       const client = ctx.confluence();
       const request = buildPageCommentBody(pageIdForInstance(input.page, ctx.confluenceConfig().url), input);
       return input.dryRun === true ? Promise.resolve(request) : client.createContent(request);
+    },
+  }),
+  tool({
+    name: 'jira_projects',
+    title: 'Jira: list projects',
+    description:
+      'List the projects visible to the current user. The key is what every other Jira tool ' +
+      'takes, so start here when you do not already have one.',
+    command: ['atlassian', 'jira', 'projects'],
+    kind: 'read',
+    inputSchema: { limit: limit(25, 'projects') },
+    run: (ctx, input) => ctx.jira().getProjects({ maxResults: input.limit ?? 25 }),
+  }),
+  tool({
+    name: 'jira_fields',
+    title: 'Jira: list fields',
+    description:
+      'List Jira fields, including custom field ids. Use this before setting a field through a ' +
+      'raw body: a custom field is addressed as customfield_NNNNN, the number differs between ' +
+      'instances, and it cannot be guessed. search matches the name or the id, so it answers ' +
+      'both "what is Story Points called here" and "what is customfield_10016".',
+    command: ['atlassian', 'jira', 'fields'],
+    kind: 'read',
+    inputSchema: {
+      custom: z.boolean().optional().describe('Only custom fields.'),
+      search: z.string().optional().describe('Match the field name or id, case-insensitively.'),
+    },
+    run: (ctx, input) => listFields(ctx.jira(), { custom: input.custom, search: input.search }),
+  }),
+  tool({
+    name: 'jira_project_versions',
+    title: "Jira: list a project's versions",
+    description: "List a project's versions (releases). The id is what sets fixVersions on an issue.",
+    command: ['atlassian', 'jira', 'project', 'versions'],
+    kind: 'read',
+    inputSchema: { project: z.string().describe('Project key, for example PROJ.') },
+    run: (ctx, input) => ctx.jira().getProjectVersions(input.project),
+  }),
+  tool({
+    name: 'jira_sprint_create',
+    title: 'Jira: create a sprint',
+    description:
+      'Create a sprint on a board. The board is a numeric id — names are not resolved, because a ' +
+      'board name is neither unique nor stable; use jira_board_list first. Dates are ISO-8601.',
+    command: ['atlassian', 'jira', 'sprint', 'create'],
+    kind: 'write',
+    inputSchema: {
+      board: z.string().describe('Board id, numeric.'),
+      name: z.string().describe('Sprint name.'),
+      goal: z.string().optional().describe('Sprint goal.'),
+      start: z.string().optional().describe('Start date, ISO-8601.'),
+      end: z.string().optional().describe('End date, ISO-8601.'),
+      ...WRITE_SHAPE,
+    },
+    run: (ctx, input) => {
+      const request = buildSprintCreateBody(numericId('Board', input.board), input);
+      return input.dryRun === true ? Promise.resolve(request) : ctx.jira().createSprint(request);
+    },
+  }),
+  tool({
+    name: 'jira_sprint_update',
+    title: 'Jira: update a sprint',
+    description:
+      "Change a sprint's name, dates, goal, or state. Jira treats an update as a full " +
+      'replacement and clears what the request omits, so the sprint is read first and your ' +
+      'changes applied on top. state "closed" ends a sprint, and is reversible.',
+    command: ['atlassian', 'jira', 'sprint', 'update'],
+    kind: 'write',
+    inputSchema: {
+      sprint: z.string().describe('Sprint id, numeric.'),
+      name: z.string().optional().describe('New sprint name.'),
+      goal: z.string().optional().describe('New sprint goal.'),
+      start: z.string().optional().describe('Start date, ISO-8601.'),
+      end: z.string().optional().describe('End date, ISO-8601.'),
+      state: z.enum(['future', 'active', 'closed']).optional().describe('Sprint state.'),
+      ...WRITE_SHAPE,
+    },
+    run: async (ctx, input) => {
+      const client = ctx.jira();
+      const sprintId = numericId('Sprint', input.sprint);
+      const request = await prepareSprintUpdate(client, sprintId, input);
+      return input.dryRun === true ? request : client.updateSprint(sprintId, request);
+    },
+  }),
+  tool({
+    name: 'jira_issue_remotelink_list',
+    title: "Jira: list an issue's links outside Jira",
+    description:
+      "List an issue's remote links — anything with a URL, most usefully the Confluence page it " +
+      'came from. Different from jira_issue_link_list, which only joins two Jira issues.',
+    command: ['atlassian', 'jira', 'issue', 'remotelink', 'list'],
+    kind: 'read',
+    inputSchema: { issue: issueKey },
+    run: async (ctx, input) => {
+      const links = (await ctx.jira().getRemoteLinks(input.issue)) as RemoteLink[];
+      return Array.isArray(links) ? links.map((link) => describeRemoteLink(link)) : links;
+    },
+  }),
+  tool({
+    name: 'jira_issue_remotelink_create',
+    title: 'Jira: link an issue to something outside Jira',
+    description:
+      'Link an issue to a URL — most usefully the Confluence page it came from. This is the ' +
+      'direction that makes the relationship visible from the issue: writing a hyperlink into a ' +
+      'page body only links one way and Jira cannot see it. Re-running with the same URL updates ' +
+      'the existing link rather than adding a duplicate.',
+    command: ['atlassian', 'jira', 'issue', 'remotelink', 'create'],
+    kind: 'write',
+    inputSchema: {
+      issue: issueKey,
+      url: z.string().describe('Absolute http or https URL to link to.'),
+      title: z.string().optional().describe('Link text. Defaults to the URL.'),
+      summary: z.string().optional().describe('A line of description shown under the link.'),
+      relationship: z
+        .string()
+        .optional()
+        .describe('How the issue relates to the target, e.g. "documented by". Jira groups links under this.'),
+      ...WRITE_SHAPE,
+    },
+    run: (ctx, input) => {
+      const request = buildRemoteLinkBody(input);
+      return input.dryRun === true ? Promise.resolve(request) : ctx.jira().createRemoteLink(input.issue, request);
+    },
+  }),
+  tool({
+    name: 'jira_issue_remotelink_delete',
+    title: 'Jira: remove a remote link',
+    description:
+      'Remove a remote link from an issue. The id comes from jira_issue_remotelink_list. No ' +
+      'confirm needed: the link holds no content and is re-creatable from its URL.',
+    command: ['atlassian', 'jira', 'issue', 'remotelink', 'delete'],
+    kind: 'write',
+    inputSchema: {
+      issue: issueKey,
+      linkId: z.string().describe('Remote link id, numeric.'),
+      ...WRITE_SHAPE,
+    },
+    run: async (ctx, input) => {
+      if (input.dryRun === true) return { issue: input.issue, linkId: input.linkId, deleted: false };
+      await ctx.jira().deleteRemoteLink(input.issue, input.linkId);
+      return { issue: input.issue, linkId: input.linkId, deleted: true };
+    },
+  }),
+  tool({
+    name: 'confluence_page_label_list',
+    title: "Confluence: list a page's labels",
+    description:
+      "List a page's labels. Confluence namespaces labels, so the prefix is part of the identity " +
+      'and two different labels can share a name.',
+    command: ['atlassian', 'confluence', 'page', 'label', 'list'],
+    kind: 'read',
+    inputSchema: { page: pageRef, limit: limit(25, 'labels') },
+    run: (ctx, input) =>
+      ctx
+        .confluence()
+        .getLabels(pageIdForInstance(input.page, ctx.confluenceConfig().url), { limit: input.limit ?? 25 }),
+  }),
+  tool({
+    name: 'confluence_page_label_add',
+    title: 'Confluence: add labels to a page',
+    description:
+      'Add one or more labels to a page. Additive and idempotent: a label the page already ' +
+      'carries is accepted rather than an error, and the response is the full label set.',
+    command: ['atlassian', 'confluence', 'page', 'label', 'add'],
+    kind: 'write',
+    inputSchema: {
+      page: pageRef,
+      labels: z.array(z.string()).min(1).describe('Labels to add.'),
+      prefix: z.string().optional().describe('Label namespace; global is what the UI applies.'),
+      ...WRITE_SHAPE,
+    },
+    run: (ctx, input) => {
+      const client = ctx.confluence();
+      const pageId = pageIdForInstance(input.page, ctx.confluenceConfig().url);
+      const request = input.labels.map((name) => ({ prefix: input.prefix ?? 'global', name }));
+      return input.dryRun === true ? Promise.resolve(request) : client.addLabels(pageId, request);
     },
   }),
 ];

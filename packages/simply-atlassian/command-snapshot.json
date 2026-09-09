@@ -129,6 +129,40 @@
   },
   {
     "alias": [],
+    "command": "atlassian:confluence:page:label:add",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "confluence-api-token",
+      "confluence-personal-token",
+      "confluence-url",
+      "confluence-username",
+      "dry-run",
+      "env-file",
+      "json",
+      "label",
+      "prefix"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:confluence:page:label:list",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "confluence-api-token",
+      "confluence-personal-token",
+      "confluence-url",
+      "confluence-username",
+      "env-file",
+      "json",
+      "limit"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
     "command": "atlassian:confluence:page:search",
     "flagAliases": [],
     "flagChars": ["e"],
@@ -182,6 +216,24 @@
       "limit",
       "project",
       "type"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:fields",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "custom",
+      "env-file",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "json",
+      "limit",
+      "search"
     ],
     "plugin": "@simplysf/simply-atlassian"
   },
@@ -354,6 +406,42 @@
   },
   {
     "alias": [],
+    "command": "atlassian:jira:issue:remotelink:create",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "dry-run",
+      "env-file",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "json",
+      "relationship",
+      "summary",
+      "title",
+      "url"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:issue:remotelink:delete",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": ["dry-run", "env-file", "jira-api-token", "jira-personal-token", "jira-url", "jira-username", "json"],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:issue:remotelink:list",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": ["env-file", "jira-api-token", "jira-personal-token", "jira-url", "jira-username", "json"],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
     "command": "atlassian:jira:issue:search",
     "flagAliases": [],
     "flagChars": ["e"],
@@ -449,10 +537,47 @@
   },
   {
     "alias": [],
+    "command": "atlassian:jira:project:versions",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": ["env-file", "jira-api-token", "jira-personal-token", "jira-url", "jira-username", "json", "limit"],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:projects",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": ["env-file", "jira-api-token", "jira-personal-token", "jira-url", "jira-username", "json", "limit"],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
     "command": "atlassian:jira:sprint:add",
     "flagAliases": [],
     "flagChars": ["e"],
     "flags": ["dry-run", "env-file", "jira-api-token", "jira-personal-token", "jira-url", "jira-username", "json"],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:sprint:create",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "board",
+      "dry-run",
+      "end",
+      "env-file",
+      "goal",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "json",
+      "name",
+      "start"
+    ],
     "plugin": "@simplysf/simply-atlassian"
   },
   {
@@ -485,6 +610,27 @@
       "jira-username",
       "json",
       "limit",
+      "state"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:sprint:update",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "dry-run",
+      "end",
+      "env-file",
+      "goal",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "json",
+      "name",
+      "start",
       "state"
     ],
     "plugin": "@simplysf/simply-atlassian"

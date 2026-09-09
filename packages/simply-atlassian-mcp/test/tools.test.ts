@@ -75,6 +75,37 @@ describe('TOOLS catalogue', () => {
     expect(Object.keys(update?.inputSchema ?? {})).toContain('append');
   });
 
+  it('exposes the discovery, label, sprint-write and remote-link commands', () => {
+    const names = TOOLS.map((tool) => tool.name);
+
+    for (const name of [
+      'confluence_page_label_add',
+      'confluence_page_label_list',
+      'jira_fields',
+      'jira_issue_remotelink_create',
+      'jira_issue_remotelink_delete',
+      'jira_issue_remotelink_list',
+      'jira_project_versions',
+      'jira_projects',
+      'jira_sprint_create',
+      'jira_sprint_update',
+    ]) {
+      expect(names, name).toContain(name);
+    }
+  });
+
+  it('marks the new writes as writes, so the read-only default covers them', () => {
+    for (const name of [
+      'confluence_page_label_add',
+      'jira_sprint_create',
+      'jira_sprint_update',
+      'jira_issue_remotelink_create',
+      'jira_issue_remotelink_delete',
+    ]) {
+      expect(TOOLS.find((tool) => tool.name === name)?.kind, name).toBe('write');
+    }
+  });
+
   it('only demands confirm from a page delete that purges, matching the CLI', () => {
     const pageDelete = TOOLS.find((tool) => tool.name === 'confluence_page_delete');
     expect(pageDelete?.requiresConfirm?.({ page: '1' })).toBe(false);
