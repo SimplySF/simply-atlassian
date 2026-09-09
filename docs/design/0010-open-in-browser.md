@@ -1,6 +1,6 @@
 # 0010 — Open Atlassian objects in the browser
 
-**Status:** Implemented
+**Status:** Implemented (PR #13)
 **Package:** `packages/simply-atlassian`
 **Date:** 2026-09-08
 
@@ -21,12 +21,12 @@ the URL instead.
 
 ## Behavior
 
-| Command | Input | URL |
-| --- | --- | --- |
-| `jira open ISSUE-123` | Jira issue key | `<base>/browse/ISSUE-123` |
-| `jira open PROJ` | Jira project key | `<base>/browse/PROJ` |
-| `confluence open 123456` | Numeric page id | `<base>/pages/viewpage.action?pageId=123456` |
-| `confluence open PAGE-URL` | Confluence page URL | Same URL after extracting its numeric id |
+| Command                    | Input               | URL                                          |
+| -------------------------- | ------------------- | -------------------------------------------- |
+| `jira open ISSUE-123`      | Jira issue key      | `<base>/browse/ISSUE-123`                    |
+| `jira open PROJ`           | Jira project key    | `<base>/browse/PROJ`                         |
+| `confluence open 123456`   | Numeric page id     | `<base>/pages/viewpage.action?pageId=123456` |
+| `confluence open PAGE-URL` | Confluence page URL | Same URL after extracting its numeric id     |
 
 Issue, project, and page identifiers are percent-encoded. Confluence Cloud's resolved base already
 includes `/wiki`, while Server/DC's base does not need a product suffix; the same page path works

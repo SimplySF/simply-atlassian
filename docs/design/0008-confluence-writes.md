@@ -1,6 +1,6 @@
 # 0008 — Confluence writes
 
-**Status:** Draft
+**Status:** Implemented (PR #16)
 **Package:** `packages/simply-atlassian`
 **Date:** 2026-09-08
 

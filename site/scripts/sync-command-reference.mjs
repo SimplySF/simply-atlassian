@@ -22,7 +22,9 @@ const COMMANDS_STOP = '<!-- commandsstop -->';
  * prefix appears in a command's header wins, so `jira issue comment` and `jira issue link` must
  * precede `jira issue`. Sidebar position is the explicit `order` instead, so the most-used page
  * (issues) can come first even though its prefix has to be matched last. An entry without a
- * `title` routes its commands onto an earlier entry's page (`whoami` sits with the user commands).
+ * `title` routes its commands onto an earlier entry's page (`whoami` sits with the user commands,
+ * `sprint` with `board`, `confluence open` with `jira open`). The sync warns about any command no
+ * entry matches — a new topic needs an entry here, or its commands silently miss the site.
  */
 const GROUPS = [
   {
@@ -58,11 +60,34 @@ const GROUPS = [
     file: 'jira-users.md',
   },
   {
+    match: 'simply atlassian jira board ',
+    file: 'jira-boards-sprints.md',
+    order: 5,
+    title: 'Jira — Boards and sprints',
+    description: "List boards and their sprints, see a sprint's issues, and move issues into a sprint.",
+  },
+  {
+    match: 'simply atlassian jira sprint ',
+    file: 'jira-boards-sprints.md',
+  },
+  {
     match: 'simply atlassian confluence page ',
     file: 'confluence-pages.md',
-    order: 5,
+    order: 6,
     title: 'Confluence — Pages',
-    description: 'Read Confluence pages: fetch one by id or title, search, and list child pages.',
+    description:
+      'Read, search, create, update, and delete Confluence pages (from storage format or Markdown), and list or add page comments.',
+  },
+  {
+    match: 'simply atlassian jira open',
+    file: 'open-in-browser.md',
+    order: 7,
+    title: 'Open in browser',
+    description: 'Open a Jira issue or project, or a Confluence page, in the browser — or just print its URL.',
+  },
+  {
+    match: 'simply atlassian confluence open',
+    file: 'open-in-browser.md',
   },
 ];
 

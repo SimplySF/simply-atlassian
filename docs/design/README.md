@@ -31,21 +31,21 @@ refactors that keep the public surface identical (though a short doc is welcome 
 
 ## Index
 
-| #    | Title                                                                                             | Status              |
-| ---- | ------------------------------------------------------------------------------------------------- | ------------------- |
-| 0001 | [Atlassian client core (config, auth, HTTP)](0001-atlassian-client-core.md)                       | Implemented (PR #2) |
-| 0002 | [Output conventions and first Jira read commands](0002-output-conventions-first-jira-commands.md) | Implemented (PR #3) |
-| 0003 | [Confluence read commands and page rendering](0003-confluence-read-commands.md)                   | Implemented (PR #4) |
-| 0004 | [Write safety, and Jira issue writes](0004-write-safety-and-jira-issue-writes.md)                 | Implemented (PR #5) |
-| 0005 | [Mentions, user lookup, and comment editing](0005-mentions-user-lookup-and-comment-editing.md)    | Implemented (PR #6) |
-| 0006 | [Relating issues: subtasks and links](0006-relating-issues.md)                                    | Implemented (PR #7) |
-| 0007 | [MCP server wrapping the CLI](0007-mcp-server.md)                                                 | Draft               |
-| 0008 | [Confluence writes](0008-confluence-writes.md)                                                    | Draft               |
-| 0009 | [Jira agile boards and sprints](0009-jira-agile-boards-sprints.md)                                | Implemented         |
-| 0010 | [Open Atlassian objects in the browser](0010-open-in-browser.md)                                  | Implemented         |
-| 0011 | [Jira issue history](0011-jira-issue-history.md)                                                  | Implemented         |
-| 0012 | [Splitting `simply-atlassian-core` out of `simply-atlassian`](0012-simply-atlassian-core.md)      | Phase 1 implemented |
-| 0013 | [Markdown page bodies](0013-markdown-page-bodies.md)                                              | Draft               |
+| #    | Title                                                                                             | Status                          |
+| ---- | ------------------------------------------------------------------------------------------------- | ------------------------------- |
+| 0001 | [Atlassian client core (config, auth, HTTP)](0001-atlassian-client-core.md)                       | Implemented (PR #2)             |
+| 0002 | [Output conventions and first Jira read commands](0002-output-conventions-first-jira-commands.md) | Implemented (PR #3)             |
+| 0003 | [Confluence read commands and page rendering](0003-confluence-read-commands.md)                   | Implemented (PR #4)             |
+| 0004 | [Write safety, and Jira issue writes](0004-write-safety-and-jira-issue-writes.md)                 | Implemented (PR #5)             |
+| 0005 | [Mentions, user lookup, and comment editing](0005-mentions-user-lookup-and-comment-editing.md)    | Implemented (PR #6)             |
+| 0006 | [Relating issues: subtasks and links](0006-relating-issues.md)                                    | Implemented (PR #7)             |
+| 0007 | [MCP server on the core library](0007-mcp-server.md)                                              | Implemented (PRs #10, #18, #21) |
+| 0008 | [Confluence writes](0008-confluence-writes.md)                                                    | Implemented (PR #16)            |
+| 0009 | [Jira agile boards and sprints](0009-jira-agile-boards-sprints.md)                                | Implemented (PR #14)            |
+| 0010 | [Open Atlassian objects in the browser](0010-open-in-browser.md)                                  | Implemented (PR #13)            |
+| 0011 | [Jira issue history](0011-jira-issue-history.md)                                                  | Implemented (PR #15)            |
+| 0012 | [Splitting `simply-atlassian-core` out of `simply-atlassian`](0012-simply-atlassian-core.md)      | Implemented (PRs #17, #18)      |
+| 0013 | [Markdown page bodies](0013-markdown-page-bodies.md)                                              | Implemented (PRs #20, #21)      |
 
 ## Template
 

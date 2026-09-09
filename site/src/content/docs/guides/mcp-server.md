@@ -84,7 +84,10 @@ With writes allowed:
 Each tool's inputs are the command's arguments and flags in camel case; see the
 [Command Reference](/reference/) for what each does. `fields` on the issue tools matters as much
 here as in the CLI: raw issue payloads are large, and an agent pays for every token it reads. The
-two `open` tools return the URL rather than launching a browser, which a server cannot do.
+two `open` tools return the URL rather than launching a browser, which a server cannot do. The
+Confluence write tools take a page or comment body as `text`, raw storage-format `body`, or
+`markdown` (converted to storage format), and `confluence_page_update` takes `append` to add to a
+page instead of replacing it.
 
 ## Results and errors
 

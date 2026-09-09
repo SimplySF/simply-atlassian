@@ -1,6 +1,6 @@
 # 0013 — Markdown page bodies
 
-**Status:** Draft
+**Status:** Implemented (core and CLI PR #20; MCP tools PR #21)
 **Package:** `packages/simply-atlassian-core` (the converter); `packages/simply-atlassian` (the flags)
 **Date:** 2026-09-09
 

@@ -1,6 +1,6 @@
 # 0012 — Splitting `simply-atlassian-core` out of `simply-atlassian`
 
-**Status:** Phase 1 implemented (PR #17); phases 2 and 3 implemented together on `feat/mcp-in-process` (PR pending)
+**Status:** Implemented (phase 1 PR #17; phases 2 and 3 together in PR #18)
 **Package:** new `packages/simply-atlassian-core`; `packages/simply-atlassian` (CLI, slimmed);
 `packages/simply-atlassian-mcp` (consumer, in a follow-up to 0007)
 **Date:** 2026-09-09

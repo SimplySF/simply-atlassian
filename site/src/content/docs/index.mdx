@@ -3,7 +3,7 @@ title: Simply Atlassian
 description: A command-line interface for Jira and Confluence by SimplySF, built to be driven by people, scripts, and agents alike.
 template: splash
 hero:
-  tagline: Jira and Confluence from the command line — search, view, create, update, transition, comment on, and link issues; read Confluence pages. Human-readable by default, raw JSON with --json, and every write takes --dry-run.
+  tagline: Jira and Confluence from the command line — search, view, create, update, transition, comment on, and link issues; manage boards and sprints; read, write, and comment on Confluence pages. Human-readable by default, raw JSON with --json, every write takes --dry-run, and the same tools are available to AI agents as an MCP server.
   image:
     alt: Simply SF logo — a stylized cloud
     light: ../../assets/logo-full.png
@@ -32,7 +32,8 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 
 <CardGrid>
   <Card title="Jira issues" icon="list-format">
-    Search with JQL, view, create, update, transition, and delete issues. [Reference](/reference/jira-issues/)
+    Search with JQL, view, create, update, transition, and delete issues, and read their history.
+    [Reference](/reference/jira-issues/)
   </Card>
   <Card title="Comments and mentions" icon="comment">
     List, add, edit, and delete comments, with @-mentions resolved by user lookup.
@@ -46,8 +47,21 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
     Find users by name or account id, and confirm which account the CLI is acting as.
     [Reference](/reference/jira-users/)
   </Card>
+  <Card title="Boards and sprints" icon="seti:todo">
+    List boards and sprints, see what's in a sprint, and move issues into one.
+    [Reference](/reference/jira-boards-sprints/)
+  </Card>
   <Card title="Confluence pages" icon="document">
-    Fetch a page by id or title, search, and list a page's children. [Reference](/reference/confluence-pages/)
+    Fetch, search, and list children; create, update (from storage format or Markdown), delete, and comment.
+    [Reference](/reference/confluence-pages/)
+  </Card>
+  <Card title="Open in browser" icon="external">
+    Jump from a key, id, or title to the page in your browser — or print the URL for a script.
+    [Reference](/reference/open-in-browser/)
+  </Card>
+  <Card title="MCP server" icon="puzzle">
+    The same tools for Claude, Cursor, or any MCP client, read-only unless a person opts into writes.
+    [Guide](/guides/mcp-server/)
   </Card>
   <Card title="Scripts and agents" icon="setting">
     `--json` returns the raw API payload, exit codes are stable, and a read-scoped token makes writes structurally

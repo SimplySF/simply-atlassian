@@ -14,8 +14,9 @@ JIRA_API_TOKEN=...                     # Cloud
 JIRA_PERSONAL_TOKEN=...                # Server/Data Center, instead of the two above
 
 CONFLUENCE_URL=https://your-site.atlassian.net
-CONFLUENCE_USERNAME=you@example.com
-CONFLUENCE_API_TOKEN=...
+CONFLUENCE_USERNAME=you@example.com     # Cloud
+CONFLUENCE_API_TOKEN=...                # Cloud
+CONFLUENCE_PERSONAL_TOKEN=...           # Server/Data Center, instead of the two above
 ```
 
 ## Precedence
@@ -33,7 +34,8 @@ simply atlassian jira issue search -e ~/atlassian.env --jql "project = PROJ"
 Jira Cloud authenticates with your account email plus an
 [API token](https://id.atlassian.com/manage-profile/security/api-tokens) (`JIRA_USERNAME` and
 `JIRA_API_TOKEN`). Server and Data Center use a personal access token on its own
-(`JIRA_PERSONAL_TOKEN`) in place of those two. Set one style or the other, not both.
+(`JIRA_PERSONAL_TOKEN`) in place of those two. Set one style or the other, not both. Confluence
+works the same way with the `CONFLUENCE_*` names.
 
 Server/Data Center support is implemented but has not yet been verified against a live instance.
 
@@ -45,6 +47,10 @@ authority, trust that CA rather than disabling verification:
 ```sh
 NODE_EXTRA_CA_CERTS=/path/to/ca.pem simply atlassian jira whoami
 ```
+
+A `JIRA_SSL_VERIFY=false` or `CONFLUENCE_SSL_VERIFY=false` carried over from other Atlassian
+tooling is rejected with an error rather than silently ignored, so nobody ends up believing
+verification is off when it is on, or the reverse.
 
 ## Checking what you're connected as
 
