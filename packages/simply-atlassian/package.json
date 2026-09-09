@@ -1,7 +1,7 @@
 {
   "name": "@simplysf/simply-atlassian",
   "description": "Command-line interface for working with Atlassian products",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "author": "@ClayChipps",
   "homepage": "https://github.com/SimplySF/simply-atlassian",
   "bugs": "https://github.com/SimplySF/simply-atlassian/issues",
@@ -86,7 +86,7 @@
   },
   "dependencies": {
     "@oclif/core": "^4.11.2",
-    "@simplysf/simply-atlassian-core": "workspace:^0.1.0"
+    "@simplysf/simply-atlassian-core": "workspace:^0.2.0"
   },
   "devDependencies": {
     "@oclif/plugin-command-snapshot": "^5.4.0",
