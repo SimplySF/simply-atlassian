@@ -58,11 +58,58 @@ export class ConfluenceClient {
    * Fetches one page. An empty `expand` list is honoured rather than replaced by the default,
    * so a caller that only wants metadata can avoid paying for the body.
    */
-  public getPage(pageId: string, options: { expand?: string[] } = {}): Promise<unknown> {
+  /**
+   * `status: 'any'` is how a trashed page is read at all: the default filter is
+   * `[current, archived]`, so a plain GET of a trashed id answers 404. Callers that need to know
+   * whether a page is in the trash — `page delete` does — have to ask for it explicitly.
+   */
+  public getPage(pageId: string, options: { expand?: string[]; status?: 'any' } = {}): Promise<unknown> {
     const expand = options.expand ?? ['body.storage', 'version', 'space'];
     return this.request(`/content/${encodeURIComponent(pageId)}`, {
       method: 'GET',
-      query: { expand: expand.length === 0 ? undefined : expand.join(',') },
+      query: {
+        expand: expand.length === 0 ? undefined : expand.join(','),
+        status: options.status,
+      },
+    });
+  }
+
+  public createContent(body: Record<string, unknown>): Promise<unknown> {
+    return this.request('/content', { method: 'POST', body, mutating: true });
+  }
+
+  public updateContent(contentId: string, body: Record<string, unknown>): Promise<unknown> {
+    return this.request(`/content/${encodeURIComponent(contentId)}`, { method: 'PUT', body, mutating: true });
+  }
+
+  /**
+   * Deletes content, in one of the two senses Confluence gives that verb.
+   *
+   * A plain delete moves a page to the space trash: it still resolves under `?status=any` with
+   * `status: trashed` and can be restored. Passing `status=trashed` purges it, after which the id
+   * is gone for good. Same endpoint, same method, very different consequence — which is why the
+   * caller states which one it wants rather than the command guessing.
+   */
+  public async deleteContent(contentId: string, options: { purge?: boolean } = {}): Promise<void> {
+    await this.request(`/content/${encodeURIComponent(contentId)}`, {
+      method: 'DELETE',
+      mutating: true,
+      query: { status: options.purge === true ? 'trashed' : undefined },
+    });
+  }
+
+  /**
+   * A comment is content in its own right, not a sub-resource of the page, so it is read from the
+   * page's comment children rather than from a `/comment` path under it.
+   */
+  public getComments(pageId: string, options: { limit?: number; start?: number } = {}): Promise<unknown> {
+    return this.request(`/content/${encodeURIComponent(pageId)}/child/comment`, {
+      method: 'GET',
+      query: {
+        limit: options.limit ?? DEFAULT_LIMIT,
+        start: options.start,
+        expand: 'body.storage,version,history',
+      },
     });
   }
 

@@ -76,6 +76,9 @@
       "atlassian:confluence": {
         "description": "Work with Confluence spaces and pages."
       },
+      "atlassian:confluence:page:comment": {
+        "description": "Read and add page comments."
+      },
       "atlassian:confluence:page": {
         "description": "Read Confluence pages."
       }

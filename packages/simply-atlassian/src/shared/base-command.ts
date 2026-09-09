@@ -144,10 +144,38 @@ export const writeFlags = {
 export const confirmFlag = {
   confirm: Flags.boolean({
     summary: 'Required to proceed with an irreversible change.',
-    description: 'There is deliberately no short form: a single letter is too easy to add by habit.',
+    description:
+      'There is deliberately no short form: a single letter is too easy to add by habit. It also ' +
+      'takes no value — pass it bare, never --confirm=true or --confirm=false.',
     default: false,
   }),
 };
+
+/**
+ * Refuses `--confirm=<anything>`, which oclif accepts in a way that is actively dangerous here.
+ *
+ * For a boolean flag, oclif sets the flag true and pushes the inline value into the next
+ * positional slot. On a destructive command that means `--confirm=123456` — a command line with no
+ * target argument at all — arms the guard *and* supplies 123456 as the thing to destroy. It reads
+ * to a person, and to a reviewing agent, as passing a value to a safety flag.
+ *
+ * `--confirm=false` is the same mechanism with the opposite lie: it means **true**, which is worse
+ * than an error in a shell history or an audit log.
+ *
+ * A value-shape check on the argument cannot catch this in general: Jira issue keys are
+ * distinctive enough to reject `123`, but every Confluence page id *is* bare digits. So the inline
+ * form is refused outright, which covers both products and every value.
+ */
+export function assertBareConfirm(argv: readonly string[] = process.argv): void {
+  const inline = argv.find((arg) => arg.startsWith('--confirm='));
+  if (inline !== undefined) {
+    throw new ConfigError(
+      '--confirm takes no value; pass it on its own. Written as ' +
+        `"${inline.slice(0, '--confirm='.length)}…" the value is consumed as this command's ` +
+        'argument, which means the command would act on something you did not name.',
+    );
+  }
+}
 
 /** Shared by every command regardless of product. */
 const envFileFlag = {
@@ -235,6 +263,11 @@ export abstract class AtlassianCommand<T extends typeof Command> extends Command
   protected rawFlags: Record<string, unknown> = {};
 
   public override async init(): Promise<void> {
+    // Before oclif parses, deliberately: an inline `--confirm=x` makes oclif consume the value as
+    // a positional, so by parse time the failure surfaces as an opaque "Unexpected argument"
+    // rather than the thing that actually went wrong. Both guards run centrally so a future
+    // destructive command cannot forget them.
+    assertBareConfirm();
     await super.init();
     const { args, flags } = await this.parse({
       // The subclass's own baseFlags, so a Jira command never offers Confluence flags.
@@ -315,7 +348,10 @@ export abstract class AtlassianCommand<T extends typeof Command> extends Command
    * person sees differ from what the agent ingests.
    */
   protected logSafe(message: string): void {
-    this.log(stripControl(message));
+    // Redacted as well as stripped. `--body-file` reads any readable path and `--dry-run` prints
+    // what would be sent, so a caller who points it at a `.env` by mistake would otherwise put a
+    // live token on stdout — and, without --dry-run, onto a page other people load.
+    this.log(stripControl(redactSecrets(message)));
   }
 
   /** Narrowed accessor so subclasses read flags without casting at every use. */

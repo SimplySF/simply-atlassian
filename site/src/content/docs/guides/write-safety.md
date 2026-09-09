@@ -3,17 +3,27 @@ title: Write safety
 description: The layers between a Simply Atlassian command and a change to your Jira data, and which of them is a real boundary.
 ---
 
-The commands that change data — `issue create`, `update`, `transition`, the comment and link
-commands — and the ones that destroy it — `issue delete`, `comment delete`, `link delete` — sit
-behind several layers. Only the last is a real boundary, and it is worth being clear about which is
-which.
+The commands that change data — `issue create`, `update`, `transition`, `page create`, `page
+update`, the comment and link commands — and the ones that destroy it — `issue delete`, `comment
+delete`, `page delete` — sit behind several layers. Only the last is a real boundary, and it is
+worth being clear about which is which.
 
 ## `--confirm`
 
-Required by the delete commands, and by nothing else. It stops accidents: a malformed command, a
-mistyped key. It does not stop a caller that decides to pass it, and requiring it everywhere would
-train callers to pass it always — at which point it protects nothing while still implying that it
-does.
+Required where an action **irreversibly destroys data**, and deliberately nowhere else:
+
+| Command                          | `--confirm`? | Why                                           |
+| -------------------------------- | ------------ | --------------------------------------------- |
+| `issue delete`                   | required     | not recoverable through the API               |
+| `issue comment delete`           | required     | not recoverable                               |
+| `confluence page delete --purge` | required     | permanent; nothing brings the page back       |
+| `confluence page delete`         | not required | moves the page to the space trash; restorable |
+| `issue link delete`              | not required | holds no content; re-creatable in one command |
+
+It stops accidents: a malformed command, a mistyped key. It does not stop a caller that decides to
+pass it, and requiring it everywhere would train callers to pass it always — at which point it
+protects nothing while still implying that it does. That is why the reversible deletes above do
+not ask for it.
 
 ## `--dry-run`
 
