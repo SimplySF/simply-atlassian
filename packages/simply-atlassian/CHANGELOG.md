@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.3.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.2.1...%40simplysf%2Fsimply-atlassian%400.3.0) (2026-09-09)
+
+### Features
+
+- **cli:** open Atlassian objects in browser ([#13](https://github.com/SimplySF/simply-atlassian/issues/13)) ([9b5581d](https://github.com/SimplySF/simply-atlassian/commit/9b5581d04876ab77f5924b89eac4c6c1b24b4fbc))
+
 ## [0.2.1](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.2.0...%40simplysf%2Fsimply-atlassian%400.2.1) (2026-09-08)
 
 ### Bug Fixes
