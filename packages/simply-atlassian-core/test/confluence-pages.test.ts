@@ -113,6 +113,57 @@ describe('page updates', () => {
     });
   });
 
+  /*
+   * --append exists because "add this week to the status page" is what automated documentation
+   * means, and without it an agent has to read the storage, splice XHTML by hand and send the
+   * whole thing back — where any mistake replaces the page instead of extending it.
+   */
+  it('puts the new body after the existing one when appending', async () => {
+    server.route('/rest/api/content/1', (_req, res) =>
+      respondJson(res, 200, {
+        type: 'page',
+        title: 'T',
+        version: { number: 3 },
+        body: { storage: { value: '<p>existing</p>' } },
+      }),
+    );
+
+    const plan = await preparePageUpdate(confluence(), '1', { markdown: 'added', append: true });
+
+    expect(plan.payload.body).toEqual({
+      storage: { value: '<p>existing</p><p>added</p>', representation: 'storage' },
+    });
+  });
+
+  it('asks for the body only when appending, so an ordinary update does not pay for it', async () => {
+    server.route('/rest/api/content/1', (_req, res) =>
+      respondJson(res, 200, { type: 'page', title: 'T', version: { number: 1 } }),
+    );
+
+    await preparePageUpdate(confluence(), '1', { text: 'replaced' });
+    expect(server.requests.at(-1)?.url).not.toContain('body.storage');
+
+    await preparePageUpdate(confluence(), '1', { text: 'added', append: true });
+    expect(server.requests.at(-1)?.url).toContain('body.storage');
+  });
+
+  it('refuses --append with nothing to add, before reading the page', async () => {
+    await expect(preparePageUpdate(confluence(), '1', { append: true })).rejects.toThrow(/needs something to add/);
+    expect(server.requests).toHaveLength(0);
+  });
+
+  it('converts Markdown to storage on the way in', async () => {
+    server.route('/rest/api/content/1', (_req, res) =>
+      respondJson(res, 200, { type: 'page', title: 'T', version: { number: 1 } }),
+    );
+
+    const plan = await preparePageUpdate(confluence(), '1', { markdown: '## Hi\n\n- one' });
+
+    expect(plan.payload.body).toEqual({
+      storage: { value: '<h2>Hi</h2><ul><li><p>one</p></li></ul>', representation: 'storage' },
+    });
+  });
+
   it('refuses an empty update, a non-page, and a page with no version', async () => {
     await expect(preparePageUpdate(confluence(), '1', {})).rejects.toThrow(/Nothing to update/);
     server.route('/rest/api/content/1', (_req, res) =>

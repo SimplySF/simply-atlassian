@@ -34,7 +34,7 @@ export default class ConfluencePageUpdate extends ConfluenceCommand<typeof Confl
     'result sent. There is no --version flag, because Confluence refuses a stale version with a ' +
     'conflict rather than overwriting — so if someone edits the page while this runs, the ' +
     'command fails and says so instead of discarding their work. Re-run it to pick up their ' +
-    'change. This REPLACES the body; it does not append to it.';
+    'change. This REPLACES the body by default; use --append to add to the end instead.';
 
   public static override readonly examples = [
     '<%= config.bin %> <%= command.id %> 123456 --text "Updated status."',
@@ -52,6 +52,15 @@ export default class ConfluencePageUpdate extends ConfluenceCommand<typeof Confl
     text: Flags.string({ summary: 'Body as plain text; becomes paragraphs, markup escaped.' }),
     body: Flags.string({ summary: 'Body as raw storage-format XHTML.' }),
     'body-file': Flags.string({ summary: 'Path to a file holding storage-format XHTML.' }),
+    markdown: Flags.string({ summary: 'Body as Markdown; converted to storage format.' }),
+    'markdown-file': Flags.string({ summary: 'Path to a Markdown file; converted to storage format.' }),
+    append: Flags.boolean({
+      summary: 'Add the new body to the end of the page instead of replacing it.',
+      description:
+        "Reads the page's existing body and puts the new content after it. Without this the body " +
+        'is replaced, which is what a bare update has always done.',
+      default: false,
+    }),
   };
 
   public async run(): Promise<unknown> {
@@ -63,6 +72,9 @@ export default class ConfluencePageUpdate extends ConfluenceCommand<typeof Confl
       text: this.flags.text,
       body: this.flags.body,
       'body-file': this.flags['body-file'],
+      markdown: this.flags.markdown,
+      'markdown-file': this.flags['markdown-file'],
+      append: this.flags.append,
     });
 
     if (this.flags['dry-run']) {

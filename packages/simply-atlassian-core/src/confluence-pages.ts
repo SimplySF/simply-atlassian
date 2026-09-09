@@ -40,6 +40,10 @@ export interface PageBodyInput {
   readonly body?: string;
   /** Path to a file holding storage-format XHTML. */
   readonly 'body-file'?: string;
+  /** Markdown, converted to storage. See `markdown-storage.ts` and design 0013. */
+  readonly markdown?: string;
+  /** Path to a Markdown file, converted to storage. */
+  readonly 'markdown-file'?: string;
 }
 
 export interface CreatePageInput extends PageBodyInput {
@@ -52,6 +56,8 @@ export interface CreatePageInput extends PageBodyInput {
 export interface UpdatePageInput extends PageBodyInput {
   /** New title; defaults to the page's current title. */
   readonly title?: string;
+  /** Put the new body after the existing one instead of replacing it. */
+  readonly append?: boolean;
 }
 
 /** An update, fully prepared: the version it was read at is what the request is conditioned on. */
@@ -133,11 +139,22 @@ export async function preparePageUpdate(
   input: UpdatePageInput,
 ): Promise<PageUpdatePlan> {
   const body = resolveStorageBody(input);
+  // Append with nothing to add is a more specific mistake than "nothing to update", so it is
+  // named first — otherwise the caller is told to pass a title they did not want to change.
+  if (input.append === true && body === undefined) {
+    throw new ConfigError('--append needs something to add. Pass --text, --markdown, --body, or a file.');
+  }
   if (body === undefined && input.title === undefined) {
-    throw new ConfigError('Nothing to update. Pass --title, or a body with --text, --body, or --body-file.');
+    throw new ConfigError(
+      'Nothing to update. Pass --title, or a body with --text, --markdown, --body, --body-file, or --markdown-file.',
+    );
   }
 
-  const current = (await client.getPage(pageId, { expand: ['version'] })) as ConfluencePageSummary;
+  // The existing body is only fetched when appending. An ordinary update replaces it, and asking
+  // for a large body just to discard it costs the caller bandwidth for nothing.
+  const current = (await client.getPage(pageId, {
+    expand: input.append === true ? ['version', 'body.storage'] : ['version'],
+  })) as ConfluencePageSummary;
   const version = current.version?.number;
   if (typeof version !== 'number') {
     throw new CliError(`The instance reported no version for page ${pageId}, so it cannot be updated safely.`);
@@ -151,7 +168,16 @@ export async function preparePageUpdate(
     title: input.title ?? current.title,
     version: { number: version + 1 },
   };
-  if (body !== undefined) payload.body = body;
+  if (body !== undefined) {
+    // Concatenated, not merged. Storage is XHTML, so putting a block after the last one is
+    // well-defined; replacing a named section or inserting under a heading would need to
+    // understand the document's structure, and guessing at that is how an edit lands where
+    // nobody intended. Deliberately not attempted — see design 0013.
+    payload.body =
+      input.append === true
+        ? { storage: { value: (current.body?.storage?.value ?? '') + body.storage.value, representation: 'storage' } }
+        : body;
+  }
   return { pageId, version, payload };
 }
 

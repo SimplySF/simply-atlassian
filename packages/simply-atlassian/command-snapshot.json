@@ -46,6 +46,8 @@
       "dry-run",
       "env-file",
       "json",
+      "markdown",
+      "markdown-file",
       "text"
     ],
     "plugin": "@simplysf/simply-atlassian"
@@ -81,6 +83,8 @@
       "dry-run",
       "env-file",
       "json",
+      "markdown",
+      "markdown-file",
       "parent",
       "space",
       "text",
@@ -146,6 +150,7 @@
     "flagAliases": [],
     "flagChars": ["e"],
     "flags": [
+      "append",
       "body",
       "body-file",
       "confluence-api-token",
@@ -155,6 +160,8 @@
       "dry-run",
       "env-file",
       "json",
+      "markdown",
+      "markdown-file",
       "text",
       "title"
     ],

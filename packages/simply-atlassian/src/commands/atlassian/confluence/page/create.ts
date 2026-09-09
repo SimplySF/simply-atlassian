@@ -51,6 +51,8 @@ export default class ConfluencePageCreate extends ConfluenceCommand<typeof Confl
     text: Flags.string({ summary: 'Body as plain text; becomes paragraphs, markup escaped.' }),
     body: Flags.string({ summary: 'Body as raw storage-format XHTML.' }),
     'body-file': Flags.string({ summary: 'Path to a file holding storage-format XHTML.' }),
+    markdown: Flags.string({ summary: 'Body as Markdown; converted to storage format.' }),
+    'markdown-file': Flags.string({ summary: 'Path to a Markdown file; converted to storage format.' }),
   };
 
   public async run(): Promise<unknown> {
@@ -63,6 +65,8 @@ export default class ConfluencePageCreate extends ConfluenceCommand<typeof Confl
         text: this.flags.text,
         body: this.flags.body,
         'body-file': this.flags['body-file'],
+        markdown: this.flags.markdown,
+        'markdown-file': this.flags['markdown-file'],
       },
       this.confluenceConfig().url,
     );

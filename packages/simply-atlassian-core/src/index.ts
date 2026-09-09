@@ -83,6 +83,7 @@ export { jiraIssueColumns, type JiraIssueRow } from './issue-table.js';
 export { mergeFields, parseBodyInput } from './json-input.js';
 export { appendMentions, resolveMentions, type ResolvedMention } from './mentions.js';
 export { formatKeyValue, formatTable, type Column, type Pair } from './output.js';
+export { markdownToStorage } from './markdown-storage.js';
 export { storageToMarkdown } from './storage-markdown.js';
 
 // --- Operations: what each command does between parsing its input and rendering its result ---

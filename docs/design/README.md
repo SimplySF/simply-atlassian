@@ -45,6 +45,7 @@ refactors that keep the public surface identical (though a short doc is welcome 
 | 0010 | [Open Atlassian objects in the browser](0010-open-in-browser.md)                                  | Implemented         |
 | 0011 | [Jira issue history](0011-jira-issue-history.md)                                                  | Implemented         |
 | 0012 | [Splitting `simply-atlassian-core` out of `simply-atlassian`](0012-simply-atlassian-core.md)      | Phase 1 implemented |
+| 0013 | [Markdown page bodies](0013-markdown-page-bodies.md)                                              | Draft               |
 
 ## Template
 
