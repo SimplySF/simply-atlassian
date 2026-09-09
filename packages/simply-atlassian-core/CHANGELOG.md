@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.5.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-core%400.4.1...%40simplysf%2Fsimply-atlassian-core%400.5.0) (2026-09-09)
+
+### Features
+
+- **simply-atlassian-core:** add discovery, labels, sprint writes, and remote links ([#23](https://github.com/SimplySF/simply-atlassian/issues/23)) ([be52c06](https://github.com/SimplySF/simply-atlassian/commit/be52c066df99791271288c8f5c86563d828b3764))
+
 ## [0.4.1](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-core%400.4.0...%40simplysf%2Fsimply-atlassian-core%400.4.1) (2026-09-09)
 
 **Note:** Version bump only for package @simplysf/simply-atlassian-core
