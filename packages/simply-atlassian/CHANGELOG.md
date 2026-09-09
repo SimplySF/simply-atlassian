@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.5.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.4.0...%40simplysf%2Fsimply-atlassian%400.5.0) (2026-09-09)
+
+### Features
+
+- **jira:** add issue history command ([#15](https://github.com/SimplySF/simply-atlassian/issues/15)) ([96ce62e](https://github.com/SimplySF/simply-atlassian/commit/96ce62e987a76dcb40115abaf6992eac94992137))
+
 # [0.4.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.3.0...%40simplysf%2Fsimply-atlassian%400.4.0) (2026-09-09)
 
 ### Features
