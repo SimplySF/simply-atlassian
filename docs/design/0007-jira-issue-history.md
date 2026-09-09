@@ -15,8 +15,9 @@ when a fix version was added.
 Add `atlassian jira issue history <issue>` as a read-only command. It follows the complete history
 up to `--limit` entries, optionally selects entries that touched `--field <name>`, and renders each
 entry as a timestamp/author header followed by its field changes. Human output is oldest first so
-the timeline reads chronologically; `--json` returns the original changelog entries, including
-server-specific author details and history metadata.
+the timeline reads chronologically; `--json` returns an envelope with the original `rawEntries`,
+including server-specific author details and history metadata, plus `total` and `complete` so
+machine consumers cannot mistake a capped or limit-truncated history for a complete audit trail.
 
 The Jira client owns the deployment difference:
 
@@ -44,8 +45,8 @@ existing typed HTTP error mapping.
 - Server/DC retrieval is covered through an expanded issue response containing
   `changelog.histories` and its `startAt`, `maxResults`, and `total` metadata.
 - Command tests cover grouped output, case-insensitive field selection, entry limits, JSON-shaped
-  raw output (including author details and history metadata), id fallback, and control-character
-  removal.
+  raw output (including author details and history metadata) with completeness metadata for both
+  limit-truncated Cloud and capped Server/DC histories, id fallback, and control-character removal.
 
 ## Verification boundary
 

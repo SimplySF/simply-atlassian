@@ -726,7 +726,7 @@ DESCRIPTION
   Show an issue field-change history.
 
   Lists who changed which fields, when, and the previous and new values. History is grouped by changelog entry and
-  rendered oldest first. Use --json for the unmodified changelog entries.
+  rendered oldest first. Use --json for raw changelog entries and completeness metadata.
 
 EXAMPLES
   $ simply atlassian jira issue history PROJ-123

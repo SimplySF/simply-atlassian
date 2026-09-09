@@ -15,6 +15,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { AtlassianConfig } from '../../../../../src/core/config.js';
+import { JiraClient } from '../../../../../src/core/jira-client.js';
 import JiraIssueHistory from '../../../../../src/commands/atlassian/jira/issue/history.js';
 import { respondJson, startTestServer, type TestServer } from '../../../../core/support.js';
 
@@ -30,6 +32,18 @@ afterEach(async () => {
 
 function argv(...extra: string[]): string[] {
   return ['--jira-url', server.baseUrl, '--jira-personal-token', 'pat', ...extra];
+}
+
+class CloudJiraIssueHistory extends JiraIssueHistory {
+  private readonly cloudConfig: AtlassianConfig = {
+    url: server.baseUrl,
+    deployment: 'cloud',
+    auth: { kind: 'basic', username: 'user@example.test', apiToken: 'token' },
+  };
+
+  protected override jira(): JiraClient {
+    return new JiraClient(this.cloudConfig);
+  }
 }
 
 describe('jira issue history', () => {
@@ -132,10 +146,11 @@ describe('jira issue history', () => {
     expect(logged).toContain('Warning: history is incomplete; Jira could not retrieve all changelog entries.');
   });
 
-  it('caps entries and returns raw changelog data for JSON callers', async () => {
-    server.route('/rest/api/2/issue/PROJ-1', (_req, res) => {
+  it('caps entries and returns raw changelog data with completeness metadata for JSON callers', async () => {
+    server.route('/rest/api/3/issue/PROJ-1/changelog', (_req, res) => {
       respondJson(res, 200, {
-        changelog: { total: 3, histories: [
+        total: 3,
+        values: [
           {
             id: '1',
             author: { displayName: 'Alice', emailAddress: 'alice@example.test' },
@@ -145,21 +160,50 @@ describe('jira issue history', () => {
           },
           { id: '2', author: { displayName: 'Bob' }, created: '2026-09-08T02:00:00.000Z', items: [] },
           { id: '3', author: { displayName: 'Cara' }, created: '2026-09-08T03:00:00.000Z', items: [] },
-        ] },
+        ],
       });
     });
 
-    const result = await JiraIssueHistory.run(argv('PROJ-1', '--limit', '2', '--json'));
+    const result = await CloudJiraIssueHistory.run(argv('PROJ-1', '--limit', '2', '--json'));
 
-    expect(result).toEqual([
-      {
-        id: '1',
-        author: { displayName: 'Alice', emailAddress: 'alice@example.test' },
-        created: '2026-09-08T01:00:00.000Z',
-        historyMetadata: { type: 'automation' },
-        items: [],
-      },
-      { id: '2', author: { displayName: 'Bob' }, created: '2026-09-08T02:00:00.000Z', items: [] },
-    ]);
+    expect(result).toEqual({
+      rawEntries: [
+        {
+          id: '1',
+          author: { displayName: 'Alice', emailAddress: 'alice@example.test' },
+          created: '2026-09-08T01:00:00.000Z',
+          historyMetadata: { type: 'automation' },
+          items: [],
+        },
+        { id: '2', author: { displayName: 'Bob' }, created: '2026-09-08T02:00:00.000Z', items: [] },
+      ],
+      total: 3,
+      complete: false,
+    });
+  });
+
+  it('reports capped Server/DC history as incomplete JSON', async () => {
+    server.route('/rest/api/2/issue/PROJ-1', (_req, res) => {
+      respondJson(res, 200, {
+        changelog: {
+          total: 3,
+          histories: [
+            { id: '1', author: { displayName: 'Alice' }, created: '2026-09-08T01:00:00.000Z', items: [] },
+            { id: '2', author: { displayName: 'Bob' }, created: '2026-09-08T02:00:00.000Z', items: [] },
+          ],
+        },
+      });
+    });
+
+    const result = await JiraIssueHistory.run(argv('PROJ-1', '--json'));
+
+    expect(result).toEqual({
+      rawEntries: [
+        { id: '1', author: { displayName: 'Alice' }, created: '2026-09-08T01:00:00.000Z', items: [] },
+        { id: '2', author: { displayName: 'Bob' }, created: '2026-09-08T02:00:00.000Z', items: [] },
+      ],
+      total: 3,
+      complete: false,
+    });
   });
 });

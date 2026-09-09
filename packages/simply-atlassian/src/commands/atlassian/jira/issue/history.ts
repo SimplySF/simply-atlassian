@@ -25,7 +25,7 @@ export default class JiraIssueHistory extends JiraCommand<typeof JiraIssueHistor
   public static override readonly summary = 'Show an issue field-change history.';
   public static override readonly description =
     'Lists who changed which fields, when, and the previous and new values. History is grouped ' +
-    'by changelog entry and rendered oldest first. Use --json for the unmodified changelog entries.';
+    'by changelog entry and rendered oldest first. Use --json for raw changelog entries and completeness metadata.';
 
   public static override readonly examples = [
     '<%= config.bin %> <%= command.id %> PROJ-123',
@@ -58,9 +58,10 @@ export default class JiraIssueHistory extends JiraCommand<typeof JiraIssueHistor
     const visible = { ...result, entries };
 
     if (this.jsonEnabled()) {
-      return field === undefined
+      const rawEntries = field === undefined
         ? result.rawEntries
         : result.rawEntries.filter((_entry, index) => touchesField(result.entries[index], field));
+      return { rawEntries, total: result.total, complete: result.complete };
     }
 
     if (!result.complete) {
