@@ -39,7 +39,7 @@ npm install -g @simplysf/simply-atlassian-mcp
 simply-atlassian-mcp --help
 ```
 
-Then add it to your client; the [MCP server guide](https://simplysf.github.io/simply-atlassian/guides/mcp-server/)
+Then add it to your client; the [MCP server guide](https://simplysf.github.io/simply-cli/atlassian/guides/mcp-server/)
 has the configuration for each one.
 
 **The core library**, for building your own tooling on the same configuration, clients, and
@@ -50,11 +50,11 @@ npm install @simplysf/simply-atlassian-core
 ```
 
 Each reads the connection settings described in
-[Credentials](https://simplysf.github.io/simply-atlassian/guides/credentials/).
+[Credentials](https://simplysf.github.io/simply-cli/atlassian/guides/credentials/).
 
 ## Documentation
 
-The [documentation site](https://simplysf.github.io/simply-atlassian/) has a getting-started guide, guides to
+The [documentation site](https://simplysf.github.io/simply-cli/atlassian/) has a getting-started guide, guides to
 credentials, write safety, scripting, and the MCP server, and the full command reference. The same command reference is in the
 [package README](packages/simply-atlassian/README.md#commands).
 

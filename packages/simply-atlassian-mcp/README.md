@@ -14,7 +14,7 @@ Using it takes four steps: install the server, tell your MCP client how to launc
 connection, then ask the agent for what you want in plain language. This README walks through
 each, then covers letting the agent write, the full tool list, results and errors, and what to
 check when something does not work. The same material, with the rest of the CLI's guides, is on
-the [documentation site](https://simplysf.github.io/simply-atlassian/guides/mcp-server/).
+the [documentation site](https://simplysf.github.io/simply-cli/atlassian/guides/mcp-server/).
 
 ## Install
 
@@ -45,7 +45,7 @@ forms.
 ## Connection settings
 
 The server reads the same variables as the CLI, described in the
-[Credentials](https://simplysf.github.io/simply-atlassian/guides/credentials/) guide:
+[Credentials](https://simplysf.github.io/simply-cli/atlassian/guides/credentials/) guide:
 
 ```
 JIRA_URL=https://your-site.atlassian.net
@@ -243,7 +243,7 @@ into:
 
 Each tool's inputs are the matching command's arguments and flags in camel case, with arrays where
 the CLI takes a repeatable or comma-separated flag; see the CLI's
-[command reference](https://simplysf.github.io/simply-atlassian/reference/) for what each does.
+[command reference](https://simplysf.github.io/simply-cli/atlassian/reference/) for what each does.
 The first request above, for instance, becomes a call like:
 
 ```json
@@ -282,7 +282,7 @@ to also register the tools that create, update, transition, comment, link, and d
 `ATLASSIAN_READ_ONLY` in the environment refuses every write, exactly as it does for the CLI.
 
 That mirrors the two-credential-file arrangement in
-[Write safety](https://simplysf.github.io/simply-atlassian/guides/write-safety/): give the agent's
+[Write safety](https://simplysf.github.io/simply-cli/atlassian/guides/write-safety/): give the agent's
 everyday server a read-scoped token, and configure a second server entry with `--allow-writes` and
 a write-capable token that is enabled only when a person means to let the agent write. In a
 `mcpServers` configuration the pair looks like this:
@@ -367,7 +367,7 @@ result whose text is a JSON object with a stable `code`:
 
 The first three carry the same `name`, `message`, and `exitCode` the CLI writes to stderr,
 scrubbed the same way, as described in
-[Scripts and agents](https://simplysf.github.io/simply-atlassian/guides/scripting/). The agent
+[Scripts and agents](https://simplysf.github.io/simply-cli/atlassian/guides/scripting/). The agent
 sees these errors and can act on them, so a wrong key or a missing setting usually ends in the
 agent telling you what went wrong rather than in silence.
 
