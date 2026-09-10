@@ -3,6 +3,34 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.11.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.10.0...%40simplysf%2Fsimply-atlassian%400.11.0) (2026-09-10)
+
+- feat!: become a plugin of the simply CLI (#27) ([a8be948](https://github.com/SimplySF/simply-atlassian/commit/a8be9485ee32fd42f525c9f5092a1feaf4024a96)), closes [#27](https://github.com/SimplySF/simply-atlassian/issues/27)
+
+### BREAKING CHANGES
+
+- this package no longer provides the `simply` command. Install
+  @simplysf/simply-cli instead; this plugin installs itself the first time one of
+  its commands runs, or ahead of time with `simply plugins install
+@simplysf/simply-atlassian`. Command names are unchanged — `simply atlassian ...`
+  is exactly what it was.
+
+  This package and @simplysf/simply-gitlab both declared bin: { simply }, so npm
+  could only ever link one of them and the two could not be installed together. A
+  single host now owns the name and both are plugins.
+
+  Two changes make that work:
+
+  - `bin` is removed, so nothing competes for the name.
+  - `prepack` generates oclif.manifest.json, which is what the host reads out of
+    this package's tarball to build its just-in-time manifest. Without it the host
+    cannot discover these commands and the JIT install never fires. It also lets
+    the CLI start without scanning every command file, which it never did before —
+    the file was listed in `files` but nothing generated it.
+
+  prepack compiles first. `oclif manifest` reads lib/commands, and packing against
+  a stale lib produced a manifest with 33 of 43 commands and no error at all.
+
 # [0.10.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.9.1...%40simplysf%2Fsimply-atlassian%400.10.0) (2026-09-09)
 
 ### Features
