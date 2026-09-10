@@ -26,7 +26,7 @@ All three packages need Node.js 22 or later.
 **The CLI**, for a person at a terminal or a script:
 
 ```sh
-npm install -g @simplysf/simply-atlassian
+npm install -g @simplysf/simply-cli
 simply atlassian --help
 ```
 

@@ -12,7 +12,7 @@ description: Requirements, installation, and a first command for the Simply Atla
 ## Install
 
 ```sh
-npm install -g @simplysf/simply-atlassian
+npm install -g @simplysf/simply-cli
 ```
 
 ## Verify it worked
