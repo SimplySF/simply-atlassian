@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.4.2](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-mcp%400.4.1...%40simplysf%2Fsimply-atlassian-mcp%400.4.2) (2026-09-10)
+
+**Note:** Version bump only for package @simplysf/simply-atlassian-mcp
+
 ## [0.4.1](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-mcp%400.4.0...%40simplysf%2Fsimply-atlassian-mcp%400.4.1) (2026-09-09)
 
 **Note:** Version bump only for package @simplysf/simply-atlassian-mcp
