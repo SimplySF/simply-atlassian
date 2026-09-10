@@ -29,9 +29,6 @@
   "exports": "./lib/index.js",
   "type": "module",
   "types": "./lib/index.d.ts",
-  "bin": {
-    "simply": "./bin/run.js"
-  },
   "oclif": {
     "additionalVersionFlags": [
       "-v"
@@ -100,6 +97,8 @@
   "devDependencies": {
     "@oclif/plugin-command-snapshot": "^5.4.0",
     "@vitest/coverage-v8": "^4.1.10",
+    "oclif": "^4.23.0",
+    "shx": "^0.4.0",
     "vitest": "^4.1.10"
   },
   "publishConfig": {
@@ -111,6 +110,8 @@
     "fix-license": "eslint src test --fix --rule \"header/header: [2]\"",
     "format": "wireit",
     "lint": "wireit",
+    "postpack": "shx rm -f oclif.manifest.json",
+    "prepack": "pnpm run compile && oclif manifest",
     "readme": "oclif readme --no-aliases",
     "test": "wireit",
     "test:coverage": "wireit",
