@@ -21,9 +21,19 @@ the [documentation site](https://simplysf.github.io/simply-atlassian/guides/mcp-
 The server needs Node.js 22 or later.
 
 ```bash
-npm install -g @simplysf/simply-atlassian-mcp
-simply-atlassian-mcp --help
+npm install -g @simplysf/simply-cli
+simply atlassian mcp --list
 ```
+
+`--list` prints every tool this server would register, then exits. Run without it and the server
+waits on stdin for a client, which at a terminal looks like a hang.
+
+The plugin installs itself the first time you run the command, so `@simplysf/simply-cli` is the
+only thing to install.
+
+**The standalone binary still works.** `npm install -g @simplysf/simply-atlassian-mcp` and
+`simply-atlassian-mcp` are unchanged, and an existing client configuration pointing at them keeps
+running.
 
 `--help` prints the options and every tool the server can register, so it doubles as a check that
 the install worked. It prints to stderr, because stdout is reserved for the protocol stream.
