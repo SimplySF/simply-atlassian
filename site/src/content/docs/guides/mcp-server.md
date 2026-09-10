@@ -1,6 +1,6 @@
 ---
 title: MCP server
-description: Give an AI agent in Claude Desktop, Claude Code, Cursor, or VS Code the same Jira and Confluence capabilities as the CLI, as Model Context Protocol tools, read-only by default.
+description: Give an AI agent in Claude Desktop, Claude Code, Cursor, Gemini CLI, or VS Code the same Jira and Confluence capabilities as the CLI, as Model Context Protocol tools, read-only by default.
 ---
 
 `@simplysf/simply-atlassian-mcp` is a [Model Context Protocol](https://modelcontextprotocol.io/)
@@ -104,6 +104,83 @@ servers and whether each one connected.
 
 Cursor reads `.cursor/mcp.json` in the project, or `~/.cursor/mcp.json` for every project, with
 the same `mcpServers` shape as Claude Desktop.
+
+### Gemini CLI
+
+Gemini CLI reads `~/.gemini/settings.json` for every project, or `.gemini/settings.json` inside a
+project, with the same `mcpServers` shape as Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "simply-atlassian": {
+      "command": "simply-atlassian-mcp",
+      "args": ["--env-file", "/home/me/atlassian.env"]
+    }
+  }
+}
+```
+
+`gemini mcp add` writes the same entry. `--scope user` puts it in the global file; the default
+`project` scope writes `.gemini/settings.json`, and `-e` sets one variable on the entry:
+
+```sh
+gemini mcp add --scope user \
+  -e JIRA_URL=https://your-site.atlassian.net \
+  -e JIRA_USERNAME=you@example.com \
+  -e JIRA_API_TOKEN=... \
+  simply-atlassian simply-atlassian-mcp
+```
+
+Flags meant for the server itself, `--env-file` and `--allow-writes`, are easier to add by editing
+`settings.json`, because `gemini mcp add` reads a leading-dash argument as one of its own options.
+
+Values in `env` expand `$NAME` from the environment Gemini started in, which keeps the token out of
+the settings file without an env file:
+
+```json
+{
+  "mcpServers": {
+    "simply-atlassian": {
+      "command": "npx",
+      "args": ["-y", "@simplysf/simply-atlassian-mcp"],
+      "env": {
+        "JIRA_URL": "https://your-site.atlassian.net",
+        "JIRA_USERNAME": "you@example.com",
+        "JIRA_API_TOKEN": "$JIRA_API_TOKEN"
+      }
+    }
+  }
+}
+```
+
+Two other fields on an entry matter here. `trust: true` bypasses the per-call confirmation for
+every tool on that server, so leave it off on any entry started with `--allow-writes` and let a
+person approve each write. `includeTools` and `excludeTools` narrow what the model is shown, which
+is a second way to express the split in [Let the agent write](#let-the-agent-write): a write entry
+can register the write tools while holding back the destructive ones.
+
+```json
+{
+  "mcpServers": {
+    "simply-atlassian-write": {
+      "command": "simply-atlassian-mcp",
+      "args": ["--allow-writes", "--env-file", "/home/me/atlassian-write.env"],
+      "excludeTools": ["jira_issue_delete", "jira_issue_comment_delete", "confluence_page_delete"],
+      "trust": false
+    }
+  }
+}
+```
+
+Inside a session, `/mcp` lists the configured servers, whether each connected, and the tools it
+registered.
+
+### Gemini Code Assist
+
+Agent mode in the VS Code extension reads that same `~/.gemini/settings.json`, so an entry added
+for Gemini CLI is already in place. In IntelliJ the file is `mcp.json` in the IDE's configuration
+directory, holding the same `mcpServers` object.
 
 ### VS Code
 
