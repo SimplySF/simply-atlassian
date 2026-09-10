@@ -47,7 +47,7 @@ const markdown = storageToMarkdown(page.body?.storage?.value ?? '');
 
 Credentials, deployment detection (Cloud versus Server/Data Center), API-version selection, and
 the retry and timeout policy are all described in the CLI's
-[Credentials](https://simplysf.github.io/simply-atlassian/guides/credentials/) guide; this package
+[Credentials](https://simplysf.github.io/simply-cli/atlassian/guides/credentials/) guide; this package
 is where that behaviour is implemented, and the CLI inherits it.
 
 ## API

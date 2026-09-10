@@ -12,6 +12,12 @@ or agent. See [Commands](#commands) below for the full reference.
 Verified against Jira and Confluence Cloud. Server/Data Center is implemented but not yet
 verified against a live instance.
 
+## Documentation
+
+Guides and the full command reference: **https://simplysf.github.io/simply-cli/atlassian/**
+
+The guides also ship inside this package, under [`docs/`](docs).
+
 ## Install
 
 `@simplysf/simply-atlassian` is a plugin of the `simply` CLI, not a command of its own. Install the host; this

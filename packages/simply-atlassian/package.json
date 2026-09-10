@@ -14,6 +14,7 @@
     "node": ">=22.0.0"
   },
   "files": [
+    "/docs",
     "/lib",
     "/oclif.lock",
     "/oclif.manifest.json"
