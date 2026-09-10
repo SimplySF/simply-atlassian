@@ -11,10 +11,6 @@ update from storage format or Markdown, delete, comments) — plus opening any o
 Output is human-readable by default and raw JSON with `--json`, every write takes `--dry-run`, and
 the same capabilities are available to AI agents as an MCP server.
 
-This repo is a Lerna/pnpm monorepo, following the same conventions as SimplySF's
-[`simply-node`](https://github.com/SimplySF/simply-node) and [`simply-plugins`](https://github.com/SimplySF/simply-plugins)
-repos.
-
 ## Packages
 
 | Package                                                             | Description                                                                             |
