@@ -64,8 +64,8 @@ Edit `claude_desktop_config.json` (macOS: `~/Library/Application Support/Claude/
 {
   "mcpServers": {
     "simply-atlassian": {
-      "command": "simply-atlassian-mcp",
-      "args": ["--env-file", "/home/me/atlassian.env"]
+      "command": "simply",
+      "args": ["atlassian", "mcp", "--env-file", "/home/me/atlassian.env"]
     }
   }
 }
@@ -78,7 +78,7 @@ The same entry with the settings inline and no global install:
   "mcpServers": {
     "simply-atlassian": {
       "command": "npx",
-      "args": ["-y", "@simplysf/simply-atlassian-mcp"],
+      "args": ["atlassian", "mcp"],
       "env": {
         "JIRA_URL": "https://your-site.atlassian.net",
         "JIRA_USERNAME": "you@example.com",
@@ -114,8 +114,8 @@ project, with the same `mcpServers` shape as Claude Desktop:
 {
   "mcpServers": {
     "simply-atlassian": {
-      "command": "simply-atlassian-mcp",
-      "args": ["--env-file", "/home/me/atlassian.env"]
+      "command": "simply",
+      "args": ["atlassian", "mcp", "--env-file", "/home/me/atlassian.env"]
     }
   }
 }
@@ -143,7 +143,7 @@ the settings file without an env file:
   "mcpServers": {
     "simply-atlassian": {
       "command": "npx",
-      "args": ["-y", "@simplysf/simply-atlassian-mcp"],
+      "args": ["atlassian", "mcp"],
       "env": {
         "JIRA_URL": "https://your-site.atlassian.net",
         "JIRA_USERNAME": "you@example.com",
@@ -164,8 +164,8 @@ can register the write tools while holding back the destructive ones.
 {
   "mcpServers": {
     "simply-atlassian-write": {
-      "command": "simply-atlassian-mcp",
-      "args": ["--allow-writes", "--env-file", "/home/me/atlassian-write.env"],
+      "command": "simply",
+      "args": ["atlassian", "mcp", "--allow-writes", "--env-file", "/home/me/atlassian-write.env"],
       "excludeTools": ["jira_issue_delete", "jira_issue_comment_delete", "confluence_page_delete"],
       "trust": false
     }
@@ -191,8 +191,8 @@ VS Code reads `.vscode/mcp.json`, with a `servers` key and an explicit transport
   "servers": {
     "simply-atlassian": {
       "type": "stdio",
-      "command": "simply-atlassian-mcp",
-      "args": ["--env-file", "/home/me/atlassian.env"]
+      "command": "simply",
+      "args": ["atlassian", "mcp", "--env-file", "/home/me/atlassian.env"]
     }
   }
 }
@@ -275,12 +275,12 @@ agent write. In a `mcpServers` configuration the pair looks like this:
 {
   "mcpServers": {
     "simply-atlassian": {
-      "command": "simply-atlassian-mcp",
-      "args": ["--env-file", "/home/me/atlassian.env"]
+      "command": "simply",
+      "args": ["atlassian", "mcp", "--env-file", "/home/me/atlassian.env"]
     },
     "simply-atlassian-write": {
-      "command": "simply-atlassian-mcp",
-      "args": ["--allow-writes", "--env-file", "/home/me/atlassian-write.env"]
+      "command": "simply",
+      "args": ["atlassian", "mcp", "--allow-writes", "--env-file", "/home/me/atlassian-write.env"]
     }
   }
 }
