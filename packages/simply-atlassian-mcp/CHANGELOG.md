@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.5.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-mcp%400.4.2...%40simplysf%2Fsimply-atlassian-mcp%400.5.0) (2026-09-10)
+
+### Features
+
+- serve the MCP tools as `simply atlassian mcp` ([#28](https://github.com/SimplySF/simply-atlassian/issues/28)) ([2f9e8e3](https://github.com/SimplySF/simply-atlassian/commit/2f9e8e3cabdecad5bf610e3c5bdc55f6b14bf724))
+
 ## [0.4.2](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-mcp%400.4.1...%40simplysf%2Fsimply-atlassian-mcp%400.4.2) (2026-09-10)
 
 **Note:** Version bump only for package @simplysf/simply-atlassian-mcp
