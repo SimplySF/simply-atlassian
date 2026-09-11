@@ -25,8 +25,8 @@ the ADF-to-text rendering in `issue view`, the "a 200 with no account is not a l
 `whoami`. An in-process server that re-derived any of that would be a second source of truth.
 
 SimplySF already solved this shape once. `simply-node` splits each plugin's CLI-independent logic
-into a `-core` library package ([0019](https://github.com/SimplySF/simply-node/blob/main/docs/design/0019-plugin-core-library-extraction.md),
-[0023](https://github.com/SimplySF/simply-node/blob/main/docs/design/0023-simply-apex-core.md)),
+into a `-core` library package ([0019](https://github.com/SimplySF/simply-plugins-core/blob/main/docs/design/0019-plugin-core-library-extraction.md),
+[0023](https://github.com/SimplySF/simply-plugins-core/blob/main/docs/design/0023-simply-apex-core.md)),
 and the CLI plugins in `simply-plugins` consume those packages. 0001 anticipated this too — it
 listed "a separate `packages/atlassian-core` package" as premature _while there is one consumer_.
 There are now two.
