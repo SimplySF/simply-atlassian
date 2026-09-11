@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.6.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-core%400.5.0...%40simplysf%2Fsimply-atlassian-core%400.6.0) (2026-09-10)
+
+### Features
+
+- **docs:** ship the guides in the packages, redirect the site ([#29](https://github.com/SimplySF/simply-atlassian/issues/29)) ([4543300](https://github.com/SimplySF/simply-atlassian/commit/454330092e0b86233333fba6b40eaa6f0382f7a8))
+
 # [0.5.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-core%400.4.1...%40simplysf%2Fsimply-atlassian-core%400.5.0) (2026-09-09)
 
 ### Features

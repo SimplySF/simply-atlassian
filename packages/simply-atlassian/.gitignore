@@ -27,9 +27,6 @@ dist
 coverage
 test_session*
 
-# generated docs
-docs
-
 # oclif files
 oclif.manifest.json
 oclif.lock

@@ -30,6 +30,13 @@ Use the smallest relevant topic document rather than loading the whole directory
 The package [README](packages/simply-atlassian/README.md) is the generated user-facing command
 reference. Update command metadata first, then regenerate it as described in `CONTRIBUTING.md`.
 
+The published documentation is built by [simply-cli](https://github.com/SimplySF/simply-cli) from
+the **published packages**, not from this repo. The guides live in `packages/*/docs/guides/` and are
+listed in each package's `files`, so they travel with a release; the command reference is generated
+from `oclif.manifest.json`. A guide change therefore reaches the site when the package is released,
+not when it merges — which is deliberate, so the site describes what people have installed. Never
+hand-write a reference page. A guide that no longer matches `--help` is worse than no guide.
+
 ## Working conventions
 
 - **Implement functionality in `@simplysf/simply-atlassian-core` first, then expose it through both

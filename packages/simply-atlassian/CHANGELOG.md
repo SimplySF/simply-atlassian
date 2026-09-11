@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.12.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.11.0...%40simplysf%2Fsimply-atlassian%400.12.0) (2026-09-10)
+
+### Features
+
+- **docs:** ship the guides in the packages, redirect the site ([#29](https://github.com/SimplySF/simply-atlassian/issues/29)) ([4543300](https://github.com/SimplySF/simply-atlassian/commit/454330092e0b86233333fba6b40eaa6f0382f7a8))
+
 # [0.11.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.10.0...%40simplysf%2Fsimply-atlassian%400.11.0) (2026-09-10)
 
 - feat!: become a plugin of the simply CLI (#27) ([a8be948](https://github.com/SimplySF/simply-atlassian/commit/a8be9485ee32fd42f525c9f5092a1feaf4024a96)), closes [#27](https://github.com/SimplySF/simply-atlassian/issues/27)
