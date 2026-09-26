@@ -125,7 +125,7 @@ importers:
     dependencies:
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
-        version: 1.30.0(supports-color@8.1.1)(zod@4.5.4)
+        version: 1.30.0(supports-color@8.1.1)(zod@4.6.5)
       '@oclif/core':
         specifier: ^4.11.2
         version: 4.14.0
@@ -133,8 +133,8 @@ importers:
         specifier: workspace:^0.6.0
         version: link:../simply-atlassian-core
       zod:
-        specifier: ^4.5.4
-        version: 4.5.4
+        specifier: ^4.6.5
+        version: 4.6.5
     devDependencies:
       '@vitest/coverage-v8':
         specifier: ^4.1.10
@@ -4535,8 +4535,8 @@ packages:
     peerDependencies:
       zod: ^3.25.28 || ^4
 
-  zod@4.5.4:
-    resolution: {integrity: sha512-sC95tT5iHHH9gtpj6A81kh+NEaRAUFN+qlUPDUbRfOMvNf5QCBqsb3WgvnpVtK5Y+4UfA6KqufotuTvMGiTlsA==}
+  zod@4.6.5:
+    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
 
 snapshots:
 
@@ -5285,7 +5285,7 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@modelcontextprotocol/sdk@1.30.0(supports-color@8.1.1)(zod@4.5.4)':
+  '@modelcontextprotocol/sdk@1.30.0(supports-color@8.1.1)(zod@4.6.5)':
     dependencies:
       '@hono/node-server': 2.1.1(hono@4.13.7)
       ajv: 8.20.0
@@ -5302,8 +5302,8 @@ snapshots:
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
-      zod: 4.5.4
-      zod-to-json-schema: 3.25.2(zod@4.5.4)
+      zod: 4.6.5
+      zod-to-json-schema: 3.25.2(zod@4.6.5)
     transitivePeerDependencies:
       - supports-color
 
@@ -9343,8 +9343,8 @@ snapshots:
 
   yoctocolors-cjs@2.1.3: {}
 
-  zod-to-json-schema@3.25.2(zod@4.5.4):
+  zod-to-json-schema@3.25.2(zod@4.6.5):
     dependencies:
-      zod: 4.5.4
+      zod: 4.6.5
 
-  zod@4.5.4: {}
+  zod@4.6.5: {}
