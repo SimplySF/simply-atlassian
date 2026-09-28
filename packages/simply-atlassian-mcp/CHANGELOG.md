@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.6.1](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-mcp%400.6.0...%40simplysf%2Fsimply-atlassian-mcp%400.6.1) (2026-09-28)
+
+### Bug Fixes
+
+- **deps:** bump zod from 4.5.4 to 4.6.5 ([#36](https://github.com/SimplySF/simply-atlassian/issues/36)) ([571edaf](https://github.com/SimplySF/simply-atlassian/commit/571edaf9e679a510e1c1ee182410948e51e76e4c))
+
 # [0.6.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-mcp%400.5.0...%40simplysf%2Fsimply-atlassian-mcp%400.6.0) (2026-09-10)
 
 ### Features
