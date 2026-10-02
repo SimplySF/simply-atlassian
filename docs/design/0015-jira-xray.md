@@ -67,9 +67,8 @@ discovered Xray fields, or one of a small number of Xray REST calls under `/rest
 search approach is what makes bulk export practical: a page of 100 tests with their steps is one
 request, instead of 101 (one search plus one steps call per test).
 
-Endpoint, field-type and JQL-function names below come from Xray's public documentation. They
-**must be confirmed** against a real DC instance before implementation (see
-[Facts to confirm](#facts-to-confirm)).
+Endpoint, field-type and JQL-function names below have been confirmed
+(see [Facts to confirm](#facts-to-confirm)).
 
 ## Behavior
 
@@ -91,28 +90,36 @@ user does not get a confusing 404 from a `/rest/raven` path that does not exist 
 `com.xpandit.plugins.xray:`. Each one is mapped to a stable **role** by its schema type, **never by
 its display name**: names can be renamed and translated, but schema types cannot.
 
-| Role                | Field schema type (`com.xpandit.plugins.xray:…`, confirm each) |
-| ------------------- | -------------------------------------------------------------- |
-| `testType`          | `test-type-custom-field`                                       |
-| `steps`             | `steps-editor-custom-field`                                    |
-| `cucumberType`      | `automated-tests-type-custom-field` (Scenario / Outline)       |
-| `cucumberScenario`  | `automated-tests-custom-field`                                 |
-| `genericDefinition` | `path-editor-custom-field`                                     |
-| `preconditions`     | `test-precondition-custom-field`                               |
-| `testSets`          | `test-sets-tests-custom-field`                                 |
-| `testPlans`         | `test-plans-associated-with-test-custom-field`                 |
-| `repositoryPath`    | `test-repository-path-custom-field`                            |
-| `testSetTests`      | `test-sets-custom-field`                                       |
-| `testPlanTests`     | `test-plan-custom-field`                                       |
+| Role                | Field schema type (`com.xpandit.plugins.xray:…`)        | On issue type |
+| ------------------- | ------------------------------------------------------- | ------------- |
+| `testType`          | `test-type-custom-field`                                | Test          |
+| `steps`             | `manual-test-steps-custom-field`                        | Test          |
+| `cucumberType`      | `automated-test-type-custom-field` (Scenario / Outline) | Test          |
+| `cucumberScenario`  | `steps-editor-custom-field`                             | Test          |
+| `genericDefinition` | `path-editor-custom-field`                              | Test          |
+| `preconditions`     | `test-precondition-custom-field`                        | Test          |
+| `testSets`          | `test-sets-custom-field`                                | Test          |
+| `testPlans`         | `test-plans-associated-with-test-custom-field`          | Test          |
+| `repositoryPath`    | `test-repository-path-custom-field`                     | Test          |
+| `testSetTests`      | `test-sets-tests-custom-field`                          | Test Set      |
+| `testPlanTests`     | `tests-associated-with-test-plan-custom-field`          | Test Plan     |
 
 Any other field with the `com.xpandit.plugins.xray:` prefix is still recorded in the instance
 record, with no role, so it can be requested by name through `--fields`. This way a new Xray
 version that adds fields does not need a CLI release before those fields can be read.
 
+Roles arrived over several Xray versions: manual steps and the core types in 1.x, Cucumber types
+in 2.x, called tests and the test repository (`repositoryPath`) in 3.x–4.x, and datasets in 5.x. On
+an older Xray a later role is simply not discovered. A command that needs a missing role, such as
+`--path` or `path list` without `repositoryPath`, fails with a `ConfigError` that names the role
+and the Xray version that introduced it.
+
 The issue type names (Test, Test Set, Test Plan, Test Execution, Precondition) can be changed in
-Xray's settings too. They default to the standard names and can be overridden in the instance
-record (see below). Xray does not expose that mapping through REST (confirm), so this one part is
-configured, not discovered.
+Xray's settings too, so they are discovered the same way. Xray has no settings endpoint for the
+mapping, but Jira's `GET /rest/api/2/issuetype` lists every issue type, and Xray's are recognisable
+whatever they are called: each has a constant `iconUrl` served by the Xray plugin and a description
+that starts "Represents a Test…". Each type is mapped to its role by those two properties, never by
+name, and the ambiguity and `overrides` rules below apply to issue types as they do to fields.
 
 **The instance record.** Discovery results are saved as one JSON file per instance:
 
@@ -138,8 +145,7 @@ ${XDG_CACHE_HOME:-~/.cache}/simply-atlassian/xray/<host>[_<path>].json
   **once** and retries. A second failure is reported as a normal error. This covers a reinstall or
   upgrade without the user having to know the cache exists.
 - **Overrides survive refreshes.** An `overrides` object in the record, edited by hand, beats
-  discovery and is kept when the record is rewritten. This is where renamed issue types go, and the
-  fix for the ambiguity case below.
+  discovery and is kept when the record is rewritten. This is the fix for the ambiguity case below.
 - **Ambiguity.** If two fields share one role's schema type (it happens after an app reinstall
   leaves orphaned fields), discovery does not guess. It records both. Commands that need that role
   fail with a `ConfigError` that names both field ids and the record's path, and says how to pin
@@ -182,12 +188,18 @@ keyed by the name the caller used.
 
 Exactly **one scope** is required:
 
-| Scope flag                           | Tests it selects                                                     | How (confirm)                                           |
-| ------------------------------------ | -------------------------------------------------------------------- | ------------------------------------------------------- |
-| `--project <key>`                    | Every Test in the project                                            | JQL `project = X AND issuetype = <test type>`           |
-| `--plan <key>`                       | Tests in the plan, **including those it reaches through a Test Set** | `testPlanTests("KEY")` JQL function, plus set expansion |
-| `--set <key>`                        | Tests in the set                                                     | `testSetTests("KEY")` JQL function                      |
-| `--path <folder>` (with `--project`) | Tests in a repository folder; `--recursive` includes subfolders      | `testRepositoryFolderTests("X", "folder", "true")`      |
+| Scope flag                           | Tests it selects                                                | How                                                |
+| ------------------------------------ | --------------------------------------------------------------- | -------------------------------------------------- |
+| `--project <key>`                    | Every Test in the project                                       | JQL `project = X AND issuetype = <test type>`      |
+| `--plan <key>`                       | Tests in the plan, **including those added through a Test Set** | `testPlanTests("KEY")` JQL function                |
+| `--set <key>`                        | Tests in the set                                                | `testSetTests("KEY")` JQL function                 |
+| `--path <folder>` (with `--project`) | Tests in a repository folder; `--recursive` includes subfolders | `testRepositoryFolderTests("X", "folder", "true")` |
+
+`testRepositoryFolderTests` takes the path as a string, with `""` meaning the repository root, so
+`--path /` becomes `""`. Other paths are accepted with or without a leading slash and passed as
+given. `/` is always a folder delimiter, so a folder name cannot contain one. Any other character is
+escaped with standard JQL string quoting, as `--search` is. Its recursive argument must be a quoted string (`"true"` or `"false"`),
+not a bare boolean; `--recursive` sets `"true"` and its absence sets `"false"`.
 
 Then any **filters**, all optional, combined with AND:
 
@@ -204,8 +216,8 @@ user's `--jql` is just ANDed on. The user's clause is wrapped in parentheses, so
 cannot widen the scope. `--search` is escaped the same way `--jql` text is escaped elsewhere in
 this repo. `--linked-to` becomes `issue in linkedIssues("K")` for each key, ORed together.
 
-**When JQL is not enough.** If a JQL function is missing on the installed Xray version (confirm
-which exist), the scope falls back to the matching Xray REST call:
+**When JQL is not enough.** All three JQL functions exist on current Xray DC. If one is missing on
+an older installed version, the scope falls back to the matching Xray REST call:
 
 - plan: `GET /rest/raven/1.0/api/testplan/{key}/test`
 - set: `GET /rest/raven/1.0/api/testset/{key}/test`
@@ -215,10 +227,12 @@ That call yields a list of keys, which is then searched as `key in (…)` in chu
 filters still apply. Which route was used is an internal detail. Both give the same result, and
 tests cover both.
 
-**Plan → Set → Test.** A plan can contain tests directly and through Test Sets. `--plan` returns
-both, without duplicates. Each test records how it was reached: `via: "direct"`, or
-`via: "set:PROJ-31"` (one entry per set when a test is reachable more than one way). `test list`
-shows this as a `VIA` column. `--direct-only` limits the result to tests added to the plan itself.
+**Plan → Set → Test.** A Test Set can be added to a plan, but Xray expands it on the way in: the
+plan's tests field then holds the set's individual Test keys and never the set's own key. So
+`--plan` needs no set expansion of its own; `testPlanTests` already returns every test, however it
+was added. Because Xray keeps no record of which tests arrived through a set, the CLI cannot tell a
+directly added test from one added through a set, and does not try. A test's own `sets` field shows
+which sets contain it, which is the closest available answer.
 
 Paging, the total count and the truncation notice follow `issue search`.
 
@@ -237,9 +251,12 @@ Takes an issue key. The output covers:
 - **Membership:** which plans and sets contain the test.
 
 **Called tests (modular tests).** An Xray DC step can call another test instead of describing an
-action (confirm the version that added this, and the shape of the step).
+action (added in Xray 3.x–4.x).
 
-- **Detected:** a calling step renders as `→ calls PROJ-9 "Log in as admin"`, not as an empty row.
+- **Detected** in either of the two forms Xray uses: a `testCallBean` property on the step object
+  holding the called test's key, or, in older data, action text of the form `Call Test PROJ-9`,
+  matched by regex. `testCallBean` wins when both are present.
+- **Rendered:** a calling step renders as `→ calls PROJ-9 "Log in as admin"`, not as an empty row.
 - **`--expand-calls`:** inlines the called test's steps in place, numbered `3.1`, `3.2`… and
   marked with the called key. Expansion is recursive.
   - It stops at a cycle (A calls B calls A) and marks the step `↺ cycle: PROJ-9`.
@@ -269,7 +286,6 @@ per test:
   "status": "Ready",
   "type": "Manual",
   "path": "/O&M/Accounts",
-  "via": ["direct"],
   "preconditions": [{ "key": "PROJ-3", "summary": "Admin account exists" }],
   "steps": [
     { "index": "1", "action": "Open Users", "data": "", "result": "List shown" },
@@ -313,8 +329,8 @@ These are the discovery commands. People do not know plan keys by heart.
 - **`set list --project <key>`**: the same columns, for Test Sets.
 - **`path list --project <key>`**: the test repository's folder tree, with a test count for each
   folder. `--path <folder>` starts at a subfolder, and `--depth <n>` limits how deep it goes.
-  `--json` returns the nested structure. Paths are written the way Xray shows them
-  (`/O&M/Accounts`), and `--path` accepts them with or without the leading slash.
+  `--json` returns the nested structure. Paths are written the way Xray stores them, as a
+  string with a leading slash (`/O&M/Accounts`), and `--path` accepts them with or without the leading slash.
 
 Each command's output feeds the next one: `plan list` → `test list --plan`, `path list` →
 `test export --project X --path …`.
@@ -420,9 +436,9 @@ itself on the one failure that makes it stale.
   secrets the CLI should not be editing around.
 - oclif's directory is unavailable to core and to the MCP server.
 
-**Fetch steps per test through `/rest/raven/1.0/api/test/{key}/step`.** Rejected as the main route:
-it means N+1 requests on export. It remains the fallback if the steps field value turns out not to
-contain the steps on some Xray versions (confirm).
+**Fetch steps per test through `/rest/raven/1.0/api/test/{key}/step`.** Rejected: it means N+1
+requests on export, and it is not needed, because the steps field returned by `/rest/api/2/search`
+contains the full steps.
 
 **Keep raw JSON for `test get --json`, as 0011 does.** Rejected, for the reason given under
 `test get`. `--raw` keeps access to the raw issue.
@@ -438,6 +454,8 @@ all three would be hard to document.
 
 1. `xray-fields.ts`:
    - the role → schema-type table and `discoverXrayFields(client)` (on top of `listFields`);
+   - issue-type discovery from `/rest/api/2/issuetype` by `iconUrl` and description (a new
+     `listIssueTypes` beside `listFields` in `jira-discovery.ts`);
    - `XrayInstanceRecord` with load and save (directory passed in; atomic write; tolerant of an
      unwritable directory);
    - `resolveFieldNames(record, names)` for `--fields`;
@@ -447,8 +465,8 @@ all three would be hard to document.
    - Its REST fallbacks (plan, set and repository) go to `/rest/raven/1.0` on the Jira host.
    - It re-discovers once on an unknown-field error.
    - `createXrayBackend` throws the Cloud `ConfigError`.
-3. `xray-scope.ts`: scope and filter → JQL (with parenthesising and escaping), the key-list
-   fallback, and set expansion for plans with `via`.
+3. `xray-scope.ts`: scope and filter → JQL (with parenthesising and escaping), and the key-list
+   fallback.
 4. `xray-tests.ts`:
    - step and definition parsing;
    - call detection and batched `--expand-calls` with cycle and depth handling;
@@ -490,6 +508,9 @@ deliberately unusual field ids and renamed fields, so nothing passes by accident
 
 - **discovery:**
   - Roles are mapped by schema type, even when fields are renamed.
+  - Renamed Xray issue types are found by `iconUrl` and description.
+  - A command that needs a role the instance lacks fails with a `ConfigError` naming the role and
+    the version that introduced it.
   - Unmapped Xray fields are recorded.
   - Two candidates for a role produce the `ConfigError` naming both ids and the record path;
     `overrides` resolves it and survives a refresh.
@@ -505,11 +526,10 @@ deliberately unusual field ids and renamed fields, so nothing passes by accident
   - `--search` text is escaped.
   - `--linked-to` handles several keys.
   - The REST fallback gives the same result as the JQL route.
-  - Plan → Set → Test is deduplicated, `via` is correct for a test reachable two ways, and
-    `--direct-only` works.
-  - Path with and without `--recursive`.
+  - A plan to which a Test Set was added returns the set's tests.
+  - Path with and without `--recursive` (sent as `"true"` / `"false"`), and `--path /` as `""`.
 - **called tests:**
-  - A calling step is detected and rendered.
+  - A calling step is detected and rendered, in both the `testCallBean` and `Call Test KEY` forms.
   - `--expand-calls` inlines recursively with `3.1`-style numbering.
   - Cycle, depth limit and inaccessible markers appear.
   - One search per call level.
@@ -536,23 +556,27 @@ deliberately unusual field ids and renamed fields, so nothing passes by accident
 
 ## Facts to confirm
 
-These come from Xray's public documentation and have **not** been checked against a live instance:
-
-- The `com.xpandit.plugins.xray:*` schema types in the role table, and which Xray version
-  introduced each one.
-- Whether the steps field's value, as returned by `/rest/api/2/search`, contains the full steps
-  (action, data, result, and calls), or only a summary. This decides whether export is one request
-  per page or needs the per-test fallback.
-- How a "call test" step is represented, and the minimum Xray DC version that has it.
-- Which JQL functions exist, and their exact signatures: `testPlanTests`, `testSetTests`,
-  `testRepositoryFolderTests` (with its recursive argument).
-- The REST fallbacks under `/rest/raven/1.0`: plan tests, set tests, repository folders and folder
-  tests.
-- That a plan can include a Test Set as a unit, and how that shows up in the plan's test list
-  (already expanded, or as the set).
-- Whether Xray's issue-type name mapping is readable through REST, which would let it be discovered
-  instead of configured.
-- How the repository path is shown, and how folder names with `/` are escaped.
+- **Confirmed: the `com.xpandit.plugins.xray:*` schema types in the role table.** The first draft
+  had `steps`, `cucumberType`, `cucumberScenario` and `testPlanTests` wrong and `testSets` and
+  `testSetTests` swapped; the table now shows the verified types.
+- **Confirmed: the Xray version that introduced each role.** Manual steps and core types arrived in
+  1.x, Cucumber in 2.x, called tests and repository paths in 3.x–4.x, and datasets in 5.x.
+- **Confirmed: the steps field returned by `/rest/api/2/search` contains the full steps.** Export
+  is one request per page; no per-test fallback is needed.
+- **Confirmed: how a "call test" step is represented.** A `testCallBean` property on the step holds
+  the called key; older data uses `Call Test KEY` action text. Called tests need Xray 3.x–4.x.
+- **Confirmed: the JQL functions and their signatures.** `testPlanTests("PLAN")`,
+  `testSetTests("SET")` and `testRepositoryFolderTests("PROJECT", "PATH", "RECURSIVE")` exist; `""`
+  is the root path, and the recursive argument is a quoted string.
+- **Confirmed: the REST fallbacks under `/rest/raven/1.0`** work as listed.
+- **Confirmed: a plan can include a Test Set, which Xray expands.** The plan's tests field lists
+  the individual Test keys, never the set's key.
+- **Confirmed: issue types are discoverable, but not through Xray.** `/rest/raven/1.0` has no
+  settings endpoint (404); Jira's `/rest/api/2/issuetype` identifies Xray's types by their constant
+  `iconUrl` and "Represents a Test…" description.
+- **Confirmed: how repository paths are shown and escaped.** They are stored as a string with a
+  leading slash (`/NewFolder`), and `testRepositoryFolderTests` accepts them with or without that
+  slash. `/` is always a delimiter, and other characters use standard JQL string escaping.
 
 ## Open questions
 
@@ -562,7 +586,8 @@ These come from Xray's public documentation and have **not** been checked agains
 - **Exporting attachments.** Step attachments are listed by name; downloading them is a separate
   decision about where files go.
 - **Parameterised tests and datasets.** When a called test takes parameters, should
-  `--expand-calls` substitute the values? It depends on how they are represented (confirm).
+  `--expand-calls` substitute the values? Datasets need Xray 5.x. The answer depends on how they
+  are represented, which is not yet known.
 - **Sharing the instance record across a team**, so one person's `overrides` can be committed to a
   repo and used by CI. This would probably be an `--xray-record <path>` flag. Wait until someone
   needs it.
