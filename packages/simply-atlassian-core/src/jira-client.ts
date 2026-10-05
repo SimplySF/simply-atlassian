@@ -27,6 +27,11 @@ export interface JiraSearchOptions {
   readonly startAt?: number;
   /** Cloud paging cursor. */
   readonly nextPageToken?: string;
+  /**
+   * Server/Data Center only: `false` makes Jira skip JQL validation, so a `key in (…)` naming an
+   * issue the caller cannot see returns the visible ones instead of failing the whole query.
+   */
+  readonly validateQuery?: boolean;
 }
 
 /** Everything a caller needs after following pages: the issues plus why paging stopped. */
@@ -303,6 +308,7 @@ export class JiraClient {
         maxResults,
         fields: joinFields(options.fields),
         expand: options.expand,
+        validateQuery: options.validateQuery,
       },
     });
     const issues = response.issues ?? [];
@@ -485,6 +491,20 @@ export class JiraClient {
    */
   public getFields(): Promise<unknown> {
     return this.request('/field', { method: 'GET' });
+  }
+
+  /** Every issue type on the instance, which is how app-defined types are recognised. */
+  public getIssueTypes(): Promise<unknown> {
+    return this.request('/issuetype', { method: 'GET' });
+  }
+
+  /**
+   * A GET against an absolute path on the Jira host, for the REST APIs a Marketplace app serves
+   * outside `/rest/api` — Xray's `/rest/raven/1.0`, for one. Authentication and transport rules
+   * are the client's own, so an app API cannot quietly bypass them.
+   */
+  public getFromRoot<T>(path: string, query?: JsonCall['query']): Promise<T> {
+    return this.request<T>(path, { method: 'GET', query }, '');
   }
 
   public getProjectVersions(projectKey: string): Promise<unknown> {
