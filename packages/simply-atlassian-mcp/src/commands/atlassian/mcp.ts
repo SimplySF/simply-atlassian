@@ -55,6 +55,10 @@ export default class AtlassianMcp extends Command {
       command: '<%= config.bin %> <%= command.id %> --allow-writes --env-file ~/atlassian.env',
     },
     {
+      description: 'Also register the Xray tools, for Jira Server/Data Center with Xray installed',
+      command: '<%= config.bin %> <%= command.id %> --xray',
+    },
+    {
       description: 'List the tools this server would register, without starting it',
       command: '<%= config.bin %> <%= command.id %> --list',
     },
@@ -66,6 +70,13 @@ export default class AtlassianMcp extends Command {
       description:
         'Off by default, so a server launched without thinking about it can only read. ' +
         'ATLASSIAN_READ_ONLY in the environment still refuses every write even when this is on.',
+      default: false,
+    }),
+    xray: Flags.boolean({
+      summary: 'Also register the Xray tools (Jira Server/Data Center, read-only).',
+      description:
+        'Off by default: a client shows its model every registered tool, and most instances have no Xray. ' +
+        'Xray Server/Data Center needs no settings of its own, so there is nothing to detect it by.',
       default: false,
     }),
     'env-file': Flags.string({
@@ -88,7 +99,7 @@ export default class AtlassianMcp extends Command {
     if (flags.list) {
       // stderr, like every other diagnostic here: a client that inspects stdout must only ever
       // find protocol traffic on it.
-      const tools = selectTools(flags['allow-writes']);
+      const tools = selectTools(flags['allow-writes'], flags.xray);
       process.stderr.write(
         [
           `${tools.length} tool(s) would be registered${flags['allow-writes'] ? ' (writes allowed)' : ' (read-only)'}:`,
@@ -101,6 +112,6 @@ export default class AtlassianMcp extends Command {
 
     // Resolves once the transport is connected; the process then stays alive until the client
     // closes the stream, which is why this command never returns in normal use.
-    await startServer({ allowWrites: flags['allow-writes'], envFile: flags['env-file'] });
+    await startServer({ allowWrites: flags['allow-writes'], xray: flags.xray, envFile: flags['env-file'] });
   }
 }

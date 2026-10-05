@@ -81,6 +81,16 @@ describe('atlassian mcp', () => {
     expect(all.length).toBeGreaterThan(selectTools(false).length);
   });
 
+  it('lists the Xray tools only with --xray', async () => {
+    await AtlassianMcp.run(['--list']);
+    expect(stderr.join('')).not.toContain('jira_xray_test_export');
+
+    stderr.length = 0;
+    await AtlassianMcp.run(['--list', '--xray']);
+    expect(stderr.join('')).toContain('jira_xray_test_export');
+    expect(stderr.join('')).toContain(`${selectTools(false, true).length} tool(s) would be registered`);
+  });
+
   it('says whether it is read-only, so a listing is never ambiguous', async () => {
     await AtlassianMcp.run(['--list']);
     expect(stderr.join('')).toMatch(/read-only/);
