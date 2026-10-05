@@ -18,11 +18,15 @@ import process from 'node:process';
 import {
   type AtlassianConfig,
   ConfluenceClient,
+  createXrayBackend,
+  defaultXrayCacheDir,
   type EnvLike,
   JiraClient,
   loadEnvFile,
   resolveConfluenceConfig,
   resolveJiraConfig,
+  stripControlOneLine,
+  type XrayBackend,
 } from '@simplysf/simply-atlassian-core';
 
 export interface ServerOptions {
@@ -32,6 +36,12 @@ export interface ServerOptions {
    * environment carries `ATLASSIAN_READ_ONLY`, exactly as the CLI refuses it.
    */
   readonly allowWrites?: boolean;
+  /**
+   * Register the Xray tools. Off by default: a host lists every registered tool to its model, most
+   * people running this server have no Xray, and Xray Server/Data Center needs no settings of its
+   * own that could be detected instead.
+   */
+  readonly xray?: boolean;
   /**
    * A `.env` file holding connection settings the host did not set. Loaded once, at startup,
    * with the CLI's precedence: a variable already in the environment wins over the file.
@@ -50,10 +60,13 @@ export interface ServerOptions {
 export interface ToolContext {
   readonly env: EnvLike;
   readonly allowWrites: boolean;
+  readonly xrayEnabled: boolean;
   jiraConfig(): AtlassianConfig;
   jira(): JiraClient;
   confluenceConfig(): AtlassianConfig;
   confluence(): ConfluenceClient;
+  /** Xray on the configured Jira, with the instance record in the CLI's default cache directory. */
+  xray(): XrayBackend;
 }
 
 /** Builds the context, loading the env file first so every later lookup sees it. */
@@ -64,9 +77,16 @@ export function createContext(options: ServerOptions = {}): ToolContext {
   return {
     env,
     allowWrites: options.allowWrites ?? false,
+    xrayEnabled: options.xray ?? false,
     jiraConfig: () => resolveJiraConfig({}, env),
     jira: () => new JiraClient(resolveJiraConfig({}, env)),
     confluenceConfig: () => resolveConfluenceConfig({}, env),
     confluence: () => new ConfluenceClient(resolveConfluenceConfig({}, env)),
+    xray: () =>
+      createXrayBackend(resolveJiraConfig({}, env), {
+        cacheDir: defaultXrayCacheDir(env),
+        // stderr, never stdout: stdout is the protocol channel. A host shows this in its server log.
+        onWarning: (message) => process.stderr.write(`${stripControlOneLine(message)}\n`),
+      }),
   };
 }

@@ -14,14 +14,22 @@
  * limitations under the License.
  */
 
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import type { EnvLike } from '@simplysf/simply-atlassian-core';
-import { respondJson, startTestServer, type TestServer } from '@simplysf/simply-atlassian-core/testing';
+import {
+  keysInJql,
+  respondJson,
+  routeJiraSearch,
+  routeXrayDiscovery,
+  startTestServer,
+  xrayFixtureIssue,
+  type TestServer,
+} from '@simplysf/simply-atlassian-core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createServer, mapError, SERVER_NAME, SERVER_VERSION, type ServerOptions } from '../src/index.js';
 import { TOOLS } from '../src/tools.js';
@@ -87,15 +95,20 @@ describe('createServer', () => {
   it('registers only read tools by default', async () => {
     const c = await connect({ env: env() });
     const { tools } = await c.listTools();
-    const expected = TOOLS.filter((tool) => tool.kind === 'read').map((tool) => tool.name);
+    // App tools (Xray) are held back until the server is started for that app.
+    const expected = TOOLS.filter((tool) => tool.kind === 'read' && tool.app === undefined).map((tool) => tool.name);
     expect(tools.map((tool) => tool.name).sort()).toEqual(expected.sort());
     for (const tool of tools) expect(tool.annotations?.readOnlyHint).toBe(true);
   });
 
-  it('registers every tool with --allow-writes, with destructive ones annotated', async () => {
+  it('registers every non-app tool with --allow-writes, with destructive ones annotated', async () => {
     const c = await connect({ allowWrites: true, env: env() });
     const { tools } = await c.listTools();
-    expect(tools.map((tool) => tool.name).sort()).toEqual(TOOLS.map((tool) => tool.name).sort());
+    expect(tools.map((tool) => tool.name).sort()).toEqual(
+      TOOLS.filter((tool) => tool.app === undefined)
+        .map((tool) => tool.name)
+        .sort(),
+    );
 
     const del = tools.find((tool) => tool.name === 'jira_issue_delete');
     expect(del?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
@@ -325,5 +338,79 @@ describe('mapError', () => {
   it('redacts credentials from the environment out of any message', () => {
     const mapped = mapError(new Error(`token ${TOKEN} leaked`), { env: { JIRA_API_TOKEN: TOKEN } });
     expect(mapped.message).toBe('token <redacted> leaked');
+  });
+});
+
+describe('Xray tools', () => {
+  let cacheHome: string;
+  const xrayNames = TOOLS.filter((tool) => tool.app === 'xray').map((tool) => tool.name);
+
+  beforeEach(() => {
+    cacheHome = mkdtempSync(join(tmpdir(), 'xray-mcp-'));
+    routeXrayDiscovery(atlassian);
+  });
+
+  afterEach(() => {
+    rmSync(cacheHome, { recursive: true, force: true });
+  });
+
+  const xrayEnv = (): EnvLike => env({ XDG_CACHE_HOME: cacheHome });
+
+  it('are registered only with --xray, even when writes are allowed', async () => {
+    const c = await connect({ allowWrites: true, env: xrayEnv() });
+    const names = (await c.listTools()).tools.map((tool) => tool.name);
+
+    for (const name of xrayNames) expect(names).not.toContain(name);
+  });
+
+  it('are all registered as reads with --xray', async () => {
+    const c = await connect({ xray: true, env: xrayEnv() });
+    const { tools } = await c.listTools();
+
+    const registered = tools.filter((tool) => xrayNames.includes(tool.name));
+    expect(registered.map((tool) => tool.name).sort()).toEqual([...xrayNames].sort());
+    for (const tool of registered) expect(tool.annotations?.readOnlyHint, tool.name).toBe(true);
+  });
+
+  it('cap an export at 100 tests by default, and say it was cut short', async () => {
+    const tests = Array.from({ length: 150 }, (_value, index) => xrayFixtureIssue(`OM-${index + 1}`));
+    routeJiraSearch(atlassian, (jql) => (keysInJql(jql).length > 0 ? [] : tests));
+    const c = await connect({ xray: true, env: xrayEnv() });
+
+    const result = await c.callTool({ name: 'jira_xray_test_export', arguments: { project: 'OM' } });
+
+    expect(result.isError).toBeFalsy();
+    const body = jsonOf(result) as { records: unknown[]; complete: boolean; total: number };
+    expect(body.records).toHaveLength(100);
+    expect(body.complete).toBe(false);
+    expect(body.total).toBe(150);
+  });
+
+  it('return the same envelope as the CLI for a test list', async () => {
+    routeJiraSearch(atlassian, () => [xrayFixtureIssue('OM-1')]);
+    const c = await connect({ xray: true, env: xrayEnv() });
+
+    const result = await c.callTool({ name: 'jira_xray_test_list', arguments: { plan: 'OM-7', linkedTo: ['OM-40'] } });
+
+    expect(jsonOf(result)).toMatchObject({ issues: [{ key: 'OM-1' }], complete: true, pages: 1 });
+    const jql = new URL(atlassian.requests.at(-1)?.url ?? '', 'http://x').searchParams.get('jql');
+    expect(jql).toBe('issue in testPlanTests("OM-7") AND (issue in linkedIssues("OM-40")) ORDER BY key ASC');
+  });
+
+  it('report a Cloud site as a config error', async () => {
+    const c = await connect({
+      xray: true,
+      env: {
+        JIRA_URL: 'https://x.atlassian.net',
+        JIRA_USERNAME: 'u',
+        JIRA_API_TOKEN: TOKEN,
+        XDG_CACHE_HOME: cacheHome,
+      },
+    });
+
+    const result = await c.callTool({ name: 'jira_xray_fields', arguments: {} });
+
+    expect(result.isError).toBe(true);
+    expect(jsonOf(result)).toMatchObject({ code: 'config', exitCode: 2 });
   });
 });

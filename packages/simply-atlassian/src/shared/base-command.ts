@@ -23,6 +23,8 @@ import {
   ConfigError,
   type ConfigOverrides,
   ConfluenceClient,
+  createXrayBackend,
+  defaultXrayCacheDir,
   HttpError,
   JiraClient,
   loadEnvFile,
@@ -34,6 +36,9 @@ import {
   sanitiseDeep,
   SECRET_ENV,
   stripControl,
+  type XrayBackend,
+  type XrayFilters,
+  type XrayScope,
 } from '@simplysf/simply-atlassian-core';
 
 /**
@@ -47,6 +52,15 @@ export function parseList(value: string | undefined): string[] | undefined {
     .split(',')
     .map((item) => item.trim())
     .filter((item) => item !== '');
+  return items.length === 0 ? undefined : items;
+}
+
+/**
+ * Flattens a repeatable, comma-separated flag: `--fields a,b --fields c` is `[a, b, c]`. Blanks are
+ * dropped for the reason {@link parseList} gives.
+ */
+export function parseMultiList(values: readonly string[] | undefined): string[] | undefined {
+  const items = (values ?? []).flatMap((value) => parseList(value) ?? []);
   return items.length === 0 ? undefined : items;
 }
 
@@ -363,4 +377,114 @@ export abstract class ConfluenceCommand<T extends typeof Command> extends Atlass
     };
     return resolveConfluenceConfig(overrides);
   }
+}
+
+/**
+ * Which tests a command reads: exactly one scope. Shared by `xray test list` and `xray test export`,
+ * so the two can never disagree about what a scope selects.
+ */
+export const xrayScopeFlags = {
+  project: Flags.string({
+    summary: 'Project key: every Test in the project, or the folder --path names in it.',
+    helpGroup: 'SCOPE',
+  }),
+  plan: Flags.string({
+    summary: 'Test Plan key: its tests, including any added through a Test Set.',
+    helpGroup: 'SCOPE',
+  }),
+  set: Flags.string({ summary: 'Test Set key: its tests.', helpGroup: 'SCOPE' }),
+  path: Flags.string({
+    summary: 'Test repository folder inside --project, such as "/O&M/Accounts"; "/" is the root.',
+    helpGroup: 'SCOPE',
+  }),
+  recursive: Flags.boolean({
+    summary: 'With --path, include tests in subfolders.',
+    default: false,
+    helpGroup: 'SCOPE',
+  }),
+};
+
+/** Optional narrowing, ANDed onto the scope. */
+export const xrayFilterFlags = {
+  jql: Flags.string({
+    summary: 'Extra JQL ANDed onto the scope, in parentheses so it cannot widen it.',
+    helpGroup: 'FILTER',
+  }),
+  search: Flags.string({ summary: 'Keyword in the summary or description.', helpGroup: 'FILTER' }),
+  'linked-to': Flags.string({
+    summary: 'Only tests linked to any of these issues, by any link type. Comma-separated or repeated.',
+    multiple: true,
+    multipleNonGreedy: true,
+    helpGroup: 'FILTER',
+  }),
+};
+
+export const xrayFieldsFlag = {
+  fields: Flags.string({
+    summary: 'Extra fields to return, added to the defaults. Comma-separated or repeated.',
+    description:
+      'Each value is an Xray role (steps, repositoryPath, …), the name of an Xray field, or any Jira field ' +
+      'id or name (components, customfield_10400, "Story Points"). A name that matches nothing is an error.',
+    multiple: true,
+    multipleNonGreedy: true,
+  }),
+};
+
+export const xrayCallFlags = {
+  'expand-calls': Flags.boolean({
+    summary: "Inline each called test's steps in place, numbered 3.1, 3.2, ….",
+    default: false,
+  }),
+  'max-call-depth': Flags.integer({
+    summary: 'How many levels of calls --expand-calls inlines.',
+    default: 5,
+    min: 1,
+  }),
+};
+
+/**
+ * Base for `jira xray` commands. Xray Server/Data Center is a plugin on the Jira host, so the Jira
+ * connection flags are all it needs; this adds only the backend, with the instance record kept in
+ * the default cache directory.
+ */
+export abstract class XrayCommand<T extends typeof Command> extends JiraCommand<T> {
+  protected xray(): XrayBackend {
+    return createXrayBackend(this.jiraConfig(), {
+      cacheDir: defaultXrayCacheDir(),
+      onWarning: stderrLine,
+    });
+  }
+
+  /** The scope flags, for commands that declare {@link xrayScopeFlags}. */
+  protected xrayScope(): XrayScope {
+    return {
+      project: this.flagValue('project'),
+      plan: this.flagValue('plan'),
+      set: this.flagValue('set'),
+      path: this.flagValue('path'),
+      recursive: this.rawFlags.recursive === true,
+    };
+  }
+
+  /** The filter flags, for commands that declare {@link xrayFilterFlags}. */
+  protected xrayFilters(): XrayFilters {
+    return {
+      jql: this.flagValue('jql'),
+      search: this.flagValue('search'),
+      linkedTo: parseMultiList(this.rawFlags['linked-to'] as string[] | undefined),
+    };
+  }
+
+  protected xrayFields(): string[] | undefined {
+    return parseMultiList(this.rawFlags.fields as string[] | undefined);
+  }
+}
+
+/**
+ * One line on stderr — progress, a skipped test, an unwritable cache — kept off stdout so an export
+ * piped to a file stays exactly the export. Sanitised like everything else this CLI prints, and held
+ * to one line so it cannot forge a second.
+ */
+export function stderrLine(message: string): void {
+  process.stderr.write(`${stripControl(redactSecrets(message, secrets())).replaceAll('\n', ' ')}\n`);
 }

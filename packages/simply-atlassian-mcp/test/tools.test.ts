@@ -111,4 +111,31 @@ describe('TOOLS catalogue', () => {
     expect(pageDelete?.requiresConfirm?.({ page: '1' })).toBe(false);
     expect(pageDelete?.requiresConfirm?.({ page: '1', purge: true })).toBe(true);
   });
+
+  it('catalogues the seven Xray reads, all marked for the Xray app', () => {
+    const xray = TOOLS.filter((tool) => tool.app === 'xray');
+
+    expect(xray.map((tool) => tool.name).sort()).toEqual([
+      'jira_xray_fields',
+      'jira_xray_path_list',
+      'jira_xray_plan_list',
+      'jira_xray_set_list',
+      'jira_xray_test_export',
+      'jira_xray_test_get',
+      'jira_xray_test_list',
+    ]);
+    for (const tool of xray) expect(tool.kind, tool.name).toBe('read');
+  });
+
+  it('exposes the Xray scopes, filters and call expansion the CLI accepts, but not an output format', () => {
+    const exportTool = TOOLS.find((tool) => tool.name === 'jira_xray_test_export');
+    const properties = Object.keys(exportTool?.inputSchema ?? {});
+
+    for (const name of ['project', 'plan', 'set', 'path', 'recursive', 'jql', 'search', 'linkedTo', 'fields']) {
+      expect(properties, name).toContain(name);
+    }
+    expect(properties).toContain('expandCalls');
+    expect(properties).toContain('maxCallDepth');
+    expect(properties).not.toContain('format');
+  });
 });

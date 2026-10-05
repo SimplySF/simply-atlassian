@@ -65,7 +65,9 @@ const INSTRUCTIONS =
   'the request without sending it, and the irreversible ones (issue and comment deletes, and a ' +
   'page purge) additionally require confirm: true. Failures come back as isError results whose ' +
   'text is JSON with a stable "code": config, auth, error, or confirm-required. Prefer "fields" ' +
-  'on issue tools to keep payloads small.';
+  'on issue tools to keep payloads small. Xray tools (jira_xray_*, Server/Data Center only) are ' +
+  'registered only when the server was started with --xray; they return assembled export records ' +
+  'rather than raw payloads, and their "fields" input adds to the defaults instead of replacing them.';
 
 const ANNOTATIONS: Readonly<Record<ToolKind, ToolAnnotations>> = {
   read: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
@@ -73,9 +75,14 @@ const ANNOTATIONS: Readonly<Record<ToolKind, ToolAnnotations>> = {
   destructive: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
 };
 
-/** Which tools a server with the given options registers. Exported so `--help` can list them. */
-export function selectTools(allowWrites: boolean): readonly ToolSpec[] {
-  return allowWrites ? TOOLS : TOOLS.filter((tool) => tool.kind === 'read');
+/**
+ * Which tools a server with the given options registers. Exported so `--help` can list them. App
+ * tools stay in the catalogue either way; only this filter decides whether they are registered.
+ */
+export function selectTools(allowWrites: boolean, xray = false): readonly ToolSpec[] {
+  return TOOLS.filter(
+    (tool) => (allowWrites || tool.kind === 'read') && (tool.app === undefined || (tool.app === 'xray' && xray)),
+  );
 }
 
 /**
@@ -87,7 +94,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
   const context = createContext(options);
   const server = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION }, { instructions: INSTRUCTIONS });
 
-  for (const spec of selectTools(context.allowWrites)) {
+  for (const spec of selectTools(context.allowWrites, context.xrayEnabled)) {
     server.registerTool(
       spec.name,
       {
