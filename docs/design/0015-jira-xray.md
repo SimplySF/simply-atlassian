@@ -1,9 +1,9 @@
 # 0015 — Xray test management under `jira xray`
 
-**Status:** Draft
+**Status:** Implemented (branch `feat/jira-xray`; PR link to follow)
 **Package:** `packages/simply-atlassian-core` (field discovery, client, behaviour);
 `packages/simply-atlassian` and `packages/simply-atlassian-mcp` (surfaces)
-**Date:** 2026-10-02, revised 2026-10-02 after review
+**Date:** 2026-10-02, revised 2026-10-02 after review, corrected 2026-10-05 to match the implementation
 
 ## Problem
 
@@ -119,7 +119,14 @@ Xray's settings too, so they are discovered the same way. Xray has no settings e
 mapping, but Jira's `GET /rest/api/2/issuetype` lists every issue type, and Xray's are recognisable
 whatever they are called: each has a constant `iconUrl` served by the Xray plugin and a description
 that starts "Represents a Test…". Each type is mapped to its role by those two properties, never by
-name, and the ambiguity and `overrides` rules below apply to issue types as they do to fields.
+name, and the ambiguity and `overrides` rules below apply to issue types as they do to fields. The
+description is checked first; a type whose description was edited is still recognised by its icon,
+which must be served from a path containing `com.xpandit.plugins.xray` and whose file name carries
+the role (`testplan`, `testset`, …).
+
+The Xray version is read from `GET /rest/plugins/1.0/com.xpandit.plugins.xray-key`. That endpoint
+often needs administrator rights, so a failure records `null` and never stops discovery; the version
+is informational only.
 
 **The instance record.** Discovery results are saved as one JSON file per instance:
 
@@ -134,16 +141,28 @@ ${XDG_CACHE_HOME:-~/.cache}/simply-atlassian/xray/<host>[_<path>].json
   "xrayVersion": "7.4.0",
   "fields": { "steps": "customfield_12100", "testType": "customfield_12101", "…": "…" },
   "unmapped": { "customfield_12188": "com.xpandit.plugins.xray:some-new-field" },
-  "issueTypes": { "test": "Test", "testSet": "Test Set", "testPlan": "Test Plan" }
+  "fieldNames": { "customfield_12100": "Manual Test Steps", "…": "…" },
+  "issueTypes": { "test": "Test", "testSet": "Test Set", "testPlan": "Test Plan" },
+  "ambiguous": { "fields": {}, "issueTypes": {} },
+  "overrides": { "fields": {}, "issueTypes": {} }
 }
 ```
+
+`fieldNames` holds every Xray field's display name, so `--fields` can resolve Xray names with no
+request. `ambiguous` holds the candidates for any role more than one field or type claimed, and
+`overrides` is written empty so a person can see where a pin goes.
 
 - **When discovery runs.** The first time an Xray command is used against an instance, discovery
   runs once and saves the record. Later commands read the record and make no discovery request.
 - **Refreshing.** `jira xray fields --refresh` rediscovers and rewrites the record. A command whose
   query fails because a recorded field id is gone (Jira reports it as an unknown field) rediscovers
   **once** and retries. A second failure is reported as a normal error. This covers a reinstall or
-  upgrade without the user having to know the cache exists.
+  upgrade without the user having to know the cache exists. "Fails because of the record" means a
+  400 whose text names a recorded field id, or a recorded issue type name alongside `issuetype`.
+  The retry happens only if no page has been emitted yet, so a streaming export never repeats one.
+- **A corrupt record is an error, not a cache miss.** A record file that is not valid JSON may hold
+  hand-edited overrides, so the command stops and names the file instead of silently rediscovering
+  and overwriting it.
 - **Overrides survive refreshes.** An `overrides` object in the record, edited by hand, beats
   discovery and is kept when the record is rewritten. This is the fix for the ambiguity case below.
 - **Ambiguity.** If two fields share one role's schema type (it happens after an app reinstall
@@ -152,11 +171,13 @@ ${XDG_CACHE_HOME:-~/.cache}/simply-atlassian/xray/<host>[_<path>].json
   one in `overrides`.
 - **No cache.** If the cache directory cannot be written (read-only home, sandboxed agent),
   discovery still runs and its result is used for the current process; only saving it fails, with
-  one line on stderr. A file the CLI cannot write must not stop a read.
+  one line on stderr. A file the CLI cannot write must not stop a read. Saving is atomic (a
+  temporary file renamed into place).
 
 Core is still forbidden from touching terminals and processes, as 0012 requires. The record's
-directory is passed in by the caller (the CLI and the MCP server both default it as above), and
-reading the environment goes through the usual `env` parameter.
+directory is passed in by the caller, and reading the environment goes through the usual `env`
+parameter: core exports `defaultXrayCacheDir(env)`, which the CLI and the MCP server both use, and
+the backend reports an unsaved record through an `onWarning` callback rather than writing anywhere.
 
 **`jira xray fields`** shows the record as a table: role, field id, field name, schema type. It
 also shows the unmapped Xray fields and the record's path. `--refresh` rediscovers first. `--json`
@@ -176,7 +197,10 @@ command's default set (it does not replace the defaults), comma-separated or rep
   passed to Jira as given.
 
 `--fields` names that match nothing are reported as an error before the search runs, not silently
-dropped. With `--fields` alone, the defaults are the minimum each command needs (shown per command
+dropped. Role and Xray names resolve from the record; any other name needs the instance's field list
+(Jira's `fields` parameter takes ids, so "Story Points" must become `customfield_…`), which is
+fetched once, and only when such a name is present. A display name two fields share is an error that
+lists both ids. With `--fields` alone, the defaults are the minimum each command needs (shown per command
 below). A separate `--only-fields` flag can come later if replacing the defaults turns out to be
 needed (open question).
 
@@ -201,6 +225,10 @@ given. `/` is always a folder delimiter, so a folder name cannot contain one. An
 escaped with standard JQL string quoting, as `--search` is. Its recursive argument must be a quoted string (`"true"` or `"false"`),
 not a bare boolean; `--recursive` sets `"true"` and its absence sets `"false"`.
 
+`--recursive` without `--path`, `--path` without `--project`, and more than one of `--project`,
+`--plan` and `--set` are all configuration errors. Plan, set and `--linked-to` values must be shaped
+like issue keys, and `--project` like a project key.
+
 Then any **filters**, all optional, combined with AND:
 
 | Filter flag          | Meaning                                                                                                    |
@@ -216,6 +244,9 @@ user's `--jql` is just ANDed on. The user's clause is wrapped in parentheses, so
 cannot widen the scope. `--search` is escaped the same way `--jql` text is escaped elsewhere in
 this repo. `--linked-to` becomes `issue in linkedIssues("K")` for each key, ORed together.
 
+A trailing `ORDER BY` in `--jql` is moved to the end of the combined query, where JQL requires it;
+without one, results are ordered `ORDER BY key ASC` so a paged export is stable.
+
 **When JQL is not enough.** All three JQL functions exist on current Xray DC. If one is missing on
 an older installed version, the scope falls back to the matching Xray REST call:
 
@@ -224,7 +255,10 @@ an older installed version, the scope falls back to the matching Xray REST call:
 - path: `GET /rest/raven/1.0/api/testrepository/{project}/folders/{id}/tests`
 
 That call yields a list of keys, which is then searched as `key in (…)` in chunks of 100 so the
-filters still apply. Which route was used is an internal detail. Both give the same result, and
+filters still apply. The path fallback finds the folder's id by walking the repository tree. Every
+`key in (…)` search, here and for called tests, is sent with `validateQuery=false`, so a key the
+caller cannot see is skipped rather than failing the whole query. A fallback stopped by `--limit`
+with chunks still unsearched reports itself incomplete, conservatively. Which route was used is an internal detail. Both give the same result, and
 tests cover both.
 
 **Plan → Set → Test.** A Test Set can be added to a plan, but Xray expands it on the way in: the
@@ -238,7 +272,8 @@ Paging, the total count and the truncation notice follow `issue search`.
 
 ### `test get <test>`
 
-Takes an issue key. The output covers:
+Takes an issue key. An issue whose type is not the discovered Test type is refused with a
+`ConfigError` naming both types. The output covers:
 
 - **Header:** type (Manual / Cucumber / Generic), status, summary, repository path.
 - **Steps (Manual):** a table with `#`, action, data and expected result. Attachments are listed by
@@ -260,13 +295,16 @@ action (added in Xray 3.x–4.x).
 - **`--expand-calls`:** inlines the called test's steps in place, numbered `3.1`, `3.2`… and
   marked with the called key. Expansion is recursive.
   - It stops at a cycle (A calls B calls A) and marks the step `↺ cycle: PROJ-9`.
-  - It also stops at a depth of 5, overridable with `--max-call-depth`.
+  - It also stops at a depth of 5, overridable with `--max-call-depth`: the top test's calls are
+    level 1, and a call at a level beyond the limit is marked `… (call depth limit reached)`. Its
+    summary is null, because that level is never fetched.
   - A called test the user cannot see is marked `⚠ not accessible: PROJ-9`.
 
   None of these stops is an error, because a partial export is more useful than none.
 
 - Called tests are fetched in batches (one `key in (…)` search for each level of calls), not one
-  at a time.
+  at a time. Without `--expand-calls` only the first level is fetched, for the summaries the call
+  rows show. Preconditions ride along in the first level's search, for their summaries.
 
 `--json` returns the **export record** described next, not a raw payload. A test assembled from a
 search, its steps and its membership has no single raw payload to pass through. This is different
@@ -288,18 +326,32 @@ per test:
   "path": "/O&M/Accounts",
   "preconditions": [{ "key": "PROJ-3", "summary": "Admin account exists" }],
   "steps": [
-    { "index": "1", "action": "Open Users", "data": "", "result": "List shown" },
+    { "index": "1", "action": "Open Users", "data": "", "result": "List shown", "attachments": [] },
     { "index": "2", "call": { "key": "PROJ-9", "summary": "Log in as admin" }, "steps": [] }
   ],
   "definition": null,
-  "links": [{ "type": "Tests", "direction": "outward", "key": "PROJ-40", "issueType": "Story", "summary": "…" }],
+  "links": [
+    {
+      "type": "Tests",
+      "direction": "outward",
+      "relationship": "tests",
+      "key": "PROJ-40",
+      "issueType": "Story",
+      "status": "Done",
+      "summary": "…"
+    }
+  ],
   "plans": ["PROJ-7"],
   "sets": ["PROJ-31"],
   "fields": { "components": ["Accounts"] }
 }
 ```
 
-The `steps` array of a call entry stays empty unless `--expand-calls` is given.
+The `steps` array of a call entry stays empty unless `--expand-calls` is given. A call entry whose
+expansion stopped carries `"stop": "cycle" | "depth" | "inaccessible"`. Action steps list their
+attachments by file name. Links carry the phrase read from this test's side (`relationship`) and the
+other issue's status, which the human view shows. Values in `fields` are simplified: a named Jira
+object becomes its name, so components read `["Accounts"]`.
 
 - **`--format`:**
   - `json` (default): one array.
@@ -307,7 +359,8 @@ The `steps` array of a call entry stays empty unless `--expand-calls` is given.
     pipelines.
   - `markdown`: one section per test, readable by people and models.
 
-  All three write to stdout.
+  All three write to stdout. `--json` returns `{ records, total, complete, notes }` instead, so a
+  caller can detect truncation; the MCP tool returns the same object.
 
 - **`--expand-calls`** and **`--fields`** work as in `test get`.
 - **Progress.** Pages are fetched sequentially at 100 tests per page, and progress goes to stderr
@@ -379,6 +432,8 @@ How they are exposed:
 - `jira_xray_test_export` returns records as JSON and takes `limit`, which defaults to **100** in
   MCP. A host has to hold the whole tool result in context, so an agent should ask for more on
   purpose. `format` is not exposed.
+- `--xray` exists on both the `simply-atlassian-mcp` binary and `simply atlassian mcp`, whose
+  `--list` honours it.
 
 ## Deferred
 
@@ -452,6 +507,8 @@ all three would be hard to document.
 
 **Core (`packages/simply-atlassian-core/src`)**
 
+0. `jira-client.ts`: `getIssueTypes()`, `getFromRoot()` (a GET on an absolute path, for
+   `/rest/raven/1.0` and the plugin endpoint), and a Server/DC-only `validateQuery` search option.
 1. `xray-fields.ts`:
    - the role → schema-type table and `discoverXrayFields(client)` (on top of `listFields`);
    - issue-type discovery from `/rest/api/2/issuetype` by `iconUrl` and description (a new
@@ -472,9 +529,11 @@ all three would be hard to document.
    - call detection and batched `--expand-calls` with cycle and depth handling;
    - the export record builder;
    - the Markdown renderer.
-5. `xray-catalogue.ts`: `plan list`, `set list`, `path list` (the folder tree and counts).
+5. `xray-catalogue.ts`: `plan list`, `set list`, `path list`, and the rows `fields` shows;
+   `xray-folders.ts`: the tolerant folder-tree reader shared by `path list` and the path fallback.
 6. `index.ts` exports. Xray routes and fixtures for the fake instance in `testing.ts`, including an
-   instance whose Xray fields carry non-default ids and names.
+   instance whose Xray fields carry non-default ids and names (`routeXrayDiscovery`,
+   `routeJiraSearch`, `xrayFixtureIssue`).
 
 **CLI (`packages/simply-atlassian`)**
 
@@ -495,7 +554,7 @@ all three would be hard to document.
 
 **Docs:** this doc's status and the index row.
 
-Suggested PR split:
+Suggested PR split (in the end it shipped as one branch, one commit per package):
 
 - (a) field discovery, `fields`, `test get`;
 - (b) scopes, filters, `test list`, `test export`, and the three list commands;

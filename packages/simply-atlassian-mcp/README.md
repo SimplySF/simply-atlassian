@@ -353,6 +353,21 @@ With writes allowed:
 | `confluence_page_children`     |                                                         |
 | `confluence_page_comment_list` |                                                         |
 
+### Xray tools (`--xray`)
+
+For Jira Server/Data Center with [Xray](https://www.getxray.app/) installed, start the server with
+`--xray` to also register seven read tools: `jira_xray_fields`, `jira_xray_test_get`,
+`jira_xray_test_list`, `jira_xray_test_export`, `jira_xray_plan_list`, `jira_xray_set_list`, and
+`jira_xray_path_list`. They are off by default because a client shows its model every registered
+tool and most instances have no Xray, and Xray Server/Data Center needs no settings of its own that
+the server could detect it by. `--allow-writes` does not register them; they are all reads.
+
+They differ from the other tools in three ways, all described in the
+[Xray guide](https://simplysf.github.io/simply-cli/atlassian/guides/xray/): test tools return the
+export record, assembled from several sources, rather than a raw payload; their `fields` input adds
+to the default fields instead of replacing them; and `jira_xray_test_export` returns at most 100
+tests unless `limit` asks for more, because a host holds the whole result in its context.
+
 ## Results and errors
 
 A successful call returns what the CLI prints with `--json`, verbatim. A failure returns an error
@@ -385,6 +400,7 @@ installed and working, and the problem is in how the client launches it or what 
 | `code: "auth"` with status `401`                                  | The instance rejected the credentials. Cloud needs `JIRA_USERNAME` plus `JIRA_API_TOKEN`; Server/Data Center needs `JIRA_PERSONAL_TOKEN` alone. Set one style, not both.                                                                   |
 | `code: "auth"` with status `403` on a write                       | The token is read-scoped, which is the intended outcome for the everyday server. Use the write-capable server entry for this change.                                                                                                       |
 | The agent says it has no tool to create, update, or delete        | The server was started without `--allow-writes`. That is the default; see [Let the agent write](#let-the-agent-write).                                                                                                                     |
+| The agent has no `jira_xray_*` tools                              | The server was started without `--xray`. Add it to the server's `args`; see [Xray tools](#xray-tools---xray).                                                                                                                              |
 | A write returns `code: "config"` mentioning `ATLASSIAN_READ_ONLY` | The variable is set in the environment or the env file. Unset it, or point the write server at a credential file meant for writing.                                                                                                        |
 
 ## Embed in your own process
@@ -404,14 +420,14 @@ await server.connect(transport);
 ```
 
 `createServer` returns the MCP SDK's `McpServer` with the tools registered and nothing connected.
-`TOOLS` is the full catalogue, `selectTools(allowWrites)` is the subset a given configuration
+`TOOLS` is the full catalogue, `selectTools(allowWrites, xray)` is the subset a given configuration
 registers, and `invokeTool` and `mapError` run one tool and map a failure onto the error object
 above, for tests and hosts that need to drive the server without a transport.
 
 ## Options
 
 ```
-simply-atlassian-mcp [--allow-writes] [--env-file <path>]
+simply-atlassian-mcp [--allow-writes] [--xray] [--env-file <path>]
 ```
 
 `--help` prints the options and the full tool list. Because stdout is the protocol stream, it

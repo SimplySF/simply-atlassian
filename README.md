@@ -8,6 +8,8 @@ with Atlassian products (Jira, Confluence, and friends).
 It covers Jira issues (search, view, create, update, transition, delete, history), comments with
 @-mentions, issue links, users, agile boards and sprints, and Confluence pages (read, search, create,
 update from storage format or Markdown, delete, comments) — plus opening any of them in a browser.
+On Jira Server/Data Center it also reads Xray test management: tests with their steps and called
+tests, plans, sets, the test repository, and bulk export.
 Output is human-readable by default and raw JSON with `--json`, every write takes `--dry-run`, and
 the same capabilities are available to AI agents as an MCP server.
 
@@ -55,7 +57,7 @@ Each reads the connection settings described in
 ## Documentation
 
 The [documentation site](https://simplysf.github.io/simply-cli/atlassian/) has a getting-started guide, guides to
-credentials, write safety, scripting, and the MCP server, and the full command reference. The same command reference is in the
+credentials, write safety, scripting, Xray, and the MCP server, and the full command reference. The same command reference is in the
 [package README](packages/simply-atlassian/README.md#commands).
 
 ## Contributing
