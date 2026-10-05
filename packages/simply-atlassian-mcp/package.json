@@ -34,7 +34,7 @@
     "simply-atlassian-mcp": "./bin/run.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/sdk": "^1.32.0",
     "@oclif/core": "^4.11.2",
     "@simplysf/simply-atlassian-core": "workspace:^0.6.0",
     "zod": "^4.6.5"
