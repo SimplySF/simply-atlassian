@@ -1,6 +1,6 @@
 # 0015 — Xray test management under `jira xray`
 
-**Status:** Implemented (branch `feat/jira-xray`; PR link to follow)
+**Status:** Implemented (core PR #45; CLI commands and MCP tools PR #46; docs PR #49)
 **Package:** `packages/simply-atlassian-core` (field discovery, client, behaviour);
 `packages/simply-atlassian` and `packages/simply-atlassian-mcp` (surfaces)
 **Date:** 2026-10-02, revised 2026-10-02 after review, corrected 2026-10-05 to match the implementation
@@ -554,11 +554,15 @@ all three would be hard to document.
 
 **Docs:** this doc's status and the index row.
 
-Suggested PR split (in the end it shipped as one branch, one commit per package):
+Suggested PR split:
 
 - (a) field discovery, `fields`, `test get`;
 - (b) scopes, filters, `test list`, `test export`, and the three list commands;
 - (c) MCP.
+
+It did not ship that way. The MCP catalogue test requires every CLI command to have a tool, so CLI
+commands and their MCP tools must land in the same commit. It shipped as three stacked PRs: core
+(#45), the CLI commands and MCP tools together (#46), then docs (#49).
 
 ## Testing
 
