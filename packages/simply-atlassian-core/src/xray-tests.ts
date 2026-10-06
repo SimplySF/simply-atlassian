@@ -124,11 +124,15 @@ export interface XrayTestListResult {
 }
 
 export interface XrayExportInput extends XrayTestListInput, XrayTestOptions {
-  /** Each page's records as they are assembled, so a caller can stream them. */
+  /**
+   * Each page's records as they are assembled, so a caller can stream them. Given this, the result
+   * does not also collect them, so a large export's memory stays at one page.
+   */
   readonly onRecords?: (records: XrayTestRecord[], progress: XraySearchProgress) => Promise<void> | void;
 }
 
 export interface XrayExportResult {
+  /** Every record, or none when they were streamed through `onRecords`. */
   readonly records: XrayTestRecord[];
   readonly total?: number;
   /** False when `limit` stopped the export before the scope ran out. */
@@ -218,7 +222,7 @@ export async function exportXrayTests(backend: XrayBackend, input: XrayExportInp
       limit: input.limit,
       onPage: async (issues, progress, instance) => {
         const page = await assembleRecords(backend, instance, issues, await extrasFor(instance), input);
-        records.push(...page.records);
+        if (input.onRecords === undefined) records.push(...page.records);
         for (const note of page.notes) notes.add(note);
         await input.onRecords?.(page.records, progress);
       },

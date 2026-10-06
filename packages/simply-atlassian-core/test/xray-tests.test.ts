@@ -273,7 +273,7 @@ describe('test list', () => {
 });
 
 describe('test export', () => {
-  it('writes one record per test with every contract key, page by page', async () => {
+  it('streams records page by page without also collecting them', async () => {
     for (let index = 1; index <= 150; index += 1) add(`OM-${index}`, { steps: [xrayStep(1, `step ${index}`)] });
     const pages: number[] = [];
 
@@ -286,8 +286,16 @@ describe('test export', () => {
     });
 
     expect(pages).toEqual([100, 50]);
-    expect(result.records).toHaveLength(150);
+    expect(result.records).toEqual([]);
     expect(result.complete).toBe(true);
+  });
+
+  it('collects every record when nothing streams them, with every contract key', async () => {
+    for (let index = 1; index <= 150; index += 1) add(`OM-${index}`, { steps: [xrayStep(1, `step ${index}`)] });
+
+    const result = await exportXrayTests(backend(), { scope: { project: 'OM' }, limit: 1000 });
+
+    expect(result.records).toHaveLength(150);
     expect(Object.keys(result.records[0] ?? {}).sort()).toEqual(
       [
         'definition',
