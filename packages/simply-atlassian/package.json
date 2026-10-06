@@ -77,6 +77,21 @@
       "atlassian:jira:sprint": {
         "description": "List sprints, sprint issues, and add issues to sprints."
       },
+      "atlassian:jira:xray": {
+        "description": "Read Xray tests, plans, sets, and repository paths (Server/Data Center)."
+      },
+      "atlassian:jira:xray:test": {
+        "description": "Read, list, and export Xray tests."
+      },
+      "atlassian:jira:xray:plan": {
+        "description": "List Xray test plans."
+      },
+      "atlassian:jira:xray:set": {
+        "description": "List Xray test sets."
+      },
+      "atlassian:jira:xray:path": {
+        "description": "Browse the Xray test repository."
+      },
       "atlassian:confluence": {
         "description": "Work with Confluence spaces and pages."
       },

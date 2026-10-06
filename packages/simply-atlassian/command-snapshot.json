@@ -658,5 +658,139 @@
     "flagChars": ["e"],
     "flags": ["env-file", "jira-api-token", "jira-personal-token", "jira-url", "jira-username", "json"],
     "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:xray:fields",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": ["env-file", "jira-api-token", "jira-personal-token", "jira-url", "jira-username", "json", "refresh"],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:xray:path:list",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "depth",
+      "env-file",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "json",
+      "path",
+      "project"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:xray:plan:list",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "env-file",
+      "fields",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "jql",
+      "json",
+      "limit",
+      "project",
+      "search"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:xray:set:list",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "env-file",
+      "fields",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "jql",
+      "json",
+      "limit",
+      "project",
+      "search"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:xray:test:export",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "env-file",
+      "fields",
+      "format",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "jql",
+      "json",
+      "limit",
+      "linked-to",
+      "path",
+      "plan",
+      "project",
+      "recursive",
+      "search",
+      "set"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:xray:test:get",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "env-file",
+      "fields",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "json",
+      "raw"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:xray:test:list",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "env-file",
+      "fields",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "jql",
+      "json",
+      "limit",
+      "linked-to",
+      "path",
+      "plan",
+      "project",
+      "recursive",
+      "search",
+      "set"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
   }
 ]

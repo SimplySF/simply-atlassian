@@ -34,6 +34,11 @@ import {
   deleteIssueLink,
   deletePage,
   describeRemoteLink,
+  exportXrayTests,
+  getXrayTest,
+  listXrayContainers,
+  listXrayFolders,
+  listXrayTests,
   filterChangelog,
   issueLinkCreated,
   listFields,
@@ -47,6 +52,7 @@ import {
   prepareSprintUpdate,
   readBackIssue,
   resolveTransitionId,
+  type JiraSearchResult,
   type RemoteLink,
   updatePage,
 } from '@simplysf/simply-atlassian-core';
@@ -68,6 +74,12 @@ export interface ToolSpec {
   /** The CLI command this tool is the equivalent of, e.g. `['atlassian', 'jira', 'issue', 'search']`. */
   readonly command: readonly string[];
   readonly kind: ToolKind;
+  /**
+   * The Marketplace app a tool needs, when it needs one. Such tools stay in the catalogue — so the
+   * parity check against the CLI still covers them — but are registered only when the server is
+   * started for that app, since most instances do not have it.
+   */
+  readonly app?: 'xray';
   readonly inputSchema: z.ZodRawShape;
   /**
    * For a destructive tool, whether this particular call needs `confirm`. Defaults to always;
@@ -153,6 +165,76 @@ const storageMarkdown = z
       'lists — is refused naming the line, rather than dropped. Confluence macros such as info ' +
       'panels have no Markdown form: use body for those.',
   );
+
+// --- Xray building blocks, shared by the Xray tools ---
+
+const xrayFields = z
+  .array(z.string())
+  .optional()
+  .describe(
+    'Extra fields to return, ADDED to the defaults: an Xray role (steps, repositoryPath, …), an Xray ' +
+      'field name, or any Jira field id or name (components, "Story Points"). Unknown names are an error.',
+  );
+
+const xrayScope = {
+  project: z.string().optional().describe('Project key: every Test in it, or the folder "path" names in it.'),
+  plan: z.string().optional().describe('Test Plan key: its tests, including any added through a Test Set.'),
+  set: z.string().optional().describe('Test Set key: its tests.'),
+  path: z
+    .string()
+    .optional()
+    .describe('Test repository folder inside "project", such as "/O&M/Accounts"; "/" is the root.'),
+  recursive: z.boolean().optional().describe('With "path", include tests in subfolders.'),
+};
+
+const xrayFilters = {
+  jql: z.string().optional().describe('Extra JQL ANDed onto the scope, in parentheses so it cannot widen it.'),
+  search: z
+    .string()
+    .optional()
+    .describe('Text in the summary or description, matched as typed: no wildcards or operators.'),
+  linkedTo: z
+    .array(z.string())
+    .optional()
+    .describe('Only tests linked to any of these issue keys (stories, bugs), by any link type.'),
+};
+
+const xrayContainerInput = {
+  project: z.string().describe('Project key.'),
+  jql: xrayFilters.jql,
+  search: xrayFilters.search,
+  fields: xrayFields,
+  limit: limit(25, 'results'),
+};
+
+/** The most an export returns in one call: a host holds the whole result in its context. */
+const XRAY_EXPORT_MAX = 500;
+
+/** A list as rows keyed by field name, since raw issues carry only `customfield_…` ids. */
+function xrayRows<Row>(result: { readonly search: JiraSearchResult; readonly rows: Row[] }): {
+  rows: Row[];
+  total?: number;
+  complete: boolean;
+} {
+  return { rows: result.rows, total: result.search.total, complete: result.search.complete };
+}
+
+/** The CLI's scope and filter flags, from a tool input. */
+function xrayQuery(input: {
+  readonly project?: string;
+  readonly plan?: string;
+  readonly set?: string;
+  readonly path?: string;
+  readonly recursive?: boolean;
+  readonly jql?: string;
+  readonly search?: string;
+  readonly linkedTo?: string[];
+}): Pick<Parameters<typeof listXrayTests>[1], 'scope' | 'filters'> {
+  return {
+    scope: { project: input.project, plan: input.plan, set: input.set, path: input.path, recursive: input.recursive },
+    filters: { jql: input.jql, search: input.search, linkedTo: input.linkedTo },
+  };
+}
 
 const WRITE_SHAPE = { dryRun } as const;
 const DESTRUCTIVE_SHAPE = { dryRun, confirm } as const;
@@ -904,5 +986,132 @@ export const TOOLS: readonly ToolSpec[] = [
       const request = input.labels.map((name) => ({ prefix: input.prefix ?? 'global', name }));
       return input.dryRun === true ? Promise.resolve(request) : client.addLabels(pageId, request);
     },
+  }),
+  // --- Jira: Xray (Server/Data Center, registered only with --xray) ---
+  tool({
+    name: 'jira_xray_fields',
+    title: 'Xray: discovered fields',
+    description:
+      "Show which Jira fields and issue types hold Xray's data on this instance — discovered by schema " +
+      'type, then cached as an instance record. Pass refresh: true to rediscover. Returns the record.',
+    command: ['atlassian', 'jira', 'xray', 'fields'],
+    kind: 'read',
+    app: 'xray',
+    inputSchema: { refresh: z.boolean().optional().describe('Rediscover and rewrite the instance record first.') },
+    run: async (ctx, input) => (await ctx.xray().instance({ refresh: input.refresh === true })).record,
+  }),
+  tool({
+    name: 'jira_xray_test_get',
+    title: 'Xray: view a test',
+    description:
+      'One Xray test. Returns { record, notes }: the export record (type, steps, definition, ' +
+      'preconditions, issue links such as the requirement or bug it verifies, plans, sets and repository ' +
+      'path), and notes on anything skipped because it is not visible or kept under a step\'s "extra" ' +
+      'because this version does not interpret it, such as a call to another test. raw: true returns ' +
+      'the underlying Jira issue instead.',
+    command: ['atlassian', 'jira', 'xray', 'test', 'get'],
+    kind: 'read',
+    app: 'xray',
+    inputSchema: {
+      test: z.string().describe('Test issue key, for example PROJ-12.'),
+      fields: xrayFields,
+      raw: z.boolean().optional().describe('Return the underlying Jira issue instead of the export record.'),
+    },
+    run: async (ctx, input) => {
+      const result = await getXrayTest(ctx.xray(), input.test, { fields: input.fields });
+      return input.raw === true ? result.issue : { record: result.record, notes: result.notes };
+    },
+  }),
+  tool({
+    name: 'jira_xray_test_list',
+    title: 'Xray: list tests',
+    description:
+      'List tests in exactly one scope — project, plan, set, or project plus path — optionally narrowed ' +
+      'by jql, search and linkedTo (ANDed). Returns { rows, total?, complete }: each row is { key, type, ' +
+      'status, summary, fields }, with "fields" keyed by the names asked for. Use jira_xray_test_export ' +
+      'for steps.',
+    command: ['atlassian', 'jira', 'xray', 'test', 'list'],
+    kind: 'read',
+    app: 'xray',
+    inputSchema: { ...xrayScope, ...xrayFilters, fields: xrayFields, limit: limit(25, 'tests') },
+    run: async (ctx, input) =>
+      xrayRows(
+        await listXrayTests(ctx.xray(), { ...xrayQuery(input), fields: input.fields, limit: input.limit ?? 25 }),
+      ),
+  }),
+  tool({
+    name: 'jira_xray_test_export',
+    title: 'Xray: export tests',
+    description:
+      'Full export records for the same scopes and filters as jira_xray_test_list. Returns { records, ' +
+      'total?, complete, notes }: "complete": false means limit cut it short, and "notes" lists what was ' +
+      'skipped because it is not visible, and step data kept under "extra" because this version does ' +
+      'not interpret it. limit defaults to 100 and is at most ' +
+      `${XRAY_EXPORT_MAX}, because the whole result lands in context; for more, use the CLI's ` +
+      '"atlassian jira xray test export --format jsonl".',
+    command: ['atlassian', 'jira', 'xray', 'test', 'export'],
+    kind: 'read',
+    app: 'xray',
+    inputSchema: {
+      ...xrayScope,
+      ...xrayFilters,
+      fields: xrayFields,
+      limit: z
+        .number()
+        .int()
+        .positive()
+        .max(XRAY_EXPORT_MAX)
+        .optional()
+        .describe(`Maximum number of tests to return, at most ${XRAY_EXPORT_MAX}. Defaults to 100.`),
+    },
+    run: (ctx, input) =>
+      exportXrayTests(ctx.xray(), {
+        ...xrayQuery(input),
+        fields: input.fields,
+        // Lower than the CLI's 1000: a host holds the whole tool result in context.
+        limit: input.limit ?? 100,
+      }),
+  }),
+  tool({
+    name: 'jira_xray_plan_list',
+    title: 'Xray: list test plans',
+    description:
+      'List the Test Plans in a project. Returns { rows, total?, complete }: each row is { key, status, ' +
+      'summary, testCount, fields }, and each key is what jira_xray_test_list takes as "plan".',
+    command: ['atlassian', 'jira', 'xray', 'plan', 'list'],
+    kind: 'read',
+    app: 'xray',
+    inputSchema: xrayContainerInput,
+    run: async (ctx, input) =>
+      xrayRows(await listXrayContainers(ctx.xray(), 'plan', { ...input, limit: input.limit ?? 25 })),
+  }),
+  tool({
+    name: 'jira_xray_set_list',
+    title: 'Xray: list test sets',
+    description:
+      'List the Test Sets in a project. Returns { rows, total?, complete }: each row is { key, status, ' +
+      'summary, testCount, fields }, and each key is what jira_xray_test_list takes as "set".',
+    command: ['atlassian', 'jira', 'xray', 'set', 'list'],
+    kind: 'read',
+    app: 'xray',
+    inputSchema: xrayContainerInput,
+    run: async (ctx, input) =>
+      xrayRows(await listXrayContainers(ctx.xray(), 'set', { ...input, limit: input.limit ?? 25 })),
+  }),
+  tool({
+    name: 'jira_xray_path_list',
+    title: 'Xray: test repository folders',
+    description:
+      "A project's test repository as a nested tree { name, path, id, testCount, folders }. Each path " +
+      'is what jira_xray_test_list and jira_xray_test_export take as "path".',
+    command: ['atlassian', 'jira', 'xray', 'path', 'list'],
+    kind: 'read',
+    app: 'xray',
+    inputSchema: {
+      project: z.string().describe('Project key.'),
+      path: z.string().optional().describe('Start at this folder instead of the root.'),
+      depth: z.number().int().nonnegative().optional().describe('Levels of subfolders to include.'),
+    },
+    run: (ctx, input) => listXrayFolders(ctx.xray(), input),
   }),
 ];
