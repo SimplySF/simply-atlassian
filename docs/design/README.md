@@ -47,7 +47,7 @@ refactors that keep the public surface identical (though a short doc is welcome 
 | 0012 | [Splitting `simply-atlassian-core` out of `simply-atlassian`](0012-simply-atlassian-core.md)      | Implemented (PRs #17, #18)      |
 | 0013 | [Markdown page bodies](0013-markdown-page-bodies.md)                                              | Implemented (PRs #20, #21)      |
 | 0014 | [Discovery, labels, sprint writes, and remote links](0014-discovery-labels-and-sprint-writes.md)  | Draft                           |
-| 0015 | [Xray test management under `jira xray`](0015-jira-xray.md)                                       | Draft                           |
+| 0015 | [Xray test management under `jira xray`](0015-jira-xray.md)                                       | Implemented (PRs #45, #46, #49) |
 
 ## Template
 
