@@ -23,10 +23,7 @@ import type { XrayBackend, XraySearchProgress } from './xray-backend.js';
 import type { ResolvedField, XrayFieldRole, XrayInstance } from './xray-fields.js';
 import { searchScopedTests, type XrayFilters, type XrayScope } from './xray-scope.js';
 
-/** Why a called test's steps were not inlined. */
-export type XrayCallStop = 'cycle' | 'depth' | 'inaccessible';
-
-/** A step that describes an action. */
+/** One manual test step. */
 export interface XrayActionStep {
   readonly index: string;
   readonly action: string;
@@ -34,18 +31,19 @@ export interface XrayActionStep {
   readonly result: string;
   /** Attachment file names; the files themselves are not exported. */
   readonly attachments: string[];
+  /**
+   * Step properties this version does not interpret, exactly as Xray sent them — such as the
+   * `testCallBean` of a step that calls another test. Absent when there are none. A later version
+   * may give some of them a typed form of their own.
+   */
+  readonly extra?: Record<string, unknown>;
 }
 
-/** A step that calls another test instead of describing an action. */
-export interface XrayCallStep {
-  readonly index: string;
-  readonly call: { readonly key: string; readonly summary: string | null };
-  /** The called test's steps, numbered `3.1`, `3.2`… — empty unless calls are expanded. */
-  readonly steps: XrayRecordStep[];
-  readonly stop?: XrayCallStop;
-}
-
-export type XrayRecordStep = XrayActionStep | XrayCallStep;
+/**
+ * A step in an export record. Only action steps today; a step that calls another test is passed
+ * through as one, with the call under `extra`, until called tests are supported (0015, Deferred).
+ */
+export type XrayRecordStep = XrayActionStep;
 
 export interface XrayLinkRecord {
   /** The link type's name, such as `Tests` or `Blocks`. */
@@ -88,9 +86,6 @@ export interface XrayTestRecord {
 export interface XrayTestOptions {
   /** Extra fields, added to the defaults: roles, Xray field names, or any Jira field. */
   readonly fields?: readonly string[];
-  readonly expandCalls?: boolean;
-  /** How many levels of calls `expandCalls` inlines. Defaults to {@link DEFAULT_MAX_CALL_DEPTH}. */
-  readonly maxCallDepth?: number;
 }
 
 export interface XrayTestGetResult {
@@ -140,8 +135,6 @@ export interface XrayExportResult {
   readonly notes: string[];
 }
 
-export const DEFAULT_MAX_CALL_DEPTH = 5;
-
 /** Fields every assembled test needs from Jira itself. */
 const BASE_FIELDS = ['summary', 'status', 'issuetype', 'issuelinks'];
 
@@ -158,10 +151,8 @@ const TEST_ROLES: readonly XrayFieldRole[] = [
   'repositoryPath',
 ];
 
-/** The older, text-only form of a calling step. */
-const CALL_TEST_TEXT = /^\s*call\s+test\s*\[?\s*([A-Za-z][A-Za-z0-9_]*-\d+)/i;
-/** Property names Xray has used for the called key inside `testCallBean`. */
-const CALL_KEY_PROPERTIES = ['calledTestIssueKey', 'calledTestKey', 'testIssueKey', 'issueKey', 'testKey', 'key'];
+/** Step properties the parser reads; any other is passed through under the step's `extra`. */
+const READ_STEP_PROPERTIES = new Set(['id', 'index', 'fields', 'attachments']);
 
 /** One test, assembled. */
 export async function getXrayTest(
@@ -174,7 +165,7 @@ export async function getXrayTest(
   const extras = await backend.resolveFields(instance, options.fields ?? []);
   const issue = await backend.issue(key, testFields(instance, extras));
   assertIsTest(issue, key, instance);
-  const { records, notes } = await assembleRecords(backend, instance, [issue], extras, options);
+  const { records, notes } = await assembleRecords(backend, instance, [issue], extras);
   const [record] = records;
   if (record === undefined) throw new ConfigError(`${key} could not be read as a test.`);
   return { record, issue, notes };
@@ -205,8 +196,8 @@ export async function listXrayTests(backend: XrayBackend, input: XrayTestListInp
 }
 
 /**
- * Full records for a scope, page by page. Each page's preconditions and called tests are fetched in
- * one batched search per call level, so a page of 100 tests costs a handful of requests, not 101.
+ * Full records for a scope, page by page. Each page's preconditions are fetched in one batched
+ * search, so a page of 100 tests costs two requests, not 101.
  */
 export async function exportXrayTests(backend: XrayBackend, input: XrayExportInput): Promise<XrayExportResult> {
   const extrasFor = fieldResolver(backend, input.fields ?? []);
@@ -221,7 +212,7 @@ export async function exportXrayTests(backend: XrayBackend, input: XrayExportInp
     {
       limit: input.limit,
       onPage: async (issues, progress, instance) => {
-        const page = await assembleRecords(backend, instance, issues, await extrasFor(instance), input);
+        const page = await assembleRecords(backend, instance, issues, await extrasFor(instance));
         if (input.onRecords === undefined) records.push(...page.records);
         for (const note of page.notes) notes.add(note);
         await input.onRecords?.(page.records, progress);
@@ -247,22 +238,16 @@ export function fieldResolver(
   };
 }
 
-/** The flat rows a step table shows: a call becomes a marker row, followed by any inlined steps. */
+/**
+ * The rows a step table shows, one per step. A step that carries only data this version does not
+ * interpret — a call to another test, say — names it rather than show an empty row.
+ */
 export function stepRows(steps: readonly XrayRecordStep[]): XrayActionStep[] {
-  return steps.flatMap((step): XrayActionStep[] => {
-    if (!('call' in step)) return [step];
-    const marker = { index: step.index, action: callMarker(step), data: '', result: '', attachments: [] };
-    return [marker, ...stepRows(step.steps)];
-  });
-}
-
-/** How a calling step reads in a table: never an empty row. */
-export function callMarker(step: XrayCallStep): string {
-  const { key, summary } = step.call;
-  if (step.stop === 'cycle') return `↺ cycle: ${key}`;
-  if (step.stop === 'inaccessible') return `⚠ not accessible: ${key}`;
-  const calls = summary === null ? `→ calls ${key}` : `→ calls ${key} "${summary}"`;
-  return step.stop === 'depth' ? `${calls} (call depth limit reached)` : calls;
+  return steps.map((step) =>
+    step.action === '' && step.extra !== undefined
+      ? { ...step, action: `(not interpreted: ${Object.keys(step.extra).join(', ')})` }
+      : step,
+  );
 }
 
 /** One section per test, readable by a person or a model. */
@@ -374,8 +359,6 @@ interface AssemblyContext {
   readonly instance: XrayInstance;
   /** Issues already fetched by key; `null` means asked for and not visible to this caller. */
   readonly known: Map<string, unknown>;
-  readonly expand: boolean;
-  readonly maxDepth: number;
   readonly notes: Set<string>;
 }
 
@@ -384,50 +367,24 @@ async function assembleRecords(
   instance: XrayInstance,
   issues: readonly unknown[],
   extras: readonly ResolvedField[],
-  options: XrayTestOptions,
 ): Promise<{ records: XrayTestRecord[]; notes: string[] }> {
-  const context: AssemblyContext = {
-    instance,
-    known: new Map(),
-    expand: options.expandCalls === true,
-    maxDepth: options.maxCallDepth ?? DEFAULT_MAX_CALL_DEPTH,
-    notes: new Set(),
-  };
-  for (const issue of issues) {
-    const key = issueProperty(issue, 'key');
-    if (typeof key === 'string') context.known.set(key, issue);
-  }
-  await fetchReferenced(backend, context, issues);
+  const context: AssemblyContext = { instance, known: new Map(), notes: new Set() };
+  await fetchPreconditions(backend, context, issues);
   const records = issues.map((issue) => buildRecord(issue, context, extras));
   return { records, notes: [...context.notes] };
 }
 
-/**
- * Fetches every called test and precondition the page refers to, one batched search per call
- * level. Without `expandCalls` only the first level is needed, for the called tests' summaries.
- */
-async function fetchReferenced(
+/** Fetches every precondition the page refers to, for their summaries, in one batched search. */
+async function fetchPreconditions(
   backend: XrayBackend,
   context: AssemblyContext,
   issues: readonly unknown[],
 ): Promise<void> {
-  const { instance } = context;
-  const stepsField = instance.field('steps');
-  const fields = unique(['summary', 'status', 'issuetype', stepsField, instance.field('testType')]);
-  const levels = context.expand ? context.maxDepth : 1;
-  const preconditions = issues.flatMap((issue) => keyList(fieldValue(issue, instance.field('preconditions'))));
-
-  let frontier: readonly unknown[] = issues;
-  /* eslint-disable no-await-in-loop -- each level's keys are only known once the previous level arrives. */
-  for (let level = 1; level <= levels; level += 1) {
-    const called = frontier.flatMap((issue) => parseSteps(fieldValue(issue, stepsField)).map((step) => step.call));
-    const wanted = unique([...called, ...(level === 1 ? preconditions : [])]).filter((key) => !context.known.has(key));
-    if (wanted.length === 0) return;
-    const found = await backend.issuesByKeys(wanted, fields);
-    for (const key of wanted) context.known.set(key, found.get(key) ?? null);
-    frontier = [...found.values()];
-  }
-  /* eslint-enable no-await-in-loop */
+  const field = context.instance.field('preconditions');
+  const wanted = unique(issues.flatMap((issue) => keyList(fieldValue(issue, field))));
+  if (wanted.length === 0) return;
+  const found = await backend.issuesByKeys(wanted, ['summary', 'status', 'issuetype']);
+  for (const key of wanted) context.known.set(key, found.get(key) ?? null);
 }
 
 function buildRecord(issue: unknown, context: AssemblyContext, extras: readonly ResolvedField[]): XrayTestRecord {
@@ -445,7 +402,7 @@ function buildRecord(issue: unknown, context: AssemblyContext, extras: readonly 
       key: pre,
       summary: summaryOf(knownIssue(context, pre, key, 'precondition')),
     })),
-    steps: buildSteps(issue, key, context, '', 0, new Set([key])),
+    steps: buildSteps(issue, context),
     definition: definition(issue, type, instance),
     links: links(issue),
     plans: keyList(fieldValue(issue, instance.field('testPlans'))),
@@ -454,39 +411,25 @@ function buildRecord(issue: unknown, context: AssemblyContext, extras: readonly 
   };
 }
 
-function buildSteps(
-  issue: unknown,
-  caller: string,
-  context: AssemblyContext,
-  prefix: string,
-  depth: number,
-  ancestors: ReadonlySet<string>,
-): XrayRecordStep[] {
-  return parseSteps(fieldValue(issue, context.instance.field('steps'))).map((step, position): XrayRecordStep => {
-    const index = prefix === '' ? String(position + 1) : `${prefix}.${position + 1}`;
-    if (step.call === undefined) {
-      return { index, action: step.action, data: step.data, result: step.result, attachments: step.attachments };
+/** The test's steps, numbered from 1. Data a step carries that is not read is kept, and noted once per name. */
+function buildSteps(issue: unknown, context: AssemblyContext): XrayRecordStep[] {
+  return parseSteps(fieldValue(issue, context.instance.field('steps'))).map((step, position) => {
+    const { extra, ...read } = step;
+    if (extra === undefined) return { index: String(position + 1), ...read };
+    for (const name of uninterpretedNames(extra)) {
+      context.notes.add(
+        `Steps carry "${name}", which this version does not interpret; it is passed through under the step's "extra".`,
+      );
     }
-    return callStep(step.call, index, caller, context, depth, ancestors);
+    return { index: String(position + 1), ...read, extra };
   });
 }
 
-/** None of these stops is an error: a partial export is more useful than none. */
-function callStep(
-  key: string,
-  index: string,
-  caller: string,
-  context: AssemblyContext,
-  depth: number,
-  ancestors: ReadonlySet<string>,
-): XrayCallStep {
-  const called = knownIssue(context, key, caller, 'called test');
-  const base = { index, call: { key, summary: summaryOf(called) }, steps: [] };
-  if (called === null) return { ...base, stop: 'inaccessible' };
-  if (!context.expand) return base;
-  if (ancestors.has(key)) return { ...base, stop: 'cycle' };
-  if (called === undefined || depth >= context.maxDepth) return { ...base, stop: 'depth' };
-  return { ...base, steps: buildSteps(called, key, context, index, depth + 1, new Set([...ancestors, key])) };
+/** `testCallBean`, or `fields.Comment` for a step column the parser does not read. */
+function uninterpretedNames(extra: Record<string, unknown>): string[] {
+  return Object.entries(extra).flatMap(([name, value]) =>
+    name === 'fields' && isRecord(value) ? Object.keys(value).map((column) => `fields.${column}`) : [name],
+  );
 }
 
 /** A fetched issue, `null` if it was asked for and is not visible (noted), or undefined if never fetched. */
@@ -511,7 +454,7 @@ interface ParsedStep {
   readonly data: string;
   readonly result: string;
   readonly attachments: string[];
-  readonly call?: string;
+  readonly extra?: Record<string, unknown>;
 }
 
 /**
@@ -530,34 +473,41 @@ function parseSteps(value: unknown): ParsedStep[] {
     .map(({ raw }) => parseStep(raw));
 }
 
+/**
+ * One step. Whatever is not read — a property such as `testCallBean`, or a step column beyond
+ * action, data and expected result — is kept under `extra` as Xray sent it, so nothing is dropped
+ * and nothing is guessed at.
+ */
 function parseStep(raw: Record<string, unknown>): ParsedStep {
+  const nested = isRecord(raw.fields);
   const fields = isRecord(raw.fields) ? raw.fields : raw;
-  const action = text(pick(fields, ['action', 'step']));
+  const columns = {
+    action: pickKey(fields, ['action', 'step']),
+    data: pickKey(fields, ['data']),
+    result: pickKey(fields, ['expected result', 'result', 'expected']),
+  };
+  const read = new Set(Object.values(columns));
+  const unread = (entries: Record<string, unknown>, skip: (name: string) => boolean): Record<string, unknown> =>
+    Object.fromEntries(Object.entries(entries).filter(([name]) => !skip(name)));
+
+  const extra = unread(raw, (name) => READ_STEP_PROPERTIES.has(name) || (!nested && read.has(name)));
+  const columnsLeft = nested ? unread(fields, (name) => read.has(name)) : {};
+  if (Object.keys(columnsLeft).length > 0) extra.fields = columnsLeft;
+
   return {
-    action,
-    data: text(pick(fields, ['data'])),
-    result: text(pick(fields, ['expected result', 'result', 'expected'])),
+    action: text(columns.action === undefined ? undefined : fields[columns.action]),
+    data: text(columns.data === undefined ? undefined : fields[columns.data]),
+    result: text(columns.result === undefined ? undefined : fields[columns.result]),
     attachments: attachmentNames(raw.attachments),
-    call: calledKey(raw.testCallBean ?? fields.testCallBean, action),
+    ...(Object.keys(extra).length > 0 ? { extra } : {}),
   };
 }
 
-/** `testCallBean` wins; the `Call Test KEY` text form is for data written before it existed. */
-function calledKey(bean: unknown, action: string): string | undefined {
-  if (typeof bean === 'string' && isIssueKey(bean)) return bean;
-  if (isRecord(bean)) {
-    for (const property of CALL_KEY_PROPERTIES) {
-      const value = bean[property];
-      if (typeof value === 'string' && isIssueKey(value)) return value;
-    }
-  }
-  return CALL_TEST_TEXT.exec(action)?.[1];
-}
-
-function pick(fields: Record<string, unknown>, names: readonly string[]): unknown {
+/** The first of `names` that `fields` has, matched case-insensitively. */
+function pickKey(fields: Record<string, unknown>, names: readonly string[]): string | undefined {
   for (const name of names) {
     const match = Object.keys(fields).find((key) => key.trim().toLowerCase() === name);
-    if (match !== undefined) return fields[match];
+    if (match !== undefined) return match;
   }
   return undefined;
 }

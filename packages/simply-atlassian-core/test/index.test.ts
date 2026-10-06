@@ -121,13 +121,11 @@ describe('@simplysf/simply-atlassian-core', () => {
         'listIssueTypes',
         'prepareSprintUpdate',
         // xray (docs/design/0015-jira-xray.md)
-        'DEFAULT_MAX_CALL_DEPTH',
         'XRAY_FIELD_ROLES',
         'XRAY_PAGE_SIZE',
         'XRAY_SCHEMA_PREFIX',
         'XrayInstance',
         'XrayServerBackend',
-        'callMarker',
         'combineJql',
         'createXrayBackend',
         'defaultXrayCacheDir',

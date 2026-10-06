@@ -219,8 +219,6 @@ export {
   type XrayScope,
 } from './xray-scope.js';
 export {
-  callMarker,
-  DEFAULT_MAX_CALL_DEPTH,
   displayValue,
   exportXrayTests,
   getXrayTest,
@@ -229,8 +227,6 @@ export {
   simplifyFieldValue,
   stepRows,
   type XrayActionStep,
-  type XrayCallStep,
-  type XrayCallStop,
   type XrayExportInput,
   type XrayExportResult,
   type XrayLinkRecord,

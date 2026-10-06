@@ -21,14 +21,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createXrayBackend, type XrayBackend } from '../src/xray-backend.js';
 import { listXrayContainers, listXrayFolders, xrayFieldRows } from '../src/xray-catalogue.js';
 import { flattenFolders } from '../src/xray-folders.js';
-import {
-  exportXrayTests,
-  getXrayTest,
-  listXrayTests,
-  renderXrayMarkdown,
-  stepRows,
-  type XrayCallStep,
-} from '../src/xray-tests.js';
+import { exportXrayTests, getXrayTest, listXrayTests, renderXrayMarkdown, stepRows } from '../src/xray-tests.js';
 import {
   keysInJql,
   respondJson,
@@ -168,87 +161,89 @@ describe('test get', () => {
   });
 });
 
-describe('called tests', () => {
-  it('detects a call in both the testCallBean and the "Call Test KEY" forms, and renders it', async () => {
-    add('OM-9', { summary: 'Log in as admin', steps: [xrayStep(1, 'Log in')] });
-    add('OM-10', { summary: 'Open settings', steps: [xrayStep(1, 'Settings')] });
+describe('step data this version does not interpret', () => {
+  it('passes a call to another test through under "extra", names it in the table, and notes it once', async () => {
+    const bean = { anything: 'as Xray sent it', nested: { id: 10_009 } };
     add('OM-12', {
       steps: [
+        xrayStep(1, 'Open Users'),
         {
-          index: 1,
+          id: 2,
+          index: 2,
           fields: { Action: '', Data: '', 'Expected Result': '' },
-          testCallBean: { calledTestIssueKey: 'OM-9' },
+          attachments: [],
+          testCallBean: bean,
         },
-        xrayStep(2, 'Call Test OM-10'),
+        {
+          id: 3,
+          index: 3,
+          fields: { Action: '', Data: '', 'Expected Result': '' },
+          attachments: [],
+          testCallBean: bean,
+        },
       ],
     });
 
-    const { record } = await getXrayTest(backend(), 'OM-12');
+    const { record, notes } = await getXrayTest(backend(), 'OM-12');
 
-    expect(record.steps).toEqual([
-      { index: '1', call: { key: 'OM-9', summary: 'Log in as admin' }, steps: [] },
-      { index: '2', call: { key: 'OM-10', summary: 'Open settings' }, steps: [] },
-    ]);
+    expect(record.steps[0]).not.toHaveProperty('extra');
+    expect(record.steps[1]).toEqual({
+      index: '2',
+      action: '',
+      data: '',
+      result: '',
+      attachments: [],
+      extra: { testCallBean: bean },
+    });
     expect(stepRows(record.steps).map((row) => row.action)).toEqual([
-      '→ calls OM-9 "Log in as admin"',
-      '→ calls OM-10 "Open settings"',
+      'Open Users',
+      '(not interpreted: testCallBean)',
+      '(not interpreted: testCallBean)',
     ]);
+    expect(notes).toEqual([
+      'Steps carry "testCallBean", which this version does not interpret; it is passed through under the step\'s "extra".',
+    ]);
+    expect(renderXrayMarkdown(record)).toContain('| 2 | (not interpreted: testCallBean) |  |  |');
   });
 
-  it('prefers testCallBean over the action text when both are present', async () => {
-    add('OM-9', {});
-    add('OM-12', { steps: [{ index: 1, fields: { Action: 'Call Test OM-99' }, testCallBean: 'OM-9' }] });
+  it("keeps a step column beyond action, data and expected result, and the step's own text", async () => {
+    add('OM-12', {
+      steps: [{ id: 1, index: 1, fields: { Action: 'Log in', Data: '', 'Expected Result': 'Home', Comment: 'flaky' } }],
+    });
+
+    const { record, notes } = await getXrayTest(backend(), 'OM-12');
+
+    expect(record.steps[0]).toMatchObject({
+      action: 'Log in',
+      result: 'Home',
+      extra: { fields: { Comment: 'flaky' } },
+    });
+    expect(stepRows(record.steps)[0]?.action).toBe('Log in');
+    expect(notes[0]).toContain('"fields.Comment"');
+  });
+
+  it('reads the older flat form and keeps only what it does not read', async () => {
+    add('OM-12', { steps: [{ id: 1, index: 1, step: { raw: 'Open' }, data: 'x', result: 'Shown', testVersionId: 7 }] });
 
     const { record } = await getXrayTest(backend(), 'OM-12');
 
-    expect((record.steps[0] as XrayCallStep).call.key).toBe('OM-9');
+    expect(record.steps[0]).toEqual({
+      index: '1',
+      action: 'Open',
+      data: 'x',
+      result: 'Shown',
+      attachments: [],
+      extra: { testVersionId: 7 },
+    });
   });
 
-  it('inlines recursively with 3.1-style numbering, one search per call level', async () => {
-    add('OM-8', { steps: [xrayStep(1, 'Deepest')] });
-    add('OM-9', { steps: [xrayStep(1, 'Log in'), { index: 2, testCallBean: 'OM-8' }] });
-    add('OM-12', { steps: [xrayStep(1, 'A'), xrayStep(2, 'B'), { index: 3, testCallBean: 'OM-9' }] });
+  it('fetches only preconditions besides the page itself: one search per page', async () => {
+    add('OM-3', { issueType: 'Vorbedingung' });
+    add('OM-12', { steps: [{ index: 1, testCallBean: 'OM-9' }], preconditions: ['OM-3'] });
 
-    const { record } = await getXrayTest(backend(), 'OM-12', { expandCalls: true });
+    await getXrayTest(backend(), 'OM-12');
 
-    expect(stepRows(record.steps).map((row) => `${row.index} ${row.action}`)).toEqual([
-      '1 A',
-      '2 B',
-      '3 → calls OM-9 "Summary of OM-9"',
-      '3.1 Log in',
-      '3.2 → calls OM-8 "Summary of OM-8"',
-      '3.2.1 Deepest',
-    ]);
-    expect(keySearches()).toEqual([['OM-9'], ['OM-8']]);
-  });
-
-  it('stops at a cycle, at the depth limit, and at a test the caller cannot see — none fatal', async () => {
-    add('OM-1', { steps: [{ index: 1, testCallBean: 'OM-2' }] });
-    add('OM-2', {
-      steps: [
-        { index: 1, testCallBean: 'OM-1' },
-        { index: 2, testCallBean: 'OM-3' },
-      ],
-    });
-    add('OM-3', { steps: [{ index: 1, testCallBean: 'OM-4' }] });
-    add('OM-4', { steps: [xrayStep(1, 'too deep')] });
-    add('OM-12', {
-      steps: [
-        { index: 1, testCallBean: 'OM-1' },
-        { index: 2, testCallBean: 'OM-404' },
-      ],
-    });
-
-    const { record, notes } = await getXrayTest(backend(), 'OM-12', { expandCalls: true, maxCallDepth: 2 });
-
-    expect(stepRows(record.steps).map((row) => `${row.index} ${row.action}`)).toEqual([
-      '1 → calls OM-1 "Summary of OM-1"',
-      '1.1 → calls OM-2 "Summary of OM-2"',
-      '1.1.1 ↺ cycle: OM-1',
-      '1.1.2 → calls OM-3 (call depth limit reached)',
-      '2 ⚠ not accessible: OM-404',
-    ]);
-    expect(notes).toEqual(['OM-404 (called test of OM-12) is not accessible; skipped.']);
+    expect(keySearches()).toEqual([['OM-3']]);
   });
 });
 
