@@ -2431,7 +2431,7 @@ FLAGS
   --jql=<value>        Extra JQL ANDed onto the project, in parentheses so it cannot widen it.
   --limit=<value>      [default: 25] Maximum number to return.
   --project=<value>    (required) Project key.
-  --search=<value>     Keyword in the summary or description.
+  --search=<value>     Text in the summary or description, matched as typed: no wildcards or operators.
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
@@ -2486,7 +2486,7 @@ FLAGS
   --jql=<value>        Extra JQL ANDed onto the project, in parentheses so it cannot widen it.
   --limit=<value>      [default: 25] Maximum number to return.
   --project=<value>    (required) Project key.
-  --search=<value>     Keyword in the summary or description.
+  --search=<value>     Text in the summary or description, matched as typed: no wildcards or operators.
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
@@ -2540,7 +2540,7 @@ USAGE
 FLAGS
   --expand-calls            Inline each called test's steps in place, numbered 3.1, 3.2, ….
   --fields=<value>...       Extra fields to return, added to the defaults. Comma-separated or repeated.
-  --format=<option>         [default: json] Output format, written to stdout.
+  --format=<option>         [default: json] Output format, written to stdout. Ignored with --json.
                             <options: json|jsonl|markdown>
   --limit=<value>           [default: 1000] Maximum number of tests to export.
   --max-call-depth=<value>  [default: 5] How many levels of calls --expand-calls inlines.
@@ -2555,7 +2555,7 @@ CONNECTION FLAGS
 FILTER FLAGS
   --jql=<value>           Extra JQL ANDed onto the scope, in parentheses so it cannot widen it.
   --linked-to=<value>...  Only tests linked to any of these issues, by any link type. Comma-separated or repeated.
-  --search=<value>        Keyword in the summary or description.
+  --search=<value>        Text in the summary or description, matched as typed: no wildcards or operators.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -2579,7 +2579,8 @@ DESCRIPTION
   per test. A test you cannot see — a called test, or a link into a project you cannot browse — is skipped and noted on
   stderr, never fatal. Reaching --limit is noted on stderr and still exits 0.
 
-  --json returns { records, total, complete, notes } instead, so a script can detect truncation.
+  --json returns { records, total, complete, notes } instead, so a script can detect truncation. It replaces --format
+  and the progress lines.
 
 EXAMPLES
   $ simply atlassian jira xray test export --plan OM-7 > plan.json
@@ -2693,7 +2694,7 @@ CONNECTION FLAGS
 FILTER FLAGS
   --jql=<value>           Extra JQL ANDed onto the scope, in parentheses so it cannot widen it.
   --linked-to=<value>...  Only tests linked to any of these issues, by any link type. Comma-separated or repeated.
-  --search=<value>        Keyword in the summary or description.
+  --search=<value>        Text in the summary or description, matched as typed: no wildcards or operators.
 
 GLOBAL FLAGS
   --json  Format output as json.

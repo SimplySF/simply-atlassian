@@ -27,6 +27,7 @@ import {
   routeJiraSearch,
   routeXrayDiscovery,
   startTestServer,
+  XRAY_FIXTURE_IDS,
   xrayFixtureIssue,
   type TestServer,
 } from '@simplysf/simply-atlassian-core/testing';
@@ -386,15 +387,52 @@ describe('Xray tools', () => {
     expect(body.total).toBe(150);
   });
 
-  it('return the same envelope as the CLI for a test list', async () => {
+  it('refuse an export limit above 500, which would not fit in context', async () => {
+    const c = await connect({ xray: true, env: xrayEnv() });
+
+    const result = await c.callTool({ name: 'jira_xray_test_export', arguments: { project: 'OM', limit: 501 } });
+
+    expect(result.isError).toBe(true);
+    expect(atlassian.requests.some((request) => request.url.startsWith('/rest/api/2/search'))).toBe(false);
+  });
+
+  it('list tests as rows keyed by field name, not raw customfield ids', async () => {
     routeJiraSearch(atlassian, () => [xrayFixtureIssue('OM-1')]);
     const c = await connect({ xray: true, env: xrayEnv() });
 
     const result = await c.callTool({ name: 'jira_xray_test_list', arguments: { plan: 'OM-7', linkedTo: ['OM-40'] } });
 
-    expect(jsonOf(result)).toMatchObject({ issues: [{ key: 'OM-1' }], complete: true, pages: 1 });
+    expect(jsonOf(result)).toEqual({
+      rows: [{ key: 'OM-1', type: 'Manual', status: 'Ready', summary: 'Summary of OM-1', fields: {} }],
+      total: 1,
+      complete: true,
+    });
+    expect(JSON.stringify(jsonOf(result))).not.toContain('customfield_');
     const jql = new URL(atlassian.requests.at(-1)?.url ?? '', 'http://x').searchParams.get('jql');
     expect(jql).toBe('issue in testPlanTests("OM-7") AND (issue in linkedIssues("OM-40")) ORDER BY key ASC');
+  });
+
+  it('list plans as rows with their test counts', async () => {
+    routeJiraSearch(atlassian, () => [
+      {
+        key: 'OM-7',
+        fields: {
+          summary: 'Release 1',
+          status: { name: 'Open' },
+          issuetype: { name: 'Prüfplan' },
+          [XRAY_FIXTURE_IDS.testPlanTests]: ['OM-1', 'OM-2'],
+        },
+      },
+    ]);
+    const c = await connect({ xray: true, env: xrayEnv() });
+
+    const result = await c.callTool({ name: 'jira_xray_plan_list', arguments: { project: 'OM' } });
+
+    expect(jsonOf(result)).toEqual({
+      rows: [{ key: 'OM-7', status: 'Open', summary: 'Release 1', testCount: 2, fields: {} }],
+      total: 1,
+      complete: true,
+    });
   });
 
   it('report a Cloud site as a config error', async () => {

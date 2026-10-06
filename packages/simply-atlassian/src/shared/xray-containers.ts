@@ -27,7 +27,9 @@ import { xrayFieldsFlag } from './base-command.js';
 export const xrayContainerFlags = {
   project: Flags.string({ summary: 'Project key.', required: true }),
   jql: Flags.string({ summary: 'Extra JQL ANDed onto the project, in parentheses so it cannot widen it.' }),
-  search: Flags.string({ summary: 'Keyword in the summary or description.' }),
+  search: Flags.string({
+    summary: 'Text in the summary or description, matched as typed: no wildcards or operators.',
+  }),
   ...xrayFieldsFlag,
   limit: Flags.integer({ summary: 'Maximum number to return.', default: 25, min: 1 }),
 };

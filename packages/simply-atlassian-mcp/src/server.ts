@@ -66,8 +66,9 @@ const INSTRUCTIONS =
   'page purge) additionally require confirm: true. Failures come back as isError results whose ' +
   'text is JSON with a stable "code": config, auth, error, or confirm-required. Prefer "fields" ' +
   'on issue tools to keep payloads small. Xray tools (jira_xray_*, Server/Data Center only) are ' +
-  'registered only when the server was started with --xray; they return assembled export records ' +
-  'rather than raw payloads, and their "fields" input adds to the defaults instead of replacing them.';
+  'registered only when the server was started with --xray; they return assembled records and rows ' +
+  'keyed by field name rather than raw payloads, and their "fields" input adds to the defaults ' +
+  'instead of replacing them.';
 
 const ANNOTATIONS: Readonly<Record<ToolKind, ToolAnnotations>> = {
   read: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },

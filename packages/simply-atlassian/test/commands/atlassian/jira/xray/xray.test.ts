@@ -288,6 +288,16 @@ describe('jira xray test export', () => {
     expect(result.complete).toBe(false);
     expect(result.total).toBe(5);
   });
+
+  it('lets --json replace --format, streaming nothing and printing no progress', async () => {
+    addTests(2);
+
+    const result = await JiraXrayTestExport.run(argv('--project', 'OM', '--format', 'jsonl', '--json'));
+
+    expect(result.records.map((record) => record.key)).toEqual(['OM-1', 'OM-2']);
+    expect(stderr.join('')).not.toContain('fetched');
+    expect(stdout.join('').split('\n')).not.toContain(JSON.stringify(result.records[0]));
+  });
 });
 
 describe('jira xray plan list and set list', () => {

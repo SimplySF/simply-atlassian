@@ -52,6 +52,7 @@ import {
   prepareSprintUpdate,
   readBackIssue,
   resolveTransitionId,
+  type JiraSearchResult,
   type RemoteLink,
   updatePage,
 } from '@simplysf/simply-atlassian-core';
@@ -188,7 +189,10 @@ const xrayScope = {
 
 const xrayFilters = {
   jql: z.string().optional().describe('Extra JQL ANDed onto the scope, in parentheses so it cannot widen it.'),
-  search: z.string().optional().describe('Keyword in the summary or description.'),
+  search: z
+    .string()
+    .optional()
+    .describe('Text in the summary or description, matched as typed: no wildcards or operators.'),
   linkedTo: z
     .array(z.string())
     .optional()
@@ -207,6 +211,18 @@ const xrayContainerInput = {
   fields: xrayFields,
   limit: limit(25, 'results'),
 };
+
+/** The most an export returns in one call: a host holds the whole result in its context. */
+const XRAY_EXPORT_MAX = 500;
+
+/** A list as rows keyed by field name, since raw issues carry only `customfield_…` ids. */
+function xrayRows<Row>(result: { readonly search: JiraSearchResult; readonly rows: Row[] }): {
+  rows: Row[];
+  total?: number;
+  complete: boolean;
+} {
+  return { rows: result.rows, total: result.search.total, complete: result.search.complete };
+}
 
 /** The CLI's scope and filter flags, from a tool input. */
 function xrayQuery(input: {
@@ -1019,14 +1035,17 @@ export const TOOLS: readonly ToolSpec[] = [
     title: 'Xray: list tests',
     description:
       'List tests in exactly one scope — project, plan, set, or project plus path — optionally narrowed ' +
-      'by jql, search and linkedTo (ANDed). Returns { issues, total?, pages, complete } with raw issues; ' +
-      'use jira_xray_test_export for steps.',
+      'by jql, search and linkedTo (ANDed). Returns { rows, total?, complete }: each row is { key, type, ' +
+      'status, summary, fields }, with "fields" keyed by the names asked for. Use jira_xray_test_export ' +
+      'for steps.',
     command: ['atlassian', 'jira', 'xray', 'test', 'list'],
     kind: 'read',
     app: 'xray',
     inputSchema: { ...xrayScope, ...xrayFilters, fields: xrayFields, limit: limit(25, 'tests') },
     run: async (ctx, input) =>
-      (await listXrayTests(ctx.xray(), { ...xrayQuery(input), fields: input.fields, limit: input.limit ?? 25 })).search,
+      xrayRows(
+        await listXrayTests(ctx.xray(), { ...xrayQuery(input), fields: input.fields, limit: input.limit ?? 25 }),
+      ),
   }),
   tool({
     name: 'jira_xray_test_export',
@@ -1034,11 +1053,25 @@ export const TOOLS: readonly ToolSpec[] = [
     description:
       'Full export records for the same scopes and filters as jira_xray_test_list. Returns { records, ' +
       'total?, complete, notes }: "complete": false means limit cut it short, and "notes" lists tests ' +
-      'skipped because they are not visible. limit defaults to 100 here; ask for more on purpose.',
+      'skipped because they are not visible. limit defaults to 100 and is at most ' +
+      `${XRAY_EXPORT_MAX}, because the whole result lands in context; for more, use the CLI's ` +
+      '"atlassian jira xray test export --format jsonl".',
     command: ['atlassian', 'jira', 'xray', 'test', 'export'],
     kind: 'read',
     app: 'xray',
-    inputSchema: { ...xrayScope, ...xrayFilters, fields: xrayFields, ...xrayCalls, limit: limit(100, 'tests') },
+    inputSchema: {
+      ...xrayScope,
+      ...xrayFilters,
+      fields: xrayFields,
+      ...xrayCalls,
+      limit: z
+        .number()
+        .int()
+        .positive()
+        .max(XRAY_EXPORT_MAX)
+        .optional()
+        .describe(`Maximum number of tests to return, at most ${XRAY_EXPORT_MAX}. Defaults to 100.`),
+    },
     run: (ctx, input) =>
       exportXrayTests(ctx.xray(), {
         ...xrayQuery(input),
@@ -1053,27 +1086,27 @@ export const TOOLS: readonly ToolSpec[] = [
     name: 'jira_xray_plan_list',
     title: 'Xray: list test plans',
     description:
-      'List the Test Plans in a project. Returns { issues, total?, pages, complete }; each key is what ' +
-      'jira_xray_test_list takes as "plan".',
+      'List the Test Plans in a project. Returns { rows, total?, complete }: each row is { key, status, ' +
+      'summary, testCount, fields }, and each key is what jira_xray_test_list takes as "plan".',
     command: ['atlassian', 'jira', 'xray', 'plan', 'list'],
     kind: 'read',
     app: 'xray',
     inputSchema: xrayContainerInput,
     run: async (ctx, input) =>
-      (await listXrayContainers(ctx.xray(), 'plan', { ...input, limit: input.limit ?? 25 })).search,
+      xrayRows(await listXrayContainers(ctx.xray(), 'plan', { ...input, limit: input.limit ?? 25 })),
   }),
   tool({
     name: 'jira_xray_set_list',
     title: 'Xray: list test sets',
     description:
-      'List the Test Sets in a project. Returns { issues, total?, pages, complete }; each key is what ' +
-      'jira_xray_test_list takes as "set".',
+      'List the Test Sets in a project. Returns { rows, total?, complete }: each row is { key, status, ' +
+      'summary, testCount, fields }, and each key is what jira_xray_test_list takes as "set".',
     command: ['atlassian', 'jira', 'xray', 'set', 'list'],
     kind: 'read',
     app: 'xray',
     inputSchema: xrayContainerInput,
     run: async (ctx, input) =>
-      (await listXrayContainers(ctx.xray(), 'set', { ...input, limit: input.limit ?? 25 })).search,
+      xrayRows(await listXrayContainers(ctx.xray(), 'set', { ...input, limit: input.limit ?? 25 })),
   }),
   tool({
     name: 'jira_xray_path_list',

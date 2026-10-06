@@ -410,7 +410,10 @@ export const xrayFilterFlags = {
     summary: 'Extra JQL ANDed onto the scope, in parentheses so it cannot widen it.',
     helpGroup: 'FILTER',
   }),
-  search: Flags.string({ summary: 'Keyword in the summary or description.', helpGroup: 'FILTER' }),
+  search: Flags.string({
+    summary: 'Text in the summary or description, matched as typed: no wildcards or operators.',
+    helpGroup: 'FILTER',
+  }),
   'linked-to': Flags.string({
     summary: 'Only tests linked to any of these issues, by any link type. Comma-separated or repeated.',
     multiple: true,

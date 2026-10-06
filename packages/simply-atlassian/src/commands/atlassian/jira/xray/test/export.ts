@@ -44,7 +44,8 @@ export default class JiraXrayTestExport extends XrayCommand<typeof JiraXrayTestE
     'pipelines; markdown writes one section per test. A test you cannot see — a called test, or a link ' +
     'into a project you cannot browse — is skipped and noted on stderr, never fatal. Reaching --limit is ' +
     'noted on stderr and still exits 0.\n\n' +
-    '--json returns { records, total, complete, notes } instead, so a script can detect truncation.';
+    '--json returns { records, total, complete, notes } instead, so a script can detect truncation. It ' +
+    'replaces --format and the progress lines.';
 
   public static override readonly examples = [
     '<%= config.bin %> <%= command.id %> --plan OM-7 > plan.json',
@@ -59,7 +60,7 @@ export default class JiraXrayTestExport extends XrayCommand<typeof JiraXrayTestE
     ...xrayFieldsFlag,
     ...xrayCallFlags,
     format: Flags.option({
-      summary: 'Output format, written to stdout.',
+      summary: 'Output format, written to stdout. Ignored with --json.',
       options: FORMATS,
       default: 'json' as const,
     })(),
@@ -70,6 +71,8 @@ export default class JiraXrayTestExport extends XrayCommand<typeof JiraXrayTestE
     const json = this.jsonEnabled();
     const { format, limit } = this.flags;
 
+    // A JSON array needs every record before it prints; jsonl and markdown hold only one page.
+    const array: XrayTestRecord[] = [];
     const result = await exportXrayTests(this.xray(), {
       scope: this.xrayScope(),
       filters: this.xrayFilters(),
@@ -77,16 +80,19 @@ export default class JiraXrayTestExport extends XrayCommand<typeof JiraXrayTestE
       expandCalls: this.flags['expand-calls'],
       maxCallDepth: this.flags['max-call-depth'],
       limit,
-      onRecords: (records, progress) => {
-        if (json) return;
-        stderrLine(progressLine(progress));
-        if (format === 'jsonl') for (const record of records) this.logSafe(JSON.stringify(record));
-        if (format === 'markdown') this.writeMarkdown(records);
-      },
+      // Under --json core collects the records for the envelope; otherwise they stream from here.
+      onRecords: json
+        ? undefined
+        : (records, progress): void => {
+            stderrLine(progressLine(progress));
+            if (format === 'json') array.push(...records);
+            if (format === 'jsonl') for (const record of records) this.logSafe(JSON.stringify(record));
+            if (format === 'markdown') this.writeMarkdown(records);
+          },
     });
 
     if (json) return result;
-    if (format === 'json') this.logSafe(JSON.stringify(result.records, null, 2));
+    if (format === 'json') this.logSafe(JSON.stringify(array, null, 2));
     for (const note of result.notes) stderrLine(note);
     if (!result.complete) {
       stderrLine(`Stopped at --limit ${limit}; more tests match. Raise --limit to export the rest.`);
