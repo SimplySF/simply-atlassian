@@ -363,10 +363,16 @@ tool and most instances have no Xray, and Xray Server/Data Center needs no setti
 the server could detect it by. `--allow-writes` does not register them; they are all reads.
 
 They differ from the other tools in three ways, all described in the
-[Xray guide](https://simplysf.github.io/simply-cli/atlassian/guides/xray/): test tools return the
-export record, assembled from several sources, rather than a raw payload; their `fields` input adds
-to the default fields instead of replacing them; and `jira_xray_test_export` returns at most 100
-tests unless `limit` asks for more, because a host holds the whole result in its context.
+[Xray guide](https://simplysf.github.io/simply-cli/atlassian/guides/xray/):
+
+- They return assembled data rather than a raw payload: `jira_xray_test_get` returns
+  `{ record, notes }` and `jira_xray_test_export` returns `{ records, total?, complete, notes }`, with
+  export records, and the list tools return `{ rows, total?, complete }`, rows keyed by field name
+  rather than Xray's `customfield_…` ids.
+- Their `fields` input adds to the default fields instead of replacing them.
+- `jira_xray_test_export` returns 100 tests unless `limit` asks for more, and at most 500, because
+  a host holds the whole result in its context. For larger exports, use the CLI's
+  `jira xray test export --format jsonl`.
 
 ## Results and errors
 

@@ -5,7 +5,7 @@ description: Read Xray tests, plans, sets, and the test repository on Jira Serve
 
 [Xray](https://www.getxray.app/) keeps its tests, test sets, test plans, and preconditions as Jira
 issues, so `jira issue view` already shows their summary and status. The parts that make them
-tests live in Xray's own fields and API: a test's steps, the tests it calls, the plans and sets
+tests live in Xray's own fields and API: a test's steps, its preconditions, the plans and sets
 that contain it, and where it sits in the test repository. The `jira xray` commands read those.
 
 They are **read-only** and support **Xray on Jira Server/Data Center** only. Xray Cloud is a
@@ -32,7 +32,9 @@ renamed too. So the first `jira xray` command against an instance discovers them
   name, because a field can be renamed or translated but its schema type cannot. Each is given a
   **role** — `steps`, `testType`, `repositoryPath`, and so on.
 - **Issue types** are recognised by the description Xray installs ("Represents a Test…") or by the
-  icon the plugin serves, never by name.
+  icon the plugin serves, never by name. An administrator can change both; if a type's description
+  was edited and its icon replaced, it is not recognised, and the first command that needs it says
+  so and shows the `overrides` entry to add (below).
 
 The result is saved as an **instance record**, one JSON file per instance:
 
@@ -44,9 +46,9 @@ Later commands read the record instead of asking again. `jira xray fields` shows
 the field id and name behind it, the Xray fields no role claims, the issue types, and the record's
 path. `--refresh` rediscovers, and `--json` prints the record itself.
 
-You rarely need to refresh by hand. If Jira rejects a query because a recorded field id or issue
-type no longer exists — what a reinstall or an upgrade looks like — the command rediscovers once
-and retries.
+You rarely need to refresh by hand. After a reinstall or an upgrade, Jira stops returning the
+recorded field ids (it leaves unknown ids out rather than failing), or rejects a renamed issue type.
+A command that sees either rediscovers once and retries.
 
 If the cache directory cannot be written, the command still works; it prints one line on stderr
 and uses the discovered layout for that run only.
@@ -69,24 +71,27 @@ keeps:
 
 The same works for an issue type, by name: `"issueTypes": { "test": "Prüfung" }`.
 
-### Older Xray versions
+### When a field is missing
 
-Xray added its fields over several releases: manual steps and the core types in 1.x, Cucumber in
-2.x, called tests and the test repository in 3.x–4.x. On an older Xray a later role is simply not
-found. A command that needs it, such as `--path` without the repository field, stops with an error
-that names the role and the release that introduced it.
+Older Xray releases lack some of these fields, and a role the instance does not have is simply not
+found. A command that needs it, such as `--fields repositoryPath` on an instance without it, stops
+with an error that names the role. Where the release that added the field is known (the repository path
+arrived in Xray 3.0.0), the error compares it with your installed version: on an older Xray it
+says an upgrade is needed; on a newer one it says discovery missed the field. Then run
+`jira xray fields --refresh`, and if the field does exist and is still not recognised, pin its id
+in `overrides` as above.
 
 ## Commands
 
-| Command                         | What it answers                                                                 |
-| ------------------------------- | ------------------------------------------------------------------------------- |
-| `jira xray fields`              | Which Jira fields hold Xray's data on this instance                             |
-| `jira xray test get <test>`     | One test: type, steps (with called tests), definition, links, plans, sets, path |
-| `jira xray test list <scope>`   | A table of tests in a project, plan, set, or folder                             |
-| `jira xray test export <scope>` | Full test records for the same scopes, in bulk                                  |
-| `jira xray plan list`           | Test plans in a project, with test counts                                       |
-| `jira xray set list`            | Test sets in a project, with test counts                                        |
-| `jira xray path list`           | The test repository's folder tree for a project, with test counts               |
+| Command                         | What it answers                                                            |
+| ------------------------------- | -------------------------------------------------------------------------- |
+| `jira xray fields`              | Which Jira fields hold Xray's data on this instance                        |
+| `jira xray test get <test>`     | One test: type, steps, definition, preconditions, links, plans, sets, path |
+| `jira xray test list <scope>`   | A table of tests in a project, plan, set, or folder                        |
+| `jira xray test export <scope>` | Full test records for the same scopes, in bulk                             |
+| `jira xray plan list`           | Test plans in a project, with test counts                                  |
+| `jira xray set list`            | Test sets in a project, with test counts                                   |
+| `jira xray path list`           | The test repository's folder tree for a project, with test counts          |
 
 Each command's output feeds the next: `plan list` gives the key `test list --plan` takes, and
 `path list` gives the path `test export --project X --path` takes.
@@ -102,22 +107,29 @@ Each command's output feeds the next: `plan list` gives the key `test list --pla
 | `--set <key>`                     | The set's tests                                                 |
 | `--project <key> --path <folder>` | Tests in a repository folder; `--recursive` adds its subfolders |
 
-A folder path is written the way Xray stores it, `/O&M/Accounts`, with or without the leading
-slash; `/` is the repository root. `/` always separates folders, so a folder name cannot contain
-one.
+A folder path is written the way Xray stores it, `/O&M/Accounts`. The leading slash is optional,
+and a trailing or doubled slash is ignored; `/` is the repository root. `/` always separates
+folders, so a folder name cannot contain one.
 
 Then any **filters**, ANDed together:
 
 | Filter               | Narrows to                                                                         |
 | -------------------- | ---------------------------------------------------------------------------------- |
 | `--jql <clause>`     | Any extra JQL. It is parenthesised, so an `OR` inside it cannot widen the scope    |
-| `--search <text>`    | A keyword in the summary or description                                            |
+| `--search <text>`    | Text in the summary or description, matched as typed                               |
 | `--linked-to <keys>` | Tests linked to any of these issues, by any link type. Comma-separated or repeated |
 
 The scope and filters become one JQL query, so filtering happens on the server and paging is
-ordinary Jira paging. Results are ordered by key unless `--jql` ends in its own `ORDER BY`. On an
-older Xray without the JQL function a scope needs, the scope's test keys come from Xray's REST API
-instead and are searched in batches, so the filters still apply and the result is the same.
+ordinary Jira paging. Results are ordered by key unless `--jql` ends in its own `ORDER BY`.
+
+`--search` treats its text literally: characters such as `+`, `-`, `*` and `?` are matched as
+typed, so `--search C++` finds "C++". For wildcards or other text-search operators, write the
+clause yourself with `--jql`, for example `--jql 'summary ~ "pass*"'`.
+
+On an older Xray without the JQL function a scope needs, the scope's test keys come from Xray's
+REST API instead and are searched in batches, so the filters still apply. The tests, their order,
+and what `--limit` keeps are the same as on the JQL route, with one exception: an `ORDER BY` in
+`--jql` cannot be applied across batches, so on that route it is an error that says to remove it.
 
 **Plans that contain sets.** Adding a Test Set to a plan adds the set's tests, not the set, so
 `--plan` already returns every test however it was added. Xray keeps no record of which tests
@@ -136,34 +148,43 @@ A name that matches nothing is an error before any search runs. On `test list`, 
 `set list` each field becomes a column; on `test get` and `test export` it goes in the record's
 `fields` object, under the name you used.
 
-## Called tests
+## Steps this version does not fully read
 
-A step can call another test instead of describing an action. It is shown as
-`→ calls PROJ-9 "Log in as admin"`, not an empty row. `--expand-calls` inlines the called test's
-steps in its place, numbered `3.1`, `3.2`, and so on, recursively. Expansion stops — without
-failing — at a cycle (`↺ cycle: PROJ-9`), at a depth of 5 (`--max-call-depth` changes it), and at a
-test you cannot see (`⚠ not accessible: PROJ-9`, also noted on stderr).
+A step can carry more than its action, data and expected result: a column your administrator added
+to the step table, or, on Xray 6.0 and later, a call to another test. This version reads the three
+standard columns and passes anything else through untouched, so nothing is lost:
+
+- In the record, it goes under the step's `extra`, exactly as Xray sent it. (`testVersionId`, which
+  every step carries, is Xray's own bookkeeping and is left out; `--raw` still shows it.)
+- In the step table, a step with no action of its own shows what it carries, such as
+  `(not interpreted: testCallBean)`, rather than an empty row.
+- Each such name is noted once on stderr.
+
+Called tests are not yet interpreted: a calling step shows up this way, with its `testCallBean`
+under `extra`. A later version may read it and give such steps a typed form of their own.
 
 ## Exporting
 
 ```sh
 simply atlassian jira xray test export --plan OM-7 > plan.json
-simply atlassian jira xray test export --project OM --path "/O&M/Accounts" --recursive --expand-calls --format jsonl
+simply atlassian jira xray test export --project OM --path "/O&M/Accounts" --recursive --format jsonl
 ```
 
 `--format` picks what goes to stdout: `json` (the default) writes one array, `jsonl` writes one
-record per line as each page of 100 arrives, and `markdown` writes one section per test. Progress
+record per line as each page of 100 arrives, and `markdown` writes one section per test. `jsonl`
+and `markdown` hold only one page in memory, so they suit exports of any size; `json` has to hold
+the whole export to print one array. Progress
 (`fetched 300 of 1240`), skipped tests, and a note when `--limit` (default 1000) stopped the
 export all go to stderr, so stdout is only ever the export. Reaching the limit still exits 0.
 
 With `--json`, the command returns `{ records, total, complete, notes }` instead, so a script can
-tell a truncated export from a complete one.
+tell a truncated export from a complete one. `--json` replaces `--format` and the progress lines.
 
 ## The export record
 
 `test export` writes, and `test get --json` returns, one record per test. Unlike the rest of this
 CLI's output it is not an Atlassian payload but a shape of this project's own, assembled from the
-issue, Xray's fields, and the called tests, so **it is a contract**: a key's meaning will not
+issue, Xray's fields, and its preconditions, so **it is a contract**: a key's meaning will not
 change and no key will be removed without a breaking release.
 
 ```json
@@ -177,7 +198,7 @@ change and no key will be removed without a breaking release.
   "preconditions": [{ "key": "PROJ-3", "summary": "Admin account exists" }],
   "steps": [
     { "index": "1", "action": "Open Users", "data": "", "result": "List shown", "attachments": [] },
-    { "index": "2", "call": { "key": "PROJ-9", "summary": "Log in as admin" }, "steps": [] }
+    { "index": "2", "action": "Pick a user", "data": "bob", "result": "Details shown", "attachments": [] }
   ],
   "definition": null,
   "links": [
@@ -205,16 +226,16 @@ change and no key will be removed without a breaking release.
 | `type`          | `Manual`, `Cucumber`, `Generic`, or the instance's own test type name; null if the test has none.                                                                                                                                                                    |
 | `path`          | Repository folder, with a leading slash; null if the test is in none.                                                                                                                                                                                                |
 | `preconditions` | Each precondition's key and summary. `summary` is null for one you cannot see.                                                                                                                                                                                       |
-| `steps`         | Action steps (`index`, `action`, `data`, `result`, `attachments` as file names) and call steps (below). Empty if not manual.                                                                                                                                         |
+| `steps`         | Each step's `index`, `action`, `data`, `result`, and `attachments` (as file names), plus `extra` when the step carries data this version does not interpret (below). Empty if not manual.                                                                            |
 | `definition`    | The Cucumber scenario or generic definition; null for a manual test.                                                                                                                                                                                                 |
 | `links`         | Every issue link, read from this test's side: the link `type` name, which end the other issue is on (`direction`), the phrase from this side (`relationship`, such as `tests` or `is tested by`), and the other issue's `key`, `issueType`, `status`, and `summary`. |
 | `plans`, `sets` | Keys of the plans and sets that contain the test.                                                                                                                                                                                                                    |
 | `fields`        | Every `--fields` value, under the name you used. Named Jira objects become their name, so components read `["Accounts"]`.                                                                                                                                            |
 
-A **call step** has `index`, `call` (the called test's `key` and `summary`, which is null if it was
-not fetched), and `steps`, which stays empty unless `--expand-calls` is given and then holds the
-called test's steps, numbered under this one. When expansion stopped, `stop` says why: `cycle`,
-`depth`, or `inaccessible`.
+`extra`, when present, holds a step's properties and columns that this version does not interpret,
+as Xray sent them; step columns beyond action, data and expected result are under `extra.fields`.
+Its contents are Xray's, not part of this contract, and a later version may give some of them a
+typed form of their own.
 
 ## Recipes
 
@@ -237,11 +258,11 @@ Find tests in a poorly organised project by keyword:
 simply atlassian jira xray test list --project OM --search password --limit 100
 ```
 
-Pull one folder, with called tests inlined, as Markdown for a reviewer or a model:
+Pull one folder, with its subfolders, as Markdown for a reviewer or a model:
 
 ```sh
 simply atlassian jira xray path list --project OM
-simply atlassian jira xray test export --project OM --path "/O&M/Accounts" --recursive --expand-calls --format markdown > accounts.md
+simply atlassian jira xray test export --project OM --path "/O&M/Accounts" --recursive --format markdown > accounts.md
 ```
 
 ## Write safety
