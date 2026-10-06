@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.7.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-mcp%400.6.2...%40simplysf%2Fsimply-atlassian-mcp%400.7.0) (2026-10-06)
+
+### Features
+
+- **simply-atlassian, simply-atlassian-mcp:** add jira xray read commands and MCP tools ([#46](https://github.com/SimplySF/simply-atlassian/issues/46)) ([98f84bd](https://github.com/SimplySF/simply-atlassian/commit/98f84bde078e4f6e5541c357924739ecfca0b737))
+
 ## [0.6.2](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-mcp%400.6.1...%40simplysf%2Fsimply-atlassian-mcp%400.6.2) (2026-10-05)
 
 ### Bug Fixes

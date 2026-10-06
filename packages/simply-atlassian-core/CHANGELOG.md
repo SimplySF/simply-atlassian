@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.7.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-core%400.6.0...%40simplysf%2Fsimply-atlassian-core%400.7.0) (2026-10-06)
+
+### Features
+
+- **simply-atlassian-core:** add Xray Server/DC read support ([#45](https://github.com/SimplySF/simply-atlassian/issues/45)) ([c4309ea](https://github.com/SimplySF/simply-atlassian/commit/c4309eaaa3491383e2e682e8dc00cb1afec1dd1e))
+
 # [0.6.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-core%400.5.0...%40simplysf%2Fsimply-atlassian-core%400.6.0) (2026-09-10)
 
 ### Features
