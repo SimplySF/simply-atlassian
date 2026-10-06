@@ -508,12 +508,14 @@ describe('path list', () => {
     await expect(listXrayFolders(backend(), { project: 'OM', path: '/nope' })).rejects.toThrow(/No folder/);
   });
 
-  it('needs the repository path role', async () => {
+  it("needs no discovered path field, since it reads Xray's REST API", async () => {
     routeXrayDiscovery(server, {
       fields: XRAY_FIXTURE_FIELDS.filter((field) => (field as { id: string }).id !== XRAY_FIXTURE_IDS.repositoryPath),
     });
 
-    await expect(listXrayFolders(backend(), { project: 'OM' })).rejects.toThrow(/"repositoryPath"/);
+    const tree = await listXrayFolders(backend(), { project: 'OM' });
+
+    expect(flattenFolders(tree)).toHaveLength(3);
   });
 });
 

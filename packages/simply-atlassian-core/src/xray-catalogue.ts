@@ -138,11 +138,12 @@ export async function listXrayContainers(
   return { search, rows, extraFields: extras };
 }
 
-/** A project's test repository as a tree, optionally starting below the root and cut to a depth. */
+/**
+ * A project's test repository as a tree, optionally starting below the root and cut to a depth.
+ * Read from Xray's REST API, so it needs no discovered field.
+ */
 export async function listXrayFolders(backend: XrayBackend, input: XrayFolderListInput): Promise<XrayFolder> {
   const project = assertProjectKey(input.project);
-  const instance = await backend.instance();
-  instance.requireField('repositoryPath');
   const tree = normaliseFolders(await backend.repositoryFolders(project));
   const start = input.path === undefined ? tree : findFolder(tree, input.path);
   if (start === undefined) {
