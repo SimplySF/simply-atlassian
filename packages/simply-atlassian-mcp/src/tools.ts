@@ -1004,9 +1004,10 @@ export const TOOLS: readonly ToolSpec[] = [
     name: 'jira_xray_test_get',
     title: 'Xray: view a test',
     description:
-      'One Xray test as an export record: type, steps, definition, preconditions, issue links (the ' +
-      'requirement or bug it verifies), plans, sets and repository path. Step data this version does ' +
-      'not interpret, such as a call to another test, is under the step\'s "extra". raw: true returns ' +
+      'One Xray test. Returns { record, notes }: the export record (type, steps, definition, ' +
+      'preconditions, issue links such as the requirement or bug it verifies, plans, sets and repository ' +
+      'path), and notes on anything skipped because it is not visible or kept under a step\'s "extra" ' +
+      'because this version does not interpret it, such as a call to another test. raw: true returns ' +
       'the underlying Jira issue instead.',
     command: ['atlassian', 'jira', 'xray', 'test', 'get'],
     kind: 'read',
@@ -1018,7 +1019,7 @@ export const TOOLS: readonly ToolSpec[] = [
     },
     run: async (ctx, input) => {
       const result = await getXrayTest(ctx.xray(), input.test, { fields: input.fields });
-      return input.raw === true ? result.issue : result.record;
+      return input.raw === true ? result.issue : { record: result.record, notes: result.notes };
     },
   }),
   tool({
@@ -1043,8 +1044,9 @@ export const TOOLS: readonly ToolSpec[] = [
     title: 'Xray: export tests',
     description:
       'Full export records for the same scopes and filters as jira_xray_test_list. Returns { records, ' +
-      'total?, complete, notes }: "complete": false means limit cut it short, and "notes" lists tests ' +
-      'skipped because they are not visible. limit defaults to 100 and is at most ' +
+      'total?, complete, notes }: "complete": false means limit cut it short, and "notes" lists what was ' +
+      'skipped because it is not visible, and step data kept under "extra" because this version does ' +
+      'not interpret it. limit defaults to 100 and is at most ' +
       `${XRAY_EXPORT_MAX}, because the whole result lands in context; for more, use the CLI's ` +
       '"atlassian jira xray test export --format jsonl".',
     command: ['atlassian', 'jira', 'xray', 'test', 'export'],

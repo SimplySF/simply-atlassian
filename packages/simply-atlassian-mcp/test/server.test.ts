@@ -387,6 +387,24 @@ describe('Xray tools', () => {
     expect(body.total).toBe(150);
   });
 
+  it('return a test with its notes, so the model sees what was not interpreted', async () => {
+    atlassian.route('/rest/api/2/issue/OM-12', (_req, res) =>
+      respondJson(
+        res,
+        200,
+        xrayFixtureIssue('OM-12', { steps: [{ id: 1, index: 1, testCallBean: { any: 'shape' } }] }),
+      ),
+    );
+    const c = await connect({ xray: true, env: xrayEnv() });
+
+    const result = await c.callTool({ name: 'jira_xray_test_get', arguments: { test: 'OM-12' } });
+
+    const body = jsonOf(result) as { record: { key: string; steps: unknown[] }; notes: string[] };
+    expect(body.record.key).toBe('OM-12');
+    expect(body.record.steps[0]).toMatchObject({ extra: { testCallBean: { any: 'shape' } } });
+    expect(body.notes).toEqual([expect.stringContaining('"testCallBean"')]);
+  });
+
   it('refuse an export limit above 500, which would not fit in context', async () => {
     const c = await connect({ xray: true, env: xrayEnv() });
 
