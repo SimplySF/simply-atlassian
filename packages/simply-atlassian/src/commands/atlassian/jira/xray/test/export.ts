@@ -25,7 +25,6 @@ import {
 import {
   stderrLine,
   XrayCommand,
-  xrayCallFlags,
   xrayFieldsFlag,
   xrayFilterFlags,
   xrayScopeFlags,
@@ -41,15 +40,16 @@ export default class JiraXrayTestExport extends XrayCommand<typeof JiraXrayTestE
     'sets, and any --fields — whose shape is documented as a contract in the Xray guide.\n\n' +
     'Pages of 100 tests are fetched one after another, with progress on stderr; stdout carries only the ' +
     'export. --format jsonl writes one record per line as pages arrive, which suits large exports and ' +
-    'pipelines; markdown writes one section per test. A test you cannot see — a called test, or a link ' +
-    'into a project you cannot browse — is skipped and noted on stderr, never fatal. Reaching --limit is ' +
-    'noted on stderr and still exits 0.\n\n' +
+    'pipelines; markdown writes one section per test. Something you cannot see — a precondition, or a ' +
+    'link into a project you cannot browse — is skipped and noted on stderr, never fatal, as is step data ' +
+    'this version does not interpret, which is kept under the step\'s "extra". Reaching --limit is noted ' +
+    'on stderr and still exits 0.\n\n' +
     '--json returns { records, total, complete, notes } instead, so a script can detect truncation. It ' +
     'replaces --format and the progress lines.';
 
   public static override readonly examples = [
     '<%= config.bin %> <%= command.id %> --plan OM-7 > plan.json',
-    '<%= config.bin %> <%= command.id %> --project OM --path "/O&M/Accounts" --recursive --expand-calls --format jsonl',
+    '<%= config.bin %> <%= command.id %> --project OM --path "/O&M/Accounts" --recursive --format jsonl',
     '<%= config.bin %> <%= command.id %> --project OM --linked-to OM-40,OM-41 --fields components,labels',
     '<%= config.bin %> <%= command.id %> --set OM-31 --format markdown > tests.md',
   ];
@@ -58,7 +58,6 @@ export default class JiraXrayTestExport extends XrayCommand<typeof JiraXrayTestE
     ...xrayScopeFlags,
     ...xrayFilterFlags,
     ...xrayFieldsFlag,
-    ...xrayCallFlags,
     format: Flags.option({
       summary: 'Output format, written to stdout. Ignored with --json.',
       options: FORMATS,
@@ -77,8 +76,6 @@ export default class JiraXrayTestExport extends XrayCommand<typeof JiraXrayTestE
       scope: this.xrayScope(),
       filters: this.xrayFilters(),
       fields: this.xrayFields(),
-      expandCalls: this.flags['expand-calls'],
-      maxCallDepth: this.flags['max-call-depth'],
       limit,
       // Under --json core collects the records for the envelope; otherwise they stream from here.
       onRecords: json

@@ -199,11 +199,6 @@ const xrayFilters = {
     .describe('Only tests linked to any of these issue keys (stories, bugs), by any link type.'),
 };
 
-const xrayCalls = {
-  expandCalls: z.boolean().optional().describe("Inline each called test's steps in place, numbered 3.1, 3.2, …."),
-  maxCallDepth: z.number().int().positive().optional().describe('Levels of calls to inline. Defaults to 5.'),
-};
-
 const xrayContainerInput = {
   project: z.string().describe('Project key.'),
   jql: xrayFilters.jql,
@@ -1009,24 +1004,20 @@ export const TOOLS: readonly ToolSpec[] = [
     name: 'jira_xray_test_get',
     title: 'Xray: view a test',
     description:
-      'One Xray test as an export record: type, steps (a step calling another test appears as a call), ' +
-      'definition, preconditions, issue links (the requirement or bug it verifies), plans, sets and ' +
-      'repository path. raw: true returns the underlying Jira issue instead.',
+      'One Xray test as an export record: type, steps, definition, preconditions, issue links (the ' +
+      'requirement or bug it verifies), plans, sets and repository path. Step data this version does ' +
+      'not interpret, such as a call to another test, is under the step\'s "extra". raw: true returns ' +
+      'the underlying Jira issue instead.',
     command: ['atlassian', 'jira', 'xray', 'test', 'get'],
     kind: 'read',
     app: 'xray',
     inputSchema: {
       test: z.string().describe('Test issue key, for example PROJ-12.'),
       fields: xrayFields,
-      ...xrayCalls,
       raw: z.boolean().optional().describe('Return the underlying Jira issue instead of the export record.'),
     },
     run: async (ctx, input) => {
-      const result = await getXrayTest(ctx.xray(), input.test, {
-        fields: input.fields,
-        expandCalls: input.expandCalls,
-        maxCallDepth: input.maxCallDepth,
-      });
+      const result = await getXrayTest(ctx.xray(), input.test, { fields: input.fields });
       return input.raw === true ? result.issue : result.record;
     },
   }),
@@ -1063,7 +1054,6 @@ export const TOOLS: readonly ToolSpec[] = [
       ...xrayScope,
       ...xrayFilters,
       fields: xrayFields,
-      ...xrayCalls,
       limit: z
         .number()
         .int()
@@ -1076,8 +1066,6 @@ export const TOOLS: readonly ToolSpec[] = [
       exportXrayTests(ctx.xray(), {
         ...xrayQuery(input),
         fields: input.fields,
-        expandCalls: input.expandCalls,
-        maxCallDepth: input.maxCallDepth,
         // Lower than the CLI's 1000: a host holds the whole tool result in context.
         limit: input.limit ?? 100,
       }),

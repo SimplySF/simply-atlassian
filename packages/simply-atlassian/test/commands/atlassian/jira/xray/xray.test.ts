@@ -137,27 +137,27 @@ describe('jira xray test get', () => {
       'OM-12',
       xrayFixtureIssue('OM-12', {
         summary: 'Reset a password',
-        steps: [xrayStep(1, 'Open Users', 'List shown'), { index: 2, testCallBean: 'OM-9' }],
+        steps: [xrayStep(1, 'Open Users', 'List shown'), { index: 2, testCallBean: { any: 'shape' } }],
         path: '/O&M/Accounts',
         plans: ['OM-7'],
       }),
     );
   });
 
-  it('renders the test with a called step shown as a call, never an empty row', async () => {
+  it('renders the test, naming step data it does not interpret rather than showing an empty row', async () => {
     await JiraXrayTestGet.run(argv('OM-12'));
 
     const out = stdout.join('');
     expect(out).toContain('Reset a password');
     expect(out).toContain('/O&M/Accounts');
-    expect(out).toContain('→ calls OM-9 "Log in as admin"');
+    expect(out).toContain('(not interpreted: testCallBean)');
+    expect(stderr.join('')).toContain('"testCallBean"');
   });
 
-  it('inlines called steps with --expand-calls', async () => {
-    const record = (await JiraXrayTestGet.run(argv('OM-12', '--expand-calls'))) as XrayTestRecord;
+  it('keeps that step data under "extra" in the record', async () => {
+    const record = (await JiraXrayTestGet.run(argv('OM-12', '--json'))) as XrayTestRecord;
 
-    expect(stdout.join('')).toContain('2.1');
-    expect(record.steps[1]).toMatchObject({ call: { key: 'OM-9' }, steps: [{ index: '2.1', action: 'Log in' }] });
+    expect(record.steps[1]).toMatchObject({ index: '2', extra: { testCallBean: { any: 'shape' } } });
   });
 
   it('returns the export record under --json, and the Jira issue under --raw', async () => {

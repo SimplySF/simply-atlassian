@@ -2534,16 +2534,14 @@ Export full test records for a project, plan, set, or folder.
 USAGE
   $ simply atlassian jira xray test export [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>] [--jira-api-token
     <value>] [--jira-personal-token <value>] [--project <value>] [--plan <value>] [--set <value>] [--path <value>]
-    [--recursive] [--jql <value>] [--search <value>] [--linked-to <value>...] [--fields <value>...] [--expand-calls]
-    [--max-call-depth <value>] [--format json|jsonl|markdown] [--limit <value>]
+    [--recursive] [--jql <value>] [--search <value>] [--linked-to <value>...] [--fields <value>...] [--format
+    json|jsonl|markdown] [--limit <value>]
 
 FLAGS
-  --expand-calls            Inline each called test's steps in place, numbered 3.1, 3.2, ….
-  --fields=<value>...       Extra fields to return, added to the defaults. Comma-separated or repeated.
-  --format=<option>         [default: json] Output format, written to stdout. Ignored with --json.
-                            <options: json|jsonl|markdown>
-  --limit=<value>           [default: 1000] Maximum number of tests to export.
-  --max-call-depth=<value>  [default: 5] How many levels of calls --expand-calls inlines.
+  --fields=<value>...  Extra fields to return, added to the defaults. Comma-separated or repeated.
+  --format=<option>    [default: json] Output format, written to stdout. Ignored with --json.
+                       <options: json|jsonl|markdown>
+  --limit=<value>      [default: 1000] Maximum number of tests to export.
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
@@ -2576,8 +2574,9 @@ DESCRIPTION
 
   Pages of 100 tests are fetched one after another, with progress on stderr; stdout carries only the export. --format
   jsonl writes one record per line as pages arrive, which suits large exports and pipelines; markdown writes one section
-  per test. A test you cannot see — a called test, or a link into a project you cannot browse — is skipped and noted on
-  stderr, never fatal. Reaching --limit is noted on stderr and still exits 0.
+  per test. Something you cannot see — a precondition, or a link into a project you cannot browse — is skipped and noted
+  on stderr, never fatal, as is step data this version does not interpret, which is kept under the step's "extra".
+  Reaching --limit is noted on stderr and still exits 0.
 
   --json returns { records, total, complete, notes } instead, so a script can detect truncation. It replaces --format
   and the progress lines.
@@ -2585,7 +2584,7 @@ DESCRIPTION
 EXAMPLES
   $ simply atlassian jira xray test export --plan OM-7 > plan.json
 
-  $ simply atlassian jira xray test export --project OM --path "/O&M/Accounts" --recursive --expand-calls --format jsonl
+  $ simply atlassian jira xray test export --project OM --path "/O&M/Accounts" --recursive --format jsonl
 
   $ simply atlassian jira xray test export --project OM --linked-to OM-40,OM-41 --fields components,labels
 
@@ -2612,17 +2611,14 @@ Show one Xray test: steps, definition, links, plans, sets, and path.
 ```
 USAGE
   $ simply atlassian jira xray test get TEST [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
-    [--jira-api-token <value>] [--jira-personal-token <value>] [--fields <value>...] [--expand-calls] [--max-call-depth
-    <value>] [--raw]
+    [--jira-api-token <value>] [--jira-personal-token <value>] [--fields <value>...] [--raw]
 
 ARGUMENTS
   TEST  Test issue key, for example OM-12.
 
 FLAGS
-  --expand-calls            Inline each called test's steps in place, numbered 3.1, 3.2, ….
-  --fields=<value>...       Extra fields to return, added to the defaults. Comma-separated or repeated.
-  --max-call-depth=<value>  [default: 5] How many levels of calls --expand-calls inlines.
-  --raw                     Print the underlying Jira issue as JSON instead.
+  --fields=<value>...  Extra fields to return, added to the defaults. Comma-separated or repeated.
+  --raw                Print the underlying Jira issue as JSON instead.
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
@@ -2641,16 +2637,14 @@ DESCRIPTION
   preconditions, every issue link — which is how the requirement or bug it verifies shows up — the plans and sets that
   contain it, and its repository folder.
 
-  A step that calls another test is shown as "→ calls KEY". --expand-calls inlines the called steps instead,
-  recursively; a cycle, the depth limit, or a test you cannot see is marked rather than treated as an error.
+  Step data this version does not interpret, such as a call to another test, is kept under the step's "extra" in the
+  record, named in the step table, and noted on stderr.
 
   --json returns the export record (the same shape "test export" writes), not a raw payload, because a test assembled
   from several sources has none. --raw returns the underlying Jira issue.
 
 EXAMPLES
   $ simply atlassian jira xray test get OM-12
-
-  $ simply atlassian jira xray test get OM-12 --expand-calls
 
   $ simply atlassian jira xray test get OM-12 --fields components,labels --json
 

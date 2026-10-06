@@ -433,18 +433,6 @@ export const xrayFieldsFlag = {
   }),
 };
 
-export const xrayCallFlags = {
-  'expand-calls': Flags.boolean({
-    summary: "Inline each called test's steps in place, numbered 3.1, 3.2, ….",
-    default: false,
-  }),
-  'max-call-depth': Flags.integer({
-    summary: 'How many levels of calls --expand-calls inlines.',
-    default: 5,
-    min: 1,
-  }),
-};
-
 /**
  * Base for `jira xray` commands. Xray Server/Data Center is a plugin on the Jira host, so the Jira
  * connection flags are all it needs; this adds only the backend, with the instance record kept in

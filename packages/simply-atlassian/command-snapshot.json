@@ -732,7 +732,6 @@
     "flagChars": ["e"],
     "flags": [
       "env-file",
-      "expand-calls",
       "fields",
       "format",
       "jira-api-token",
@@ -743,7 +742,6 @@
       "json",
       "limit",
       "linked-to",
-      "max-call-depth",
       "path",
       "plan",
       "project",
@@ -760,14 +758,12 @@
     "flagChars": ["e"],
     "flags": [
       "env-file",
-      "expand-calls",
       "fields",
       "jira-api-token",
       "jira-personal-token",
       "jira-url",
       "jira-username",
       "json",
-      "max-call-depth",
       "raw"
     ],
     "plugin": "@simplysf/simply-atlassian"

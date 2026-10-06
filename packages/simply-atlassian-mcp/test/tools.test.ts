@@ -127,15 +127,13 @@ describe('TOOLS catalogue', () => {
     for (const tool of xray) expect(tool.kind, tool.name).toBe('read');
   });
 
-  it('exposes the Xray scopes, filters and call expansion the CLI accepts, but not an output format', () => {
+  it('exposes the Xray scopes and filters the CLI accepts, but not an output format', () => {
     const exportTool = TOOLS.find((tool) => tool.name === 'jira_xray_test_export');
     const properties = Object.keys(exportTool?.inputSchema ?? {});
 
     for (const name of ['project', 'plan', 'set', 'path', 'recursive', 'jql', 'search', 'linkedTo', 'fields']) {
       expect(properties, name).toContain(name);
     }
-    expect(properties).toContain('expandCalls');
-    expect(properties).toContain('maxCallDepth');
     expect(properties).not.toContain('format');
   });
 });

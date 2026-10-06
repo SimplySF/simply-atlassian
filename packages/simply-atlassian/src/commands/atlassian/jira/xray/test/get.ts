@@ -26,7 +26,7 @@ import {
   type XrayLinkRecord,
   type XrayTestRecord,
 } from '@simplysf/simply-atlassian-core';
-import { stderrLine, XrayCommand, xrayCallFlags, xrayFieldsFlag } from '../../../../../shared/base-command.js';
+import { stderrLine, XrayCommand, xrayFieldsFlag } from '../../../../../shared/base-command.js';
 
 export default class JiraXrayTestGet extends XrayCommand<typeof JiraXrayTestGet> {
   public static override readonly summary = 'Show one Xray test: steps, definition, links, plans, sets, and path.';
@@ -34,15 +34,13 @@ export default class JiraXrayTestGet extends XrayCommand<typeof JiraXrayTestGet>
     "Assembles a test from its Jira issue and Xray's fields: the type, the steps (or the Cucumber or " +
     'generic definition), preconditions, every issue link — which is how the requirement or bug it ' +
     'verifies shows up — the plans and sets that contain it, and its repository folder.\n\n' +
-    'A step that calls another test is shown as "→ calls KEY". --expand-calls inlines the called steps ' +
-    'instead, recursively; a cycle, the depth limit, or a test you cannot see is marked rather than ' +
-    'treated as an error.\n\n' +
+    'Step data this version does not interpret, such as a call to another test, is kept under the ' +
+    'step\'s "extra" in the record, named in the step table, and noted on stderr.\n\n' +
     '--json returns the export record (the same shape "test export" writes), not a raw payload, because ' +
     'a test assembled from several sources has none. --raw returns the underlying Jira issue.';
 
   public static override readonly examples = [
     '<%= config.bin %> <%= command.id %> OM-12',
-    '<%= config.bin %> <%= command.id %> OM-12 --expand-calls',
     '<%= config.bin %> <%= command.id %> OM-12 --fields components,labels --json',
     '<%= config.bin %> <%= command.id %> OM-12 --raw',
   ];
@@ -53,16 +51,11 @@ export default class JiraXrayTestGet extends XrayCommand<typeof JiraXrayTestGet>
 
   public static override readonly flags = {
     ...xrayFieldsFlag,
-    ...xrayCallFlags,
     raw: Flags.boolean({ summary: 'Print the underlying Jira issue as JSON instead.', default: false }),
   };
 
   public async run(): Promise<unknown> {
-    const result = await getXrayTest(this.xray(), this.args.test, {
-      fields: this.xrayFields(),
-      expandCalls: this.flags['expand-calls'],
-      maxCallDepth: this.flags['max-call-depth'],
-    });
+    const result = await getXrayTest(this.xray(), this.args.test, { fields: this.xrayFields() });
 
     if (this.flags.raw) {
       this.logSafe(JSON.stringify(result.issue, null, 2));
