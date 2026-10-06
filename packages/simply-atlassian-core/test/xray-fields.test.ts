@@ -344,6 +344,32 @@ describe('rediscovery on a stale record', () => {
     expect(requestsTo('/rest/api/2/field')).toBe(2);
   });
 
+  it('does not rediscover when a requested Xray field is present, even if empty', async () => {
+    routeXrayDiscovery(server);
+    server.route('/rest/api/2/search', (_req, res) =>
+      respondJson(res, 200, { issues: [{ key: 'OM-1', fields: { [XRAY_FIXTURE_IDS.steps]: null } }], total: 1 }),
+    );
+
+    await backend().search(() => ({ jql: 'x', fields: ['summary', XRAY_FIXTURE_IDS.steps] }), { limit: 10 });
+
+    expect(requestsTo('/rest/api/2/field')).toBe(1);
+  });
+
+  it('rediscovers once when no requested Xray field comes back, and then accepts what it gets', async () => {
+    routeXrayDiscovery(server);
+    server.route('/rest/api/2/search', (_req, res) =>
+      respondJson(res, 200, { issues: [{ key: 'OM-1', fields: { summary: 'S' } }], total: 1 }),
+    );
+
+    const result = await backend().search(() => ({ jql: 'x', fields: ['summary', XRAY_FIXTURE_IDS.steps] }), {
+      limit: 10,
+    });
+
+    expect(result.issues).toHaveLength(1);
+    expect(requestsTo('/rest/api/2/field')).toBe(2);
+    expect(requestsTo('/rest/api/2/search')).toBe(2);
+  });
+
   it('does not rediscover for an error that has nothing to do with the record', async () => {
     routeXrayDiscovery(server);
     server.route('/rest/api/2/search', (_req, res) => respondJson(res, 400, { errorMessages: ['Bad JQL.'] }));

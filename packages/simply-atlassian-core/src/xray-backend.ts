@@ -78,8 +78,9 @@ export interface XrayBackend {
   /** The instance record, discovered and saved on first use; `refresh` rediscovers. */
   instance(options?: { readonly refresh?: boolean }): Promise<XrayInstance>;
   /**
-   * Follows search pages, rediscovering once if a recorded field or type has gone stale. The result
-   * names the instance the query was built from, so the caller reads fields with the same ids.
+   * Follows search pages, rediscovering once if the record has gone stale: Jira returned none of the
+   * recorded Xray fields it was asked for, or rejected a recorded issue type. The result names the
+   * instance the query was built from, so the caller reads fields with the same ids.
    */
   search(
     build: (instance: XrayInstance) => XrayQuery | Promise<XrayQuery>,
@@ -87,8 +88,11 @@ export interface XrayBackend {
   ): Promise<XraySearchResult>;
   /** Fetches issues by key in chunks; keys the caller cannot see are simply absent. */
   issuesByKeys(keys: readonly string[], fields: readonly string[]): Promise<Map<string, unknown>>;
-  /** One issue by key, as Jira returns it. */
-  issue(key: string, fields: readonly string[]): Promise<unknown>;
+  /** One issue by key, as Jira returns it, rediscovering once as `search` does if the record is stale. */
+  issue(
+    key: string,
+    fields: (instance: XrayInstance) => readonly string[] | Promise<readonly string[]>,
+  ): Promise<{ readonly issue: unknown; readonly instance: XrayInstance }>;
   /** Resolves `--fields` values against the record (and, only if needed, the field list). */
   resolveFields(instance: XrayInstance, names: readonly string[]): Promise<ResolvedField[]>;
   /** The test keys in a plan or set, through Xray's REST API rather than JQL. */
@@ -162,9 +166,14 @@ export class XrayServerBackend implements XrayBackend {
     const instance = await this.instance();
     let emitted = false;
     const run = async (current: XrayInstance): Promise<XraySearchResult> => {
-      const result = await this.followPages(await build(current), {
+      const query = await build(current);
+      const result = await this.followPages(query, {
         ...options,
         onPage: async (issues, progress) => {
+          // Checked on the first page, before it is streamed, so a retry repeats nothing.
+          if (!emitted && !this.rediscovered && lacksRecordedFields(issues, query.fields, current)) {
+            throw new StaleRecord();
+          }
           emitted = true;
           await options.onPage?.(issues, progress, current);
         },
@@ -175,7 +184,8 @@ export class XrayServerBackend implements XrayBackend {
       return await run(instance);
     } catch (error) {
       // Only before anything was streamed: retrying after a page went out would repeat it.
-      if (emitted || this.rediscovered || !isStaleRecordError(error, instance)) throw error;
+      const stale = error instanceof StaleRecord || isStaleRecordError(error, instance);
+      if (emitted || this.rediscovered || !stale) throw error;
       this.rediscovered = true;
       return run(await this.instance({ refresh: true }));
     }
@@ -200,8 +210,21 @@ export class XrayServerBackend implements XrayBackend {
     return found;
   }
 
-  public issue(key: string, fields: readonly string[]): Promise<unknown> {
-    return this.client.getIssue(key, { fields: [...fields] });
+  public async issue(
+    key: string,
+    fields: (instance: XrayInstance) => readonly string[] | Promise<readonly string[]>,
+  ): Promise<{ readonly issue: unknown; readonly instance: XrayInstance }> {
+    const fetch = async (
+      current: XrayInstance,
+    ): Promise<{ issue: unknown; instance: XrayInstance; stale: boolean }> => {
+      const requested = [...(await fields(current))];
+      const issue = await this.client.getIssue(key, { fields: requested });
+      return { issue, instance: current, stale: lacksRecordedFields([issue], requested, current) };
+    };
+    const first = await fetch(await this.instance());
+    if (!first.stale || this.rediscovered) return first;
+    this.rediscovered = true;
+    return fetch(await this.instance({ refresh: true }));
   }
 
   public resolveFields(instance: XrayInstance, names: readonly string[]): Promise<ResolvedField[]> {
@@ -295,9 +318,32 @@ function quoteKey(key: string): string {
   return jqlString(key);
 }
 
+/** Thrown inside a search when its first page shows the record is stale; never leaves `search`. */
+class StaleRecord extends Error {}
+
+/**
+ * Whether issues came back without any of the recorded Xray fields they were asked for. Jira
+ * leaves a field id it does not know out of the response, without an error, and includes a field
+ * that exists but is empty as `null`. So when none of the requested ids is present on any issue,
+ * the ids are stale — what a reinstall or upgrade looks like from outside.
+ */
+function lacksRecordedFields(
+  issues: readonly unknown[],
+  requested: readonly string[],
+  instance: XrayInstance,
+): boolean {
+  const recorded = new Set(instance.recordedNames().fieldIds);
+  const watched = requested.filter((id) => recorded.has(id));
+  if (issues.length === 0 || watched.length === 0) return false;
+  return !issues.some((issue) => {
+    const fields = (issue as { fields?: unknown } | null)?.fields;
+    return typeof fields === 'object' && fields !== null && watched.some((id) => id in fields);
+  });
+}
+
 /**
  * Whether a failed search is the record's fault: Jira rejected the query and named a field id or
- * issue type the record put there. That is what a reinstall or upgrade looks like from outside.
+ * issue type the record put there, as it does for a renamed issue type in a project scope.
  */
 function isStaleRecordError(error: unknown, instance: XrayInstance): boolean {
   if (!(error instanceof HttpError) || error.status !== 400) return false;

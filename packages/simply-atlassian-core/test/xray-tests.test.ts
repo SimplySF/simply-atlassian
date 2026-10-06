@@ -339,22 +339,43 @@ describe('after a rediscovery', () => {
     return { ...rest, id: id.replace('customfield_93', 'customfield_80') };
   });
 
-  /** Records the old ids, then answers like the reinstalled instance: any old id is a 400. */
+  /**
+   * Like Jira: only the requested fields that exist come back, an empty one as `null`, and an id it
+   * does not know is left out with no error.
+   */
+  function onlyRequested(issue: unknown, requested: string[]): unknown {
+    const { fields = {}, ...rest } = issue as { fields?: Record<string, unknown> };
+    return {
+      ...rest,
+      fields: Object.fromEntries(requested.filter((id) => id in fields).map((id) => [id, fields[id]])),
+    };
+  }
+
+  /** Records the old ids, then answers like the reinstalled instance, which knows only the new ones. */
   async function reinstall(answer: (jql: string) => unknown[]): Promise<void> {
     routeXrayDiscovery(server, { fields: oldFields });
     await backend().instance();
     routeXrayDiscovery(server);
     server.route('/rest/api/2/search', (request, response) => {
       const url = new URL(request.url ?? '/', 'http://x');
-      const stale = /customfield_80\d+/.exec(url.search)?.[0];
-      if (stale !== undefined) {
-        respondJson(response, 400, { errorMessages: [`Field '${stale}' does not exist.`] });
-        return;
-      }
-      const issues = answer(url.searchParams.get('jql') ?? '');
+      const requested = (url.searchParams.get('fields') ?? '').split(',');
+      const issues = answer(url.searchParams.get('jql') ?? '').map((issue) => onlyRequested(issue, requested));
       respondJson(response, 200, { startAt: 0, maxResults: 100, total: issues.length, issues });
     });
+    server.route('/rest/api/2/issue/OM-12', (request, response) => {
+      const requested = (new URL(request.url ?? '/', 'http://x').searchParams.get('fields') ?? '').split(',');
+      respondJson(response, 200, onlyRequested(store.get('OM-12'), requested));
+    });
   }
+
+  it('gets a test with the fresh field ids', async () => {
+    add('OM-12', { steps: [xrayStep(1, 'Open Users', 'List shown')], path: 'O&M' });
+    await reinstall(() => []);
+
+    const { record } = await getXrayTest(backend(), 'OM-12');
+
+    expect(record).toMatchObject({ type: 'Manual', path: '/O&M', steps: [{ action: 'Open Users' }] });
+  });
 
   const testsOnly = (jql: string): unknown[] =>
     jql.includes('key in') ? keysInJql(jql).map((key) => store.get(key)) : [store.get('OM-12')];

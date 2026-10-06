@@ -161,9 +161,12 @@ export async function getXrayTest(
   options: XrayTestOptions = {},
 ): Promise<XrayTestGetResult> {
   if (!isIssueKey(key)) throw new ConfigError(`"${key}" is not an issue key. Pass a test key such as PROJ-12.`);
-  const instance = await backend.instance();
-  const extras = await backend.resolveFields(instance, options.fields ?? []);
-  const issue = await backend.issue(key, testFields(instance, extras));
+  const extrasFor = fieldResolver(backend, options.fields ?? []);
+  const { issue, instance } = await backend.issue(key, async (current) =>
+    testFields(current, await extrasFor(current)),
+  );
+  // The instance the issue was read with: after a rediscovery, the one it started with has stale ids.
+  const extras = await extrasFor(instance);
   assertIsTest(issue, key, instance);
   const { records, notes } = await assembleRecords(backend, instance, [issue], extras);
   const [record] = records;
