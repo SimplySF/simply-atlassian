@@ -224,7 +224,13 @@ export function xrayFixtureIssue(key: string, options: XrayFixtureIssueOptions =
   };
 }
 
-/** A manual step in the current `{ index, fields: { Action, Data, "Expected Result" } }` form. */
+/** A step as Xray DC's steps field returns it, including the `testVersionId` every step carries. */
 export function xrayStep(index: number, action: string, result = '', data = ''): unknown {
-  return { id: index, index, fields: { Action: action, Data: data, 'Expected Result': result }, attachments: [] };
+  return {
+    id: index,
+    index,
+    fields: { Action: action, Data: data, 'Expected Result': result },
+    attachments: [],
+    testVersionId: 1,
+  };
 }

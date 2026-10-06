@@ -151,8 +151,12 @@ const TEST_ROLES: readonly XrayFieldRole[] = [
   'repositoryPath',
 ];
 
-/** Step properties the parser reads; any other is passed through under the step's `extra`. */
-const READ_STEP_PROPERTIES = new Set(['id', 'index', 'fields', 'attachments']);
+/**
+ * Step properties every Xray step carries, read or deliberately left out; any other is passed
+ * through under the step's `extra`. `testVersionId` is Xray's internal id for the test version the
+ * steps belong to, which an export has no use for (`--raw` and `--fields steps` still show it).
+ */
+const KNOWN_STEP_PROPERTIES = new Set(['id', 'index', 'fields', 'attachments', 'testVersionId']);
 
 /** One test, assembled. */
 export async function getXrayTest(
@@ -248,7 +252,7 @@ export function fieldResolver(
 export function stepRows(steps: readonly XrayRecordStep[]): XrayActionStep[] {
   return steps.map((step) =>
     step.action === '' && step.extra !== undefined
-      ? { ...step, action: `(not interpreted: ${Object.keys(step.extra).join(', ')})` }
+      ? { ...step, action: `(not interpreted: ${uninterpretedNames(step.extra).join(', ')})` }
       : step,
   );
 }
@@ -493,7 +497,7 @@ function parseStep(raw: Record<string, unknown>): ParsedStep {
   const unread = (entries: Record<string, unknown>, skip: (name: string) => boolean): Record<string, unknown> =>
     Object.fromEntries(Object.entries(entries).filter(([name]) => !skip(name)));
 
-  const extra = unread(raw, (name) => READ_STEP_PROPERTIES.has(name) || (!nested && read.has(name)));
+  const extra = unread(raw, (name) => KNOWN_STEP_PROPERTIES.has(name) || (!nested && read.has(name)));
   const columnsLeft = nested ? unread(fields, (name) => read.has(name)) : {};
   if (Object.keys(columnsLeft).length > 0) extra.fields = columnsLeft;
 

@@ -222,8 +222,26 @@ describe('step data this version does not interpret', () => {
     expect(notes[0]).toContain('"fields.Comment"');
   });
 
+  it('names a custom column by its column name when it is all a step carries', async () => {
+    add('OM-12', { steps: [{ id: 1, index: 1, fields: { Action: '', Comment: 'see ticket' } }] });
+
+    const { record } = await getXrayTest(backend(), 'OM-12');
+
+    expect(stepRows(record.steps)[0]?.action).toBe('(not interpreted: fields.Comment)');
+  });
+
+  it('leaves out testVersionId, which every step carries, without noting it', async () => {
+    add('OM-12', { steps: [xrayStep(1, 'Open Users'), xrayStep(2, 'Pick a user')] });
+
+    const { record, notes } = await getXrayTest(backend(), 'OM-12');
+
+    expect(record.steps[0]).not.toHaveProperty('extra');
+    expect(JSON.stringify(record)).not.toContain('testVersionId');
+    expect(notes).toEqual([]);
+  });
+
   it('reads the older flat form and keeps only what it does not read', async () => {
-    add('OM-12', { steps: [{ id: 1, index: 1, step: { raw: 'Open' }, data: 'x', result: 'Shown', testVersionId: 7 }] });
+    add('OM-12', { steps: [{ id: 1, index: 1, step: { raw: 'Open' }, data: 'x', result: 'Shown', rank: 7 }] });
 
     const { record } = await getXrayTest(backend(), 'OM-12');
 
@@ -233,7 +251,7 @@ describe('step data this version does not interpret', () => {
       data: 'x',
       result: 'Shown',
       attachments: [],
-      extra: { testVersionId: 7 },
+      extra: { rank: 7 },
     });
   });
 
