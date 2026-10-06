@@ -26,6 +26,8 @@ import {
   routeJiraSearch,
   routeXrayDiscovery,
   startTestServer,
+  XRAY_FIXTURE_FIELDS,
+  XRAY_FIXTURE_IDS,
   type TestServer,
 } from '../src/testing.js';
 
@@ -70,10 +72,13 @@ describe('scope resolution', () => {
     expect(() => resolveScope({ project: 'OM-1' })).toThrow(/not a project key/);
   });
 
-  it('spells the repository root as "" and passes other paths as given', () => {
+  it('spells the repository root as "" and every other path one way', () => {
     expect(folderArgument('/')).toBe('');
+    expect(folderArgument(' // ')).toBe('');
     expect(folderArgument('/O&M/Accounts')).toBe('/O&M/Accounts');
-    expect(folderArgument('O&M/Accounts')).toBe('O&M/Accounts');
+    expect(folderArgument('O&M/Accounts')).toBe('/O&M/Accounts');
+    expect(folderArgument('/O&M/Accounts/')).toBe('/O&M/Accounts');
+    expect(folderArgument('//O&M//Accounts')).toBe('/O&M/Accounts');
   });
 });
 
@@ -92,6 +97,18 @@ describe('scope and filter JQL', () => {
     );
   });
 
+  it('scopes by path even when discovery did not find the path field, which the function never uses', async () => {
+    routeXrayDiscovery(server, {
+      fields: XRAY_FIXTURE_FIELDS.filter((field) => (field as { id: string }).id !== XRAY_FIXTURE_IDS.repositoryPath),
+    });
+    const instance = await backend().instance();
+
+    expect(instance.field('repositoryPath')).toBeUndefined();
+    expect(scopeJql(resolveScope({ project: 'OM', path: 'O&M/' }), instance)).toBe(
+      'issue in testRepositoryFolderTests("OM", "/O&M", "false")',
+    );
+  });
+
   it('parenthesises --jql, so an OR inside it cannot widen the scope', () => {
     expect(combineJql('S', { jql: 'labels = a OR labels = b' })).toBe(
       'S AND (labels = a OR labels = b) ORDER BY key ASC',
@@ -103,11 +120,26 @@ describe('scope and filter JQL', () => {
       'S AND (labels = a) ORDER BY created DESC',
     );
     expect(combineJql('S', { jql: 'ORDER BY rank' })).toBe('S ORDER BY rank');
+    expect(combineJql('S', { jql: '(labels = a)order by rank' })).toBe('S AND ((labels = a)) ORDER BY rank');
   });
 
-  it('escapes --search as a JQL string', () => {
+  it('leaves an "order by" inside a quoted string alone', () => {
+    expect(combineJql('S', { jql: 'summary ~ "sort order by date"' })).toBe(
+      'S AND (summary ~ "sort order by date") ORDER BY key ASC',
+    );
+    expect(combineJql('S', { jql: "summary ~ 'say \\' order by x' ORDER BY created" })).toBe(
+      "S AND (summary ~ 'say \\' order by x') ORDER BY created",
+    );
+    expect(combineJql('S', { jql: 'reorder by = 1' })).toBe('S AND (reorder by = 1) ORDER BY key ASC');
+  });
+
+  it('escapes --search for Lucene and then as a JQL string, so it matches as typed', () => {
+    // Lucene sees `say \"hi\" \\ bye`; each backslash and quote is escaped again for JQL.
     expect(combineJql('S', { search: 'say "hi" \\ bye' })).toBe(
-      'S AND (summary ~ "say \\"hi\\" \\\\ bye" OR description ~ "say \\"hi\\" \\\\ bye") ORDER BY key ASC',
+      'S AND (summary ~ "say \\\\\\"hi\\\\\\" \\\\\\\\ bye" OR description ~ "say \\\\\\"hi\\\\\\" \\\\\\\\ bye") ORDER BY key ASC',
+    );
+    expect(combineJql('S', { search: 'C++ foo-bar *' })).toBe(
+      'S AND (summary ~ "C\\\\+\\\\+ foo\\\\-bar \\\\*" OR description ~ "C\\\\+\\\\+ foo\\\\-bar \\\\*") ORDER BY key ASC',
     );
     expect(jqlString('line\nbreak')).toBe('"line break"');
   });
@@ -143,7 +175,7 @@ describe('searchScopedTests', () => {
     expect(result.issues).toEqual([{ key: 'OM-1' }, { key: 'OM-32' }]);
   });
 
-  it('falls back to the REST API when the JQL function is missing, with the same result', async () => {
+  it('falls back to the REST API when the JQL function is missing, validating the filters once', async () => {
     const tests = [{ key: 'OM-1' }, { key: 'OM-2' }];
     server.route('/rest/api/2/search', (request, response) => {
       const jql = new URL(request.url ?? '/', 'http://x').searchParams.get('jql') ?? '';
@@ -170,7 +202,71 @@ describe('searchScopedTests', () => {
 
     expect(result.issues).toEqual(tests);
     expect(result.complete).toBe(true);
-    expect(searchedJql()[1]).toBe('key in ("OM-1", "OM-2") AND (labels = x) ORDER BY key ASC');
+    expect(searchedJql().slice(1)).toEqual([
+      '(labels = x)',
+      'key in ("OM-1", "OM-2") AND (labels = x) ORDER BY key ASC',
+    ]);
+  });
+
+  describe('on the fallback route', () => {
+    /** A plan whose JQL function is missing, and whose REST answer lists `keys` in that order. */
+    function fallbackPlan(keys: string[], onSearch?: (jql: string) => unknown): void {
+      server.route('/rest/api/2/search', (request, response) => {
+        const url = new URL(request.url ?? '/', 'http://x');
+        const jql = url.searchParams.get('jql') ?? '';
+        if (jql.includes('testPlanTests')) {
+          respondJson(response, 400, { errorMessages: ["Unable to find JQL function 'testPlanTests(OM-7)'."] });
+          return;
+        }
+        const error = onSearch?.(jql);
+        if (error !== undefined) {
+          respondJson(response, 400, error);
+          return;
+        }
+        const all = keysInJql(jql).map((key) => ({ key }));
+        const maxResults = Number(url.searchParams.get('maxResults'));
+        respondJson(response, 200, { issues: all.slice(0, maxResults), total: all.length, startAt: 0, maxResults });
+      });
+      server.route('/rest/raven/1.0/api/testplan/OM-7/test', (req, res) => {
+        const page = Number(new URL(req.url ?? '/', 'http://x').searchParams.get('page'));
+        respondJson(
+          res,
+          200,
+          keys.slice((page - 1) * 100, page * 100).map((key) => ({ key })),
+        );
+      });
+    }
+
+    it('orders across chunks by key, so limit keeps the same tests as the JQL route', async () => {
+      const keys = Array.from({ length: 150 }, (_value, index) => `OM-${150 - index}`);
+      fallbackPlan(['AB-2', ...keys]);
+
+      const result = await searchScopedTests(backend(), { plan: 'OM-7' }, {}, fields, { limit: 120 });
+
+      const returned = result.issues.map((issue) => (issue as { key: string }).key);
+      expect(returned.slice(0, 3)).toEqual(['AB-2', 'OM-1', 'OM-2']);
+      expect(returned).toHaveLength(120);
+      expect(returned.at(-1)).toBe('OM-119');
+      expect(result.complete).toBe(false);
+    });
+
+    it('refuses an ORDER BY in --jql, which cannot apply across chunks', async () => {
+      fallbackPlan(['OM-1']);
+
+      await expect(
+        searchScopedTests(backend(), { plan: 'OM-7' }, { jql: 'labels = x ORDER BY created' }, fields, { limit: 25 }),
+      ).rejects.toThrow(/no testPlanTests JQL function.*Remove the ORDER BY/);
+    });
+
+    it('reports a mistake in --jql rather than returning no tests', async () => {
+      fallbackPlan(['OM-1'], (jql) =>
+        jql.startsWith('key in') ? undefined : { errorMessages: ["Field 'labelz' does not exist."] },
+      );
+
+      await expect(
+        searchScopedTests(backend(), { plan: 'OM-7' }, { jql: 'labelz = x' }, fields, { limit: 25 }),
+      ).rejects.toThrow(/labelz/);
+    });
   });
 
   it('falls back for a repository path by resolving the folder id from the tree', async () => {

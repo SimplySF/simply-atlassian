@@ -77,10 +77,17 @@ export function resolveScope(scope: XrayScope): ResolvedScope {
   return { kind: 'path', project, path: folderArgument(scope.path), recursive: scope.recursive === true };
 }
 
-/** `/` is the repository root, which the JQL function spells `""`; other paths pass as given. */
+/**
+ * One spelling for a repository folder, whichever route reads it: a leading slash, no trailing
+ * slash, no empty segments — the form Xray's REST API and the path field use. The JQL function
+ * accepts it with or without the leading slash, and spells the root `""`.
+ */
 export function folderArgument(folder: string): string {
-  const trimmed = folder.trim();
-  return /^\/+$/.test(trimmed) ? '' : trimmed;
+  const segments = folder
+    .trim()
+    .split('/')
+    .filter((segment) => segment !== '');
+  return segments.length === 0 ? '' : `/${segments.join('/')}`;
 }
 
 export function assertProjectKey(value: string): string {
@@ -97,8 +104,8 @@ export function scopeJql(scope: ResolvedScope, instance: XrayInstance): string {
       return `issue in ${SCOPE_FUNCTIONS.plan}(${jqlString(scope.key)})`;
     case 'set':
       return `issue in ${SCOPE_FUNCTIONS.set}(${jqlString(scope.key)})`;
+    // The function finds the folder itself, so the path field need not have been discovered.
     case 'path':
-      instance.requireField('repositoryPath');
       return (
         `issue in ${SCOPE_FUNCTIONS.path}(${jqlString(scope.project)}, ${jqlString(scope.path)}, ` +
         `${jqlString(String(scope.recursive))})`
@@ -112,34 +119,70 @@ export function scopeJql(scope: ResolvedScope, instance: XrayInstance): string {
  * JQL requires it. Without one, results are ordered by key so a paged export is stable.
  */
 export function combineJql(scopeClause: string, filters: XrayFilters): string {
-  const parts = [scopeClause];
-  let order = 'key ASC';
+  const { clauses, order } = filterJql(filters);
+  return `${[scopeClause, ...clauses].join(' AND ')} ORDER BY ${order ?? 'key ASC'}`;
+}
 
-  const userJql = filters.jql?.trim();
-  if (userJql !== undefined && userJql !== '') {
-    const match = /(?:^|\s)order\s+by\s+([\s\S]+)$/i.exec(userJql);
-    const condition = match === null ? userJql : userJql.slice(0, match.index).trim();
-    if (match?.[1] !== undefined) order = match[1].trim();
-    if (condition !== '') parts.push(`(${condition})`);
-  }
+/** The filters as parenthesised clauses, and the `ORDER BY` the caller's `--jql` asked for, if any. */
+function filterJql(filters: XrayFilters): { readonly clauses: string[]; readonly order?: string } {
+  const clauses: string[] = [];
+  const { condition, order } = splitOrderBy(filters.jql?.trim() ?? '');
+  if (condition !== '') clauses.push(`(${condition})`);
 
   const search = filters.search?.trim();
   if (search !== undefined && search !== '') {
-    parts.push(`(summary ~ ${jqlString(search)} OR description ~ ${jqlString(search)})`);
+    const term = jqlString(luceneLiteral(search));
+    clauses.push(`(summary ~ ${term} OR description ~ ${term})`);
   }
 
   const linked = (filters.linkedTo ?? []).map((key) => assertKey(key, '--linked-to'));
   if (linked.length > 0) {
-    parts.push(`(${linked.map((key) => `issue in linkedIssues(${jqlString(key)})`).join(' OR ')})`);
+    clauses.push(`(${linked.map((key) => `issue in linkedIssues(${jqlString(key)})`).join(' OR ')})`);
   }
+  return { clauses, order };
+}
 
-  return `${parts.join(' AND ')} ORDER BY ${order}`;
+/**
+ * Splits a trailing `ORDER BY` off a query. Only one outside a quoted string counts, so
+ * `summary ~ "sort order by date"` is left whole; a backslash escapes the next character.
+ */
+function splitOrderBy(jql: string): { readonly condition: string; readonly order?: string } {
+  const orderBy = /order\s+by\s+/iy;
+  let quote: string | undefined;
+  for (let index = 0; index < jql.length; index += 1) {
+    const char = jql[index];
+    if (quote !== undefined) {
+      if (char === '\\') index += 1;
+      else if (char === quote) quote = undefined;
+    } else if (char === '"' || char === "'") {
+      quote = char;
+    } else if (index === 0 || /[\s)]/.test(jql[index - 1] ?? '')) {
+      orderBy.lastIndex = index;
+      if (orderBy.test(jql)) {
+        const order = jql.slice(orderBy.lastIndex).trim();
+        return { condition: jql.slice(0, index).trim(), order: order === '' ? undefined : order };
+      }
+    }
+  }
+  return { condition: jql };
+}
+
+/**
+ * `~` is a Lucene text query, where `+ - & | ! ( ) { } [ ] ^ " ~ * ? : \ /` are operators. Each is
+ * escaped so `--search C++` or `--search foo-bar` matches the text as typed.
+ */
+function luceneLiteral(text: string): string {
+  return text.replaceAll(/[+\-&|!(){}[\]^"~*?:\\/]/g, (char) => `\\${char}`);
 }
 
 /**
  * Searches the tests a scope and filters select. JQL first; if the installed Xray lacks the scope's
  * JQL function, the scope's keys come from Xray's REST API instead and are searched in chunks of
- * `key in (…)`, so the filters still apply on the server. Both routes give the same result.
+ * `key in (…)`, so the filters still apply on the server.
+ *
+ * The routes match in what they return and how `limit` truncates it, because the fallback sorts
+ * every key before chunking, the way `ORDER BY key ASC` would. What it cannot do is apply a caller's
+ * own `ORDER BY` across chunks, so it refuses one rather than return a different order.
  */
 export async function searchScopedTests(
   backend: XrayBackend,
@@ -162,8 +205,38 @@ export async function searchScopedTests(
     if (resolved.kind === 'project' || !isMissingFunction(error, SCOPE_FUNCTIONS[resolved.kind])) throw error;
   }
 
-  const keys = await scopeKeysByRest(backend, resolved);
+  const missing = SCOPE_FUNCTIONS[resolved.kind];
+  if (filterJql(filters).order !== undefined) {
+    throw new ConfigError(
+      `This Xray has no ${missing} JQL function, so the tests are fetched by key and can only be ordered ` +
+        'by key. Remove the ORDER BY from --jql.',
+    );
+  }
+  await validateFilters(backend, filters);
+  const keys = [...(await scopeKeysByRest(backend, resolved))].sort(compareKeys);
   return searchKeyChunks(backend, keys, filters, fields, options);
+}
+
+/**
+ * The key chunks are searched without validation, so a key the caller cannot see is skipped rather
+ * than fatal — which would also hide a typo in the filters. One validated search of the filters
+ * alone first reports it, the way the JQL route would.
+ */
+async function validateFilters(backend: XrayBackend, filters: XrayFilters): Promise<void> {
+  const { clauses } = filterJql(filters);
+  if (clauses.length === 0) return;
+  await backend.search(() => ({ jql: clauses.join(' AND '), fields: ['key'] }), { limit: 1 });
+}
+
+/** `key ASC` order: by project, then by number, so `OM-9` comes before `OM-10`. */
+function compareKeys(left: string, right: string): number {
+  const split = (key: string): [string, number] => {
+    const dash = key.lastIndexOf('-');
+    return [key.slice(0, dash), Number(key.slice(dash + 1))];
+  };
+  const [leftProject, leftNumber] = split(left);
+  const [rightProject, rightNumber] = split(right);
+  return leftProject === rightProject ? leftNumber - rightNumber : leftProject < rightProject ? -1 : 1;
 }
 
 async function scopeKeysByRest(
