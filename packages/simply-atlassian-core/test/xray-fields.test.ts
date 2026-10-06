@@ -21,7 +21,13 @@ import process from 'node:process';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ConfigError } from '../src/errors.js';
 import { createXrayBackend, type XrayBackend } from '../src/xray-backend.js';
-import { defaultXrayCacheDir, loadXrayRecord, XRAY_FIELD_ROLES, xrayRecordPath } from '../src/xray-fields.js';
+import {
+  compareVersions,
+  defaultXrayCacheDir,
+  loadXrayRecord,
+  XRAY_FIELD_ROLES,
+  xrayRecordPath,
+} from '../src/xray-fields.js';
 import {
   respondJson,
   routeJiraSearch,
@@ -29,6 +35,7 @@ import {
   startTestServer,
   XRAY_FIXTURE_FIELDS,
   XRAY_FIXTURE_IDS,
+  XRAY_FIXTURE_ISSUE_TYPES,
   type TestServer,
 } from '../src/testing.js';
 
@@ -82,6 +89,64 @@ describe('Xray field discovery', () => {
     });
   });
 
+  it('recognises every type by its plugin icon alone, with hyphenated file names such as test-set.png', async () => {
+    routeXrayDiscovery(server, {
+      issueTypes: XRAY_FIXTURE_ISSUE_TYPES.map((type) => ({ ...type, description: 'Edited by an administrator.' })),
+    });
+
+    const instance = await backend().instance();
+
+    expect(instance.record.issueTypes).toEqual({
+      test: 'Prüfung',
+      testSet: 'Prüfsammlung',
+      testPlan: 'Prüfplan',
+      testExecution: 'Prüflauf',
+      precondition: 'Vorbedingung',
+    });
+  });
+
+  it('recognises a Precondition spelled with or without a hyphen, by description or icon', async () => {
+    const icon = 'https://jira.example.test/download/resources/com.xpandit.plugins.xray/images';
+    const discover = async (type: Record<string, string>): Promise<string | undefined> => {
+      routeXrayDiscovery(server, { issueTypes: [{ id: '1', ...type }] });
+      return (await backend().instance({ refresh: true })).record.issueTypes.precondition;
+    };
+
+    expect(await discover({ name: 'A', description: 'Represents a Precondition', iconUrl: '/x.png' })).toBe('A');
+    expect(await discover({ name: 'B', description: 'Represents a Pre-Condition', iconUrl: '/x.png' })).toBe('B');
+    expect(await discover({ name: 'C', description: '', iconUrl: `${icon}/pre-condition.png` })).toBe('C');
+    expect(await discover({ name: 'D', description: '', iconUrl: `${icon}/precondition.png` })).toBe('D');
+  });
+
+  // Jira DC serves an issue type whose icon was replaced as an uploaded avatar, not a plugin resource.
+  describe('when the icon is an avatar', () => {
+    const avatar = (id: number): string => `/secure/viewavatar?size=xsmall&avatarId=${id}&avatarType=issuetype`;
+    const withAvatars = (descriptions: Record<string, string>): unknown[] =>
+      XRAY_FIXTURE_ISSUE_TYPES.map((type, index) => ({
+        ...type,
+        iconUrl: avatar(10_300 + index),
+        description: descriptions[type.name] ?? type.description,
+      }));
+
+    it('still recognises a type by its default description', async () => {
+      routeXrayDiscovery(server, { issueTypes: withAvatars({}) });
+
+      const instance = await backend().instance();
+
+      expect(instance.record.issueTypes.test).toBe('Prüfung');
+      expect(instance.record.issueTypes.testPlan).toBe('Prüfplan');
+    });
+
+    it('does not guess a type whose description was edited too, and asks for an override', async () => {
+      routeXrayDiscovery(server, { issueTypes: withAvatars({ Prüfung: 'Unsere Testfälle.' }) });
+
+      const instance = await backend().instance();
+
+      expect(instance.record.issueTypes.test).toBeUndefined();
+      expect(() => instance.requireIssueType('test')).toThrow(/"overrides": \{ "issueTypes": \{ "test": "Test" \} \}/);
+    });
+  });
+
   it('records Xray fields with no role, so they can still be requested by name', async () => {
     routeXrayDiscovery(server);
 
@@ -93,15 +158,47 @@ describe('Xray field discovery', () => {
     expect(record.xrayVersion).toBe('7.4.0');
   });
 
-  it('names the role and the Xray release that introduced it when an older instance lacks it', async () => {
-    routeXrayDiscovery(server, {
-      fields: XRAY_FIXTURE_FIELDS.filter((field) => (field as { id: string }).id !== XRAY_FIXTURE_IDS.repositoryPath),
+  describe('a missing role', () => {
+    const withoutPath = XRAY_FIXTURE_FIELDS.filter(
+      (field) => (field as { id: string }).id !== XRAY_FIXTURE_IDS.repositoryPath,
+    );
+
+    it('on an Xray that has had the field, says discovery missed it and gives the remedies', async () => {
+      routeXrayDiscovery(server, { fields: withoutPath, version: '7.4.0' });
+
+      const instance = await backend().instance();
+
+      expect(() => instance.requireField('repositoryPath')).toThrow(ConfigError);
+      expect(() => instance.requireField('repositoryPath')).toThrow(
+        /no Xray "repositoryPath" field.*\(7\.4\.0\) has had it since 3\.0\.0, so discovery missed it.*--refresh.*"overrides"/s,
+      );
     });
 
-    const instance = await backend().instance();
+    it('on an Xray older than the field, says an upgrade is needed rather than a refresh', async () => {
+      routeXrayDiscovery(server, { fields: withoutPath, version: '2.4.1' });
 
-    expect(() => instance.requireField('repositoryPath')).toThrow(ConfigError);
-    expect(() => instance.requireField('repositoryPath')).toThrow(/"repositoryPath".*3\.x–4\.x/);
+      const instance = await backend().instance();
+
+      expect(() => instance.requireField('repositoryPath')).toThrow(
+        /\(2\.4\.1\) predates 3\.0\.0, which added it, so this needs an Xray upgrade\.$/,
+      );
+    });
+
+    it('with no readable version, names the release and the remedies', async () => {
+      routeXrayDiscovery(server, { fields: withoutPath });
+      server.route('/rest/plugins/1.0/com.xpandit.plugins.xray-key', (_req, res) => respondJson(res, 401, {}));
+
+      const instance = await backend().instance();
+
+      expect(() => instance.requireField('repositoryPath')).toThrow(/Xray added it in 3\.0\.0\. Run .*--refresh/s);
+    });
+  });
+
+  it("orders release numbers numerically, ignoring the tracker's R prefix", () => {
+    expect(compareVersions('10.0.1', '9.9')).toBeGreaterThan(0);
+    expect(compareVersions('R3.0.0', '3.0')).toBe(0);
+    expect(compareVersions('2.4.1', '3.0.0')).toBeLessThan(0);
+    expect(compareVersions('7.4.0-m1', '7.4.0')).toBe(0);
   });
 
   it('records a version it cannot read as null rather than failing discovery', async () => {

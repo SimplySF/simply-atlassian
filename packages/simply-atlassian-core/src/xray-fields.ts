@@ -48,8 +48,11 @@ export interface XrayFieldRoleSpec {
   readonly schemaType: string;
   /** The issue type that carries the field. */
   readonly issueType: XrayIssueTypeRole;
-  /** The Xray release that introduced it, named when an older instance lacks the field. */
-  readonly introducedIn: string;
+  /**
+   * The Xray Server release that added the field, set only where Xray's own issue tracker
+   * (jira.getxray.app) records it. A missing-field error compares it with the installed version.
+   */
+  readonly introducedIn?: string;
 }
 
 /**
@@ -57,31 +60,25 @@ export interface XrayFieldRoleSpec {
  * or translate a field, but the app fixes its schema type.
  */
 export const XRAY_FIELD_ROLES: readonly XrayFieldRoleSpec[] = [
-  { role: 'testType', schemaType: 'test-type-custom-field', issueType: 'test', introducedIn: '1.x' },
-  { role: 'steps', schemaType: 'manual-test-steps-custom-field', issueType: 'test', introducedIn: '1.x' },
-  { role: 'cucumberType', schemaType: 'automated-test-type-custom-field', issueType: 'test', introducedIn: '2.x' },
-  { role: 'cucumberScenario', schemaType: 'steps-editor-custom-field', issueType: 'test', introducedIn: '2.x' },
-  { role: 'genericDefinition', schemaType: 'path-editor-custom-field', issueType: 'test', introducedIn: '1.x' },
-  { role: 'preconditions', schemaType: 'test-precondition-custom-field', issueType: 'test', introducedIn: '1.x' },
-  { role: 'testSets', schemaType: 'test-sets-custom-field', issueType: 'test', introducedIn: '1.x' },
+  { role: 'testType', schemaType: 'test-type-custom-field', issueType: 'test' },
+  { role: 'steps', schemaType: 'manual-test-steps-custom-field', issueType: 'test' },
+  { role: 'cucumberType', schemaType: 'automated-test-type-custom-field', issueType: 'test' },
+  { role: 'cucumberScenario', schemaType: 'steps-editor-custom-field', issueType: 'test' },
+  { role: 'genericDefinition', schemaType: 'path-editor-custom-field', issueType: 'test' },
+  { role: 'preconditions', schemaType: 'test-precondition-custom-field', issueType: 'test' },
+  { role: 'testSets', schemaType: 'test-sets-custom-field', issueType: 'test' },
   {
     role: 'testPlans',
     schemaType: 'test-plans-associated-with-test-custom-field',
     issueType: 'test',
-    introducedIn: '1.x',
   },
-  {
-    role: 'repositoryPath',
-    schemaType: 'test-repository-path-custom-field',
-    issueType: 'test',
-    introducedIn: '3.x–4.x',
-  },
-  { role: 'testSetTests', schemaType: 'test-sets-tests-custom-field', issueType: 'testSet', introducedIn: '1.x' },
+  // XRAY-1251, fixed in R3.0.0: "I can see in a Custom Field, the Test Repository folder".
+  { role: 'repositoryPath', schemaType: 'test-repository-path-custom-field', issueType: 'test', introducedIn: '3.0.0' },
+  { role: 'testSetTests', schemaType: 'test-sets-tests-custom-field', issueType: 'testSet' },
   {
     role: 'testPlanTests',
     schemaType: 'tests-associated-with-test-plan-custom-field',
     issueType: 'testPlan',
-    introducedIn: '1.x',
   },
 ];
 
@@ -95,9 +92,12 @@ interface IssueTypeRoleSpec {
 }
 
 /**
- * Issue types can be renamed in Xray's settings too, so they are recognised the way fields are: by
- * what the app fixes. Each Xray type's icon is served by the plugin, and its default description
- * begins "Represents a …". Most specific first, because every token contains "test".
+ * Issue types can be renamed in Xray's settings too, so they are recognised by what the app
+ * installs rather than by name: a default description beginning "Represents a …", or, failing that,
+ * an icon served from the plugin's own resources. An administrator can edit either; a type that
+ * matches neither — say an edited description and an icon replaced by an uploaded avatar — is not
+ * recognised, and the error asks for an `overrides` pin. Most specific first, because every token
+ * contains "test".
  */
 const ISSUE_TYPE_ROLES: readonly IssueTypeRoleSpec[] = [
   {
@@ -265,10 +265,25 @@ export class XrayInstance {
     const id = this.field(role);
     if (id !== undefined) return id;
     const spec = XRAY_FIELD_ROLES.find((candidate) => candidate.role === role);
+    const missing =
+      `This instance has no Xray "${role}" field: no field has the schema type ` +
+      `${XRAY_SCHEMA_PREFIX}${spec?.schemaType ?? role}.`;
+    const remedy =
+      'Run "jira xray fields --refresh" to rediscover. If the field exists but was not recognised, pin its ' +
+      `id in the instance record at ${this.path}:\n  "overrides": { "fields": { "${role}": "customfield_…" } }`;
+    const installed = this.record.xrayVersion;
+    const added = spec?.introducedIn;
+    if (installed === null || added === undefined) {
+      const context = installed === null ? (added === undefined ? '' : ` Xray added it in ${added}.`) : '';
+      throw new ConfigError(`${missing}${context} ${remedy}`);
+    }
+    if (compareVersions(installed, added) < 0) {
+      throw new ConfigError(
+        `${missing} The installed Xray (${installed}) predates ${added}, which added it, so this needs an Xray upgrade.`,
+      );
+    }
     throw new ConfigError(
-      `This instance has no Xray "${role}" field (schema type ${XRAY_SCHEMA_PREFIX}${spec?.schemaType ?? role}). ` +
-        `Xray added it in ${spec?.introducedIn ?? 'a later release'}, so the installed Xray may be older. If the ` +
-        'field does exist, run "jira xray fields --refresh" to rediscover.',
+      `${missing} The installed Xray (${installed}) has had it since ${added}, so discovery missed it. ${remedy}`,
     );
   }
 
@@ -435,6 +450,22 @@ function issueTypeRole(type: JiraIssueType): XrayIssueTypeRole | undefined {
   if (!icon.includes(XRAY_PLUGIN_KEY)) return undefined;
   const file = (icon.split('?')[0]?.split('/').pop() ?? '').toLowerCase().replaceAll(/[^a-z]/g, '');
   return ISSUE_TYPE_ROLES.find((spec) => file.includes(spec.iconToken))?.role;
+}
+
+/** Orders dotted release numbers numerically; Xray's tracker writes some as `R3.0.0`. */
+export function compareVersions(left: string, right: string): number {
+  const parts = (version: string): number[] =>
+    version
+      .replace(/^[^\d]*/, '')
+      .split(/[.-]/)
+      .map((part) => Number.parseInt(part, 10))
+      .map((part) => (Number.isNaN(part) ? 0 : part));
+  const [a, b] = [parts(left), parts(right)];
+  for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
+    const difference = (a[index] ?? 0) - (b[index] ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return 0;
 }
 
 function splitCandidates<R extends string>(

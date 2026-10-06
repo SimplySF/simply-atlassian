@@ -124,15 +124,16 @@ export const XRAY_FIXTURE_IDS = {
   testPlanTests: 'customfield_93011',
 } as const;
 
-const XRAY_ICON = '/download/resources/com.xpandit.plugins.xray/images/issuetypes';
+/** Where Xray DC serves its issue-type icons, as observed on a live instance: hyphenated file names. */
+const XRAY_ICON = 'https://jira.example.test/download/resources/com.xpandit.plugins.xray/images';
 
 /** Renamed Xray issue types, recognisable only by icon and description. */
 export const XRAY_FIXTURE_ISSUE_TYPES = [
   { id: '1', name: 'Story', description: 'A user story.', iconUrl: '/images/icons/issuetypes/story.svg' },
   { id: '10100', name: 'Prüfung', description: 'Represents a Test', iconUrl: `${XRAY_ICON}/test.png` },
-  { id: '10101', name: 'Prüfsammlung', description: 'Represents a Test Set', iconUrl: `${XRAY_ICON}/testset.png` },
-  { id: '10102', name: 'Prüfplan', description: 'Represents a Test Plan', iconUrl: `${XRAY_ICON}/testplan.png` },
-  { id: '10103', name: 'Prüflauf', description: '', iconUrl: `${XRAY_ICON}/testexecution.png` },
+  { id: '10101', name: 'Prüfsammlung', description: 'Represents a Test Set', iconUrl: `${XRAY_ICON}/test-set.png` },
+  { id: '10102', name: 'Prüfplan', description: 'Represents a Test Plan', iconUrl: `${XRAY_ICON}/test-plan.png` },
+  { id: '10103', name: 'Prüflauf', description: '', iconUrl: `${XRAY_ICON}/test-execution.png` },
   {
     id: '10104',
     name: 'Vorbedingung',
