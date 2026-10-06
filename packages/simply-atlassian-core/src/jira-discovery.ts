@@ -58,3 +58,23 @@ export async function listFields(client: JiraClient, filter: FieldFilter = {}): 
 export function fieldType(field: JiraField): string | undefined {
   return field.schema?.type;
 }
+
+/** An issue type as the instance reports it. */
+export interface JiraIssueType {
+  readonly id?: string;
+  readonly name?: string;
+  readonly description?: string;
+  readonly iconUrl?: string;
+  readonly subtask?: boolean;
+}
+
+/**
+ * Lists every issue type. Unpaginated, like the field list. An app's issue types can be renamed,
+ * so a caller recognising them reads the icon and description the app installs rather than the
+ * name. An administrator can edit those too, but rarely does; a caller should offer a way to pin
+ * the type for when they have been.
+ */
+export async function listIssueTypes(client: JiraClient): Promise<JiraIssueType[]> {
+  const response = (await client.getIssueTypes()) as JiraIssueType[] | { values?: JiraIssueType[] };
+  return Array.isArray(response) ? response : (response.values ?? []);
+}

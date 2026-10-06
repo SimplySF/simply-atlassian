@@ -83,7 +83,14 @@ export { jiraIssueColumns, type JiraIssueRow } from './issue-table.js';
 export { mergeFields, parseBodyInput } from './json-input.js';
 export { appendMentions, resolveMentions, type ResolvedMention } from './mentions.js';
 export { formatKeyValue, formatTable, type Column, type Pair } from './output.js';
-export { fieldType, listFields, type FieldFilter, type JiraField } from './jira-discovery.js';
+export {
+  fieldType,
+  listFields,
+  listIssueTypes,
+  type FieldFilter,
+  type JiraField,
+  type JiraIssueType,
+} from './jira-discovery.js';
 export { buildSprintCreateBody, prepareSprintUpdate, type Sprint, type SprintInput } from './jira-agile.js';
 export { buildRemoteLinkBody, describeRemoteLink, type RemoteLink, type RemoteLinkInput } from './jira-remote-links.js';
 export { markdownToStorage } from './markdown-storage.js';
@@ -158,3 +165,76 @@ export {
   type PageUpdatePlan,
   type UpdatePageInput,
 } from './confluence-pages.js';
+
+// --- Xray (Server/Data Center, read-only): docs/design/0015-jira-xray.md ---
+export {
+  createXrayBackend,
+  jqlString,
+  XRAY_PAGE_SIZE,
+  XrayServerBackend,
+  type RawXrayFolder,
+  type XrayBackend,
+  type XrayBackendOptions,
+  type XrayQuery,
+  type XraySearchOptions,
+  type XraySearchProgress,
+  type XraySearchResult,
+} from './xray-backend.js';
+export {
+  listXrayContainers,
+  listXrayFolders,
+  xrayFieldRows,
+  xrayIssueTypeRows,
+  type XrayContainerListInput,
+  type XrayContainerListResult,
+  type XrayContainerRow,
+  type XrayFieldRow,
+  type XrayFolderListInput,
+  type XrayIssueTypeRow,
+} from './xray-catalogue.js';
+export {
+  defaultXrayCacheDir,
+  discoverXray,
+  loadXrayRecord,
+  resolveFieldNames,
+  saveXrayRecord,
+  XRAY_FIELD_ROLES,
+  XRAY_SCHEMA_PREFIX,
+  XrayInstance,
+  xrayRecordPath,
+  type ResolvedField,
+  type XrayFieldRole,
+  type XrayFieldRoleSpec,
+  type XrayInstanceRecord,
+  type XrayIssueTypeRole,
+} from './xray-fields.js';
+export { flattenFolders, type XrayFolder } from './xray-folders.js';
+export {
+  combineJql,
+  folderArgument,
+  resolveScope,
+  scopeJql,
+  searchScopedTests,
+  type XrayFilters,
+  type XrayScope,
+} from './xray-scope.js';
+export {
+  displayValue,
+  exportXrayTests,
+  getXrayTest,
+  listXrayTests,
+  renderXrayMarkdown,
+  simplifyFieldValue,
+  stepRows,
+  type XrayActionStep,
+  type XrayExportInput,
+  type XrayExportResult,
+  type XrayLinkRecord,
+  type XrayRecordStep,
+  type XrayTestGetResult,
+  type XrayTestListInput,
+  type XrayTestListResult,
+  type XrayTestOptions,
+  type XrayTestRecord,
+  type XrayTestRow,
+} from './xray-tests.js';
