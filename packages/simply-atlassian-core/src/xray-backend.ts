@@ -46,8 +46,17 @@ export interface XraySearchProgress {
 
 export interface XraySearchOptions {
   readonly limit: number;
-  /** Called with each page as it arrives, so an export can stream instead of buffering. */
-  readonly onPage?: (issues: unknown[], progress: XraySearchProgress) => Promise<void> | void;
+  /**
+   * Called with each page as it arrives, so an export can stream instead of buffering. `instance`
+   * is the record the page was searched with, which after a rediscovery is not the one the caller
+   * started with: read the page's fields through it.
+   */
+  readonly onPage?: (issues: unknown[], progress: XraySearchProgress, instance: XrayInstance) => Promise<void> | void;
+}
+
+/** A search's issues, with the instance record the query was built from. */
+export interface XraySearchResult extends JiraSearchResult {
+  readonly instance: XrayInstance;
 }
 
 /** A node of the test repository's folder tree, as Xray reports it. */
@@ -68,8 +77,14 @@ export interface RawXrayFolder {
 export interface XrayBackend {
   /** The instance record, discovered and saved on first use; `refresh` rediscovers. */
   instance(options?: { readonly refresh?: boolean }): Promise<XrayInstance>;
-  /** Follows search pages, rediscovering once if a recorded field or type has gone stale. */
-  search(build: (instance: XrayInstance) => XrayQuery, options: XraySearchOptions): Promise<JiraSearchResult>;
+  /**
+   * Follows search pages, rediscovering once if a recorded field or type has gone stale. The result
+   * names the instance the query was built from, so the caller reads fields with the same ids.
+   */
+  search(
+    build: (instance: XrayInstance) => XrayQuery | Promise<XrayQuery>,
+    options: XraySearchOptions,
+  ): Promise<XraySearchResult>;
   /** Fetches issues by key in chunks; keys the caller cannot see are simply absent. */
   issuesByKeys(keys: readonly string[], fields: readonly string[]): Promise<Map<string, unknown>>;
   /** One issue by key, as Jira returns it. */
@@ -141,23 +156,28 @@ export class XrayServerBackend implements XrayBackend {
   }
 
   public async search(
-    build: (instance: XrayInstance) => XrayQuery,
+    build: (instance: XrayInstance) => XrayQuery | Promise<XrayQuery>,
     options: XraySearchOptions,
-  ): Promise<JiraSearchResult> {
+  ): Promise<XraySearchResult> {
     const instance = await this.instance();
     let emitted = false;
-    const onPage = async (issues: unknown[], progress: XraySearchProgress): Promise<void> => {
-      emitted = true;
-      await options.onPage?.(issues, progress);
+    const run = async (current: XrayInstance): Promise<XraySearchResult> => {
+      const result = await this.followPages(await build(current), {
+        ...options,
+        onPage: async (issues, progress) => {
+          emitted = true;
+          await options.onPage?.(issues, progress, current);
+        },
+      });
+      return { ...result, instance: current };
     };
     try {
-      return await this.followPages(build(instance), { ...options, onPage });
+      return await run(instance);
     } catch (error) {
       // Only before anything was streamed: retrying after a page went out would repeat it.
       if (emitted || this.rediscovered || !isStaleRecordError(error, instance)) throw error;
       this.rediscovered = true;
-      const fresh = await this.instance({ refresh: true });
-      return this.followPages(build(fresh), { ...options, onPage });
+      return run(await this.instance({ refresh: true }));
     }
   }
 
@@ -208,7 +228,13 @@ export class XrayServerBackend implements XrayBackend {
     );
   }
 
-  private async followPages(query: XrayQuery, options: XraySearchOptions): Promise<JiraSearchResult> {
+  private async followPages(
+    query: XrayQuery,
+    options: {
+      readonly limit: number;
+      readonly onPage: (issues: unknown[], progress: XraySearchProgress) => Promise<void>;
+    },
+  ): Promise<JiraSearchResult> {
     const issues: unknown[] = [];
     let startAt = 0;
     let total: number | undefined;
@@ -226,7 +252,7 @@ export class XrayServerBackend implements XrayBackend {
       pages += 1;
       issues.push(...page.issues);
       total = page.total ?? total;
-      await options.onPage?.(page.issues, { fetched: issues.length, total });
+      await options.onPage(page.issues, { fetched: issues.length, total });
 
       const next = page.nextStartAt;
       if (page.isLast || page.issues.length === 0 || next === undefined || next <= startAt) {

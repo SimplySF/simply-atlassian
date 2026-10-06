@@ -26,7 +26,7 @@ import {
 } from './xray-fields.js';
 import { findFolder, limitFolderDepth, normaliseFolders, type XrayFolder } from './xray-folders.js';
 import { assertProjectKey, combineJql } from './xray-scope.js';
-import { simplifyFieldValue } from './xray-tests.js';
+import { fieldResolver, simplifyFieldValue } from './xray-tests.js';
 
 export interface XrayContainerListInput {
   readonly project: string;
@@ -97,27 +97,31 @@ export async function listXrayContainers(
 ): Promise<XrayContainerListResult> {
   const project = assertProjectKey(input.project);
   const spec = CONTAINERS[kind];
-  const instance = await backend.instance();
-  const extras = await backend.resolveFields(instance, input.fields ?? []);
+  const extrasFor = fieldResolver(backend, input.fields ?? []);
   const filters = { jql: input.jql, search: input.search };
 
-  const search = await backend.search(
-    (current) => ({
+  const { instance, ...search } = await backend.search(
+    async (current) => ({
       jql: combineJql(
         `project = ${jqlString(project)} AND issuetype = ${jqlString(current.requireIssueType(spec.issueType))}`,
         filters,
       ),
       fields: [
         ...new Set(
-          ['summary', 'status', current.field(spec.testsRole), ...extras.map((extra) => extra.id)].filter(
-            (id): id is string => id !== undefined,
-          ),
+          [
+            'summary',
+            'status',
+            current.field(spec.testsRole),
+            ...(await extrasFor(current)).map((extra) => extra.id),
+          ].filter((id): id is string => id !== undefined),
         ),
       ],
     }),
     { limit: input.limit },
   );
 
+  // Read with the instance the search ran with, which a rediscovery may have replaced.
+  const extras = await extrasFor(instance);
   const testsField = instance.field(spec.testsRole);
   const rows = search.issues.map((issue) => {
     const record = issue as { key?: unknown; fields?: Record<string, unknown> };

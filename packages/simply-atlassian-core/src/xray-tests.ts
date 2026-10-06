@@ -178,15 +178,17 @@ export async function getXrayTest(
 
 /** A table of tests: the scope's issues with only the fields a row shows. */
 export async function listXrayTests(backend: XrayBackend, input: XrayTestListInput): Promise<XrayTestListResult> {
-  const instance = await backend.instance();
-  const extras = await backend.resolveFields(instance, input.fields ?? []);
-  const search = await searchScopedTests(
+  const extrasFor = fieldResolver(backend, input.fields ?? []);
+  const { instance, ...search } = await searchScopedTests(
     backend,
     input.scope,
     input.filters ?? {},
-    (current) => unique(['summary', 'status', current.field('testType'), ...extras.map((extra) => extra.id)]),
+    async (current) =>
+      unique(['summary', 'status', current.field('testType'), ...(await extrasFor(current)).map((extra) => extra.id)]),
     { limit: input.limit },
   );
+  // The instance the search ran with: after a rediscovery, the one it started with has stale ids.
+  const extras = await extrasFor(instance);
   const testType = instance.field('testType');
   const rows = search.issues.map((issue) => ({
     key: stringOrNull(issueProperty(issue, 'key')),
@@ -203,8 +205,7 @@ export async function listXrayTests(backend: XrayBackend, input: XrayTestListInp
  * one batched search per call level, so a page of 100 tests costs a handful of requests, not 101.
  */
 export async function exportXrayTests(backend: XrayBackend, input: XrayExportInput): Promise<XrayExportResult> {
-  const instance = await backend.instance();
-  const extras = await backend.resolveFields(instance, input.fields ?? []);
+  const extrasFor = fieldResolver(backend, input.fields ?? []);
   const records: XrayTestRecord[] = [];
   const notes = new Set<string>();
 
@@ -212,11 +213,11 @@ export async function exportXrayTests(backend: XrayBackend, input: XrayExportInp
     backend,
     input.scope,
     input.filters ?? {},
-    (current) => testFields(current, extras),
+    async (current) => testFields(current, await extrasFor(current)),
     {
       limit: input.limit,
-      onPage: async (issues, progress) => {
-        const page = await assembleRecords(backend, instance, issues, extras, input);
+      onPage: async (issues, progress, instance) => {
+        const page = await assembleRecords(backend, instance, issues, await extrasFor(instance), input);
         records.push(...page.records);
         for (const note of page.notes) notes.add(note);
         await input.onRecords?.(page.records, progress);
@@ -225,6 +226,21 @@ export async function exportXrayTests(backend: XrayBackend, input: XrayExportInp
   );
 
   return { records, total: search.total, complete: search.complete, notes: [...notes] };
+}
+
+/**
+ * `--fields` resolved against a given instance record, once per record. A search that rediscovers
+ * builds its retry from the fresh record, so the extra fields must be resolved against it too.
+ */
+export function fieldResolver(
+  backend: XrayBackend,
+  names: readonly string[],
+): (instance: XrayInstance) => Promise<ResolvedField[]> {
+  let cached: { readonly instance: XrayInstance; readonly extras: Promise<ResolvedField[]> } | undefined;
+  return (instance) => {
+    if (cached?.instance !== instance) cached = { instance, extras: backend.resolveFields(instance, names) };
+    return cached.extras;
+  };
 }
 
 /** The flat rows a step table shows: a call becomes a marker row, followed by any inlined steps. */

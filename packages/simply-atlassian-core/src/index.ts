@@ -178,6 +178,7 @@ export {
   type XrayQuery,
   type XraySearchOptions,
   type XraySearchProgress,
+  type XraySearchResult,
 } from './xray-backend.js';
 export {
   listXrayContainers,

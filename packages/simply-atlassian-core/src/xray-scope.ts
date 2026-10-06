@@ -16,8 +16,14 @@
 
 import { isIssueKey } from './atlassian-url.js';
 import { ConfigError, HttpError } from './errors.js';
-import type { JiraSearchResult } from './jira-client.js';
-import { jqlString, XRAY_PAGE_SIZE, type XrayBackend, type XrayQuery, type XraySearchOptions } from './xray-backend.js';
+import {
+  jqlString,
+  XRAY_PAGE_SIZE,
+  type XrayBackend,
+  type XrayQuery,
+  type XraySearchOptions,
+  type XraySearchResult,
+} from './xray-backend.js';
 import type { XrayInstance } from './xray-fields.js';
 import { findFolder, normaliseFolders } from './xray-folders.js';
 
@@ -139,15 +145,15 @@ export async function searchScopedTests(
   backend: XrayBackend,
   scope: XrayScope,
   filters: XrayFilters,
-  fields: (instance: XrayInstance) => string[],
+  fields: (instance: XrayInstance) => string[] | Promise<string[]>,
   options: XraySearchOptions,
-): Promise<JiraSearchResult> {
+): Promise<XraySearchResult> {
   const resolved = resolveScope(scope);
   // Checked up front, so a bad --linked-to fails before any request rather than inside a retry.
   for (const key of filters.linkedTo ?? []) assertKey(key, '--linked-to');
-  const build = (instance: XrayInstance): XrayQuery => ({
+  const build = async (instance: XrayInstance): Promise<XrayQuery> => ({
     jql: combineJql(scopeJql(resolved, instance), filters),
-    fields: fields(instance),
+    fields: await fields(instance),
   });
 
   try {
@@ -180,33 +186,36 @@ async function searchKeyChunks(
   backend: XrayBackend,
   keys: readonly string[],
   filters: XrayFilters,
-  fields: (instance: XrayInstance) => string[],
+  fields: (instance: XrayInstance) => string[] | Promise<string[]>,
   options: XraySearchOptions,
-): Promise<JiraSearchResult> {
+): Promise<XraySearchResult> {
   const issues: unknown[] = [];
   let pages = 0;
   let total = 0;
+  let instance = await backend.instance();
   /* eslint-disable no-await-in-loop -- chunks are sequential, so the limit can stop the next one. */
   for (let index = 0; index < keys.length; index += XRAY_PAGE_SIZE) {
     // Chunks remain, so there may be more matches: conservatively incomplete.
-    if (issues.length >= options.limit) return { issues, pages, complete: false };
+    if (issues.length >= options.limit) return { issues, pages, complete: false, instance };
     const chunk = keys.slice(index, index + XRAY_PAGE_SIZE);
     const clause = `key in (${chunk.map((key) => jqlString(key)).join(', ')})`;
     const fetchedBefore = issues.length;
     const result = await backend.search(
-      (instance) => ({ jql: combineJql(clause, filters), fields: fields(instance), validateQuery: false }),
+      async (current) => ({ jql: combineJql(clause, filters), fields: await fields(current), validateQuery: false }),
       {
         limit: options.limit - issues.length,
-        onPage: (page, progress) => options.onPage?.(page, { fetched: fetchedBefore + progress.fetched }),
+        onPage: (page, progress, current) =>
+          options.onPage?.(page, { fetched: fetchedBefore + progress.fetched }, current),
       },
     );
+    ({ instance } = result);
     issues.push(...result.issues);
     pages += result.pages;
     total += result.total ?? result.issues.length;
-    if (!result.complete) return { issues, pages, complete: false };
+    if (!result.complete) return { issues, pages, complete: false, instance };
   }
   /* eslint-enable no-await-in-loop */
-  return { issues, total, pages, complete: true };
+  return { issues, total, pages, complete: true, instance };
 }
 
 /** Jira's answer when a JQL function is not installed names the function in a 400. */

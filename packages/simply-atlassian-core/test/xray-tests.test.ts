@@ -329,6 +329,75 @@ describe('test export', () => {
   });
 });
 
+describe('after a rediscovery', () => {
+  /** The same fields before a reinstall gave them new ids. */
+  const oldFields = XRAY_FIXTURE_FIELDS.map((field: unknown) => {
+    const { id, ...rest } = field as { id: string };
+    return { ...rest, id: id.replace('customfield_93', 'customfield_80') };
+  });
+
+  /** Records the old ids, then answers like the reinstalled instance: any old id is a 400. */
+  async function reinstall(answer: (jql: string) => unknown[]): Promise<void> {
+    routeXrayDiscovery(server, { fields: oldFields });
+    await backend().instance();
+    routeXrayDiscovery(server);
+    server.route('/rest/api/2/search', (request, response) => {
+      const url = new URL(request.url ?? '/', 'http://x');
+      const stale = /customfield_80\d+/.exec(url.search)?.[0];
+      if (stale !== undefined) {
+        respondJson(response, 400, { errorMessages: [`Field '${stale}' does not exist.`] });
+        return;
+      }
+      const issues = answer(url.searchParams.get('jql') ?? '');
+      respondJson(response, 200, { startAt: 0, maxResults: 100, total: issues.length, issues });
+    });
+  }
+
+  const testsOnly = (jql: string): unknown[] =>
+    jql.includes('key in') ? keysInJql(jql).map((key) => store.get(key)) : [store.get('OM-12')];
+
+  it('exports with the fresh field ids, so steps and type are read', async () => {
+    add('OM-12', { steps: [xrayStep(1, 'Open Users', 'List shown')], path: 'O&M' });
+    await reinstall(testsOnly);
+
+    const { records } = await exportXrayTests(backend(), { scope: { project: 'OM' }, fields: ['steps'], limit: 10 });
+
+    expect(records[0]).toMatchObject({
+      type: 'Manual',
+      path: '/O&M',
+      steps: [{ index: '1', action: 'Open Users', result: 'List shown' }],
+    });
+    expect(records[0]?.fields.steps).not.toBeNull();
+  });
+
+  it('lists tests with the fresh test type field', async () => {
+    add('OM-12', { testType: 'Generic' });
+    await reinstall(testsOnly);
+
+    const { rows, search } = await listXrayTests(backend(), { scope: { project: 'OM' }, limit: 10 });
+
+    expect(rows[0]?.type).toBe('Generic');
+    expect(search).not.toHaveProperty('instance');
+  });
+
+  it("counts a plan's tests with the fresh tests field", async () => {
+    store.set('OM-7', {
+      key: 'OM-7',
+      fields: {
+        summary: 'Release 1',
+        status: { name: 'Open' },
+        issuetype: { name: 'Prüfplan' },
+        [XRAY_FIXTURE_IDS.testPlanTests]: ['OM-1', 'OM-2'],
+      },
+    });
+    await reinstall(() => [store.get('OM-7')]);
+
+    const { rows } = await listXrayContainers(backend(), 'plan', { project: 'OM', limit: 25 });
+
+    expect(rows[0]?.testCount).toBe(2);
+  });
+});
+
 describe('plan list and set list', () => {
   it('lists plans in a project with how many tests each holds', async () => {
     store.set('OM-7', {
