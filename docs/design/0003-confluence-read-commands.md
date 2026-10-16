@@ -113,9 +113,11 @@ actually emits:
 | `<ul>`/`<ol>`/`<li>`, nested                         | `-` / `1.` with indentation                             |
 | `<table>`, `<th>`, `<td>`                            | GitHub-style table                                      |
 | `<ac:structured-macro ac:name="code">`               | fenced block, language from the macro parameter         |
-| `info` / `note` / `warning` / `tip` / `panel` macros | labelled blockquote                                     |
-| Any other `<ac:*>` macro                             | `> [macro: name]` placeholder                           |
+| `info` / `note` / `warning` / `tip` / `panel` macros | labelled blockquote, with the title when set (0016)     |
+| Any other `<ac:*>` macro                             | `> [macro: name]`, or `[macro: name: title]` (0016)     |
 | `<ac:link>` / `<ri:page>`                            | `[title]` with the page reference                       |
+| `<ac:link>` / `<ri:user>`                            | `[@username]`, else the user key or account id (0016)   |
+| inline macro such as `status`                        | `[status: title]`, or `[status]` without a title (0016) |
 | `<ac:task-list>` / `<ac:task>`                       | `- [ ]` / `- [x]` checklist                             |
 | `<ac:adf-extension>`                                 | its fallback content, else `> [node-type]`              |
 | `<ac:emoticon>`                                      | its printable emoji fallback                            |
@@ -124,8 +126,9 @@ actually emits:
 
 Deliberate limitations, stated so nobody is surprised: attachments and images become their
 filename in brackets rather than embedded content; layout macros are flattened; unrecognized
-macros keep their name but lose their body; `colspan`/`rowspan` are dropped, so a spanning
-cell shifts the rest of its row; and a nested table collapses into its cell's text. A table
+macros keep their name (and title) but lose their body; `colspan`/`rowspan` are dropped, so a
+spanning cell shifts the rest of its row; and a nested table is flattened into its cell, cells
+joined by commas and rows by semicolons (0016). A table
 with no `<th>` row gets a blank header rather than having its first data row promoted into
 column names. `--json` always carries the untouched original, so nothing is unrecoverable.
 

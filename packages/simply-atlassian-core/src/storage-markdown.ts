@@ -23,10 +23,10 @@
  * macro, which is the genuinely Confluence-specific half of the problem.
  *
  * Deliberately lossy, and stated so nobody is surprised: images and attachments become their
- * filename in brackets, layout macros are flattened, an unrecognized macro keeps its name but
- * loses its body, `colspan`/`rowspan` are dropped so a spanning cell shifts the rest of its
- * row, and a nested table collapses into its cell's text. `--json` always carries the
- * untouched original.
+ * filename in brackets, layout macros are flattened, an unrecognized macro keeps its name (and
+ * its title, when it has one) but loses its body, `colspan`/`rowspan` are dropped so a spanning
+ * cell shifts the rest of its row, and a nested table is flattened into its cell row by row.
+ * `--json` always carries the untouched original.
  */
 
 interface Node {
@@ -186,8 +186,55 @@ function referenceName(node: Node): string | undefined {
     if (child.tag === 'ri:attachment') return child.attrs['ri:filename'];
     if (child.tag === 'ri:url') return child.attrs['ri:value'];
     if (child.tag === 'ri:page') return child.attrs['ri:content-title'];
+    // A mention names a person, and who was mentioned is the content: without it the sentence
+    // reads "maintained by [link]". Server/DC identify users by username or key, Cloud by account.
+    if (child.tag === 'ri:user') {
+      const who = child.attrs['ri:username'] ?? child.attrs['ri:userkey'] ?? child.attrs['ri:account-id'];
+      return who === undefined || who === '' ? undefined : `@${who}`;
+    }
   }
   return undefined;
+}
+
+/**
+ * A macro's `title` parameter, with its whitespace collapsed. Panels, expand sections and status
+ * lozenges keep their visible words there rather than in a body, so dropping it drops what a
+ * reader of the page actually sees: an incident's severity, a warning's heading.
+ */
+function macroTitle(node: Node): string {
+  return (macroParameter(node, 'title') ?? '').replaceAll(/\s+/g, ' ').trim();
+}
+
+/** `name`, or `name: title` when the macro carries a title. */
+function macroLabel(node: Node): string {
+  const name = node.attrs['ac:name'] ?? 'macro';
+  const title = macroTitle(node);
+  return title === '' ? name : `${name}: ${title}`;
+}
+
+/**
+ * A table inside a table cell. A Markdown cell holds one line, so the inner table is flattened
+ * into it: cells joined by commas, rows by semicolons. Collapsing it into the cell's raw text ran
+ * every value together ("ZoneUptimeeu-1…"), which reads as one meaningless word.
+ */
+function inlineTable(node: Node): string {
+  const rows: string[] = [];
+  const collect = (children: readonly Child[]): void => {
+    for (const child of children) {
+      if (!isNode(child)) continue;
+      if (child.tag === 'tr') {
+        const cells = child.children
+          .filter((cell): cell is Node => isNode(cell) && (cell.tag === 'td' || cell.tag === 'th'))
+          .map((cell) => renderInline(cell.children).trim())
+          .filter((text) => text !== '');
+        if (cells.length > 0) rows.push(cells.join(', '));
+      } else {
+        collect(child.children);
+      }
+    }
+  };
+  collect(node.children);
+  return rows.length === 0 ? '' : ` ${rows.join('; ')} `;
 }
 
 /* ------------------------------------------------------------------ inline */
@@ -233,8 +280,10 @@ const INLINE: Record<string, (node: Node) => string> = {
       .join('');
     return `[${label === '' ? (referenceName(node) ?? 'link') : label}]`;
   },
-  // An inline macro (a status lozenge, a date) reads better as its name than as a block.
-  'ac:structured-macro': (node) => `[${node.attrs['ac:name'] ?? 'macro'}]`,
+  // An inline macro (a status lozenge, a date) reads better as its name than as a block, with its
+  // title kept: a status lozenge's words live only there.
+  'ac:structured-macro': (node) => `[${macroLabel(node)}]`,
+  table: (node) => inlineTable(node),
   'ac:emoticon': (node) => node.attrs['ac:emoji-fallback'] ?? '',
   'ac:placeholder': (node) => renderInline(node.children),
 };
@@ -371,8 +420,9 @@ function renderMacro(node: Node): string {
   }
 
   const body = macroBody(node).trim();
-  if (PANEL_MACROS.has(name)) return `> **${name}**\n${quote(body)}`;
-  return body === '' ? `> [macro: ${name}]` : `> [macro: ${name}]\n${quote(body)}`;
+  const label = macroLabel(node);
+  if (PANEL_MACROS.has(name)) return `> **${label}**\n${quote(body)}`;
+  return body === '' ? `> [macro: ${label}]` : `> [macro: ${label}]\n${quote(body)}`;
 }
 
 const HEADINGS: Record<string, number> = { h1: 1, h2: 2, h3: 3, h4: 4, h5: 5, h6: 6 };

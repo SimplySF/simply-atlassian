@@ -75,6 +75,49 @@ describe('storageToMarkdown', () => {
     expect(storageToMarkdown(storage)).toBe('> **info**\n> Heads up');
   });
 
+  it("keeps a panel's title beside its kind, because the title is the heading readers see", () => {
+    const storage =
+      '<ac:structured-macro ac:name="warning"><ac:parameter ac:name="title">Paging policy</ac:parameter>' +
+      '<ac:rich-text-body><p>Page the owning team first.</p></ac:rich-text-body></ac:structured-macro>';
+    expect(storageToMarkdown(storage)).toBe('> **warning: Paging policy**\n> Page the owning team first.');
+  });
+
+  it("keeps a status lozenge's text, which is the only place its words live", () => {
+    const storage =
+      '<p>Severity <ac:structured-macro ac:name="status"><ac:parameter ac:name="colour">Red</ac:parameter>' +
+      '<ac:parameter ac:name="title">SEV2</ac:parameter></ac:structured-macro>.</p>';
+    expect(storageToMarkdown(storage)).toBe('Severity [status: SEV2].');
+  });
+
+  it('names a status lozenge without a title by its kind alone', () => {
+    const storage =
+      '<p><ac:structured-macro ac:name="status"><ac:parameter ac:name="colour">Grey</ac:parameter></ac:structured-macro></p>';
+    expect(storageToMarkdown(storage)).toBe('[status]');
+  });
+
+  it("keeps an expand section's title along with its body", () => {
+    const storage =
+      '<ac:structured-macro ac:name="expand"><ac:parameter ac:name="title">Show legacy details</ac:parameter>' +
+      '<ac:rich-text-body><p>Retired in 2024.</p></ac:rich-text-body></ac:structured-macro>';
+    expect(storageToMarkdown(storage)).toBe('> [macro: expand: Show legacy details]\n> Retired in 2024.');
+  });
+
+  it('keeps who a mention names, by username, user key or account id', () => {
+    expect(storageToMarkdown('<p>By <ac:link><ri:user ri:username="sam.rivera" /></ac:link>.</p>')).toBe(
+      'By [@sam.rivera].',
+    );
+    expect(storageToMarkdown('<p><ac:link><ri:user ri:userkey="8a7f001" /></ac:link></p>')).toBe('[@8a7f001]');
+    expect(storageToMarkdown('<p><ac:link><ri:user ri:account-id="5b10ac" /></ac:link></p>')).toBe('[@5b10ac]');
+  });
+
+  it("flattens a nested table into its cell row by row, so the inner cells' values stay apart", () => {
+    const storage =
+      '<table><tbody><tr><th>Region</th><th>Detail</th></tr><tr><td>EU</td><td>' +
+      '<table><tbody><tr><th>Zone</th><th>Uptime</th></tr><tr><td>eu-1</td><td>99.99%</td></tr></tbody></table>' +
+      '</td></tr></tbody></table>';
+    expect(storageToMarkdown(storage).split('\n')[2]).toBe('| EU | Zone, Uptime; eu-1, 99.99% |');
+  });
+
   it('keeps an unknown macro name but does not pretend to render its body', () => {
     const storage = '<ac:structured-macro ac:name="jira-issues"></ac:structured-macro>';
     expect(storageToMarkdown(storage)).toBe('> [macro: jira-issues]');
