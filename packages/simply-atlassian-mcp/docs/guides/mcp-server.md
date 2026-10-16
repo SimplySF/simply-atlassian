@@ -55,6 +55,40 @@ slashes or doubled backslashes inside JSON: `"C:/Users/me/atlassian.env"`.
 
 ## Configure a client
 
+### With `simply atlassian mcp install`
+
+One command writes the entry for you. Name each client with `--client`:
+
+```sh
+simply atlassian mcp install --client claude-code --client cursor --env-file ~/atlassian.env
+```
+
+Client ids: `claude-code`, `claude-desktop`, `cursor`, `vscode`, `windsurf`, `gemini`, `codex`.
+Running it without `--client` lists them, and marks the ones found on this machine.
+
+- **Only the entry changes.** In a JSON file, everything else, comments included, is left as it
+  was, and the previous file is kept as `<file>.bak`. Claude Code and Codex are configured through
+  their own `claude mcp` and `codex mcp` commands. If one isn't on `PATH`, you get the exact command
+  to run yourself.
+- **Credentials are never written.** `--env-file` is resolved to an absolute path, checked to exist,
+  and passed to the server. Without it, the entry starts with no settings, because a GUI client
+  doesn't see your shell's environment.
+- **Server flags are passed through.** `--allow-writes` and `--xray` reach the server.
+  `--allow-writes` also names the entry `simply-atlassian-write`, so it can sit beside the read-only
+  one (see [Let the agent write](#let-the-agent-write)). `--name` overrides the name.
+- **`--scope project`** writes the repository's own file in the current directory instead:
+  `.mcp.json` for Claude Code, `.cursor/mcp.json`, `.vscode/mcp.json` or `.gemini/settings.json`.
+  The entry then runs `simply` from `PATH`, so it works for everyone who clones the repository.
+- **At user scope the entry starts this Node binary and the `simply` CLI's own script.** That works
+  for GUI clients that don't see your `PATH`. If a Node upgrade moves the binary, run the command
+  again with `--force`. `--launcher simply` or `--launcher npx` choose the other forms.
+- **Running it twice is safe.** An identical entry is left alone. An entry that differs is reported
+  as a conflict (exit 2) and is replaced only with `--force`. `--dry-run` shows what would be
+  written, and `--json` returns the per-client results.
+
+Restart Claude Desktop or Windsurf afterwards. In Claude Code or Gemini CLI, run `/mcp`. The
+sections below show what the command writes, for editing by hand or for any other client.
+
 ### Claude Desktop
 
 Edit `claude_desktop_config.json` (macOS: `~/Library/Application Support/Claude/`; Windows:

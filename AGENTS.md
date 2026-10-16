@@ -26,6 +26,9 @@ Use the smallest relevant topic document rather than loading the whole directory
   Marketplace app lives under its host product.
 - [MCP server](docs/design/0007-mcp-server.md): the tool catalogue and its parity with the CLI,
   the read-only default and `--allow-writes`, the confirm gate, and error mapping.
+- [MCP install](docs/design/0018-mcp-install.md): `atlassian mcp install`, which writes the server
+  into MCP clients. The client logic is `simply-atlassian-mcp/src/mcpClients`, kept identical to
+  simply-gitlab's copy: change both together.
 - [The core library package](docs/design/0012-simply-atlassian-core.md): what lives in
   `@simplysf/simply-atlassian-core` versus the CLI, the no-terminal rule, and the phased plan for
   the MCP server to call it in-process.
