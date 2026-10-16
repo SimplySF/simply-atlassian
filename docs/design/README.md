@@ -48,6 +48,7 @@ refactors that keep the public surface identical (though a short doc is welcome 
 | 0013 | [Markdown page bodies](0013-markdown-page-bodies.md)                                              | Implemented (PRs #20, #21)      |
 | 0014 | [Discovery, labels, sprint writes, and remote links](0014-discovery-labels-and-sprint-writes.md)  | Draft                           |
 | 0015 | [Xray test management under `jira xray`](0015-jira-xray.md)                                       | Implemented (PRs #45, #46, #49) |
+| 0017 | [Retrying only the writes that cannot have landed](0017-retrying-writes.md)                       | Draft                           |
 
 ## Template
 
