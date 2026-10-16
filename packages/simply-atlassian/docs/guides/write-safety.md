@@ -64,3 +64,18 @@ simply atlassian jira issue delete PROJ-1 -e ~/atlassian-write.env --confirm
 The agent's normal loop is then structurally incapable of changing anything, and a write becomes a
 deliberate act. A `403` from a read-scoped token is reported as an authentication error that says
 the credential cannot make changes, rather than looking like a permissions bug.
+
+## When a write fails partway
+
+A write is never sent twice. If the instance answers a write with a `5xx`, the connection drops,
+or the request times out, the change may already have been applied — a gateway can give up on a
+slow backend after the issue was created — so the command fails at once rather than retrying, and
+its message ends with:
+
+```
+The change may have been applied; check before retrying.
+```
+
+Look before running it again: search for the issue or comment, or re-read the page, so a retry
+does not create a duplicate. A rate limit (`429`) or a refused connection means nothing happened,
+and those are still retried automatically. Reads retry as they always have.

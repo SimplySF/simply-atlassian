@@ -169,6 +169,88 @@ describe('HttpTransport', () => {
     expect(server.requests).toHaveLength(2);
   });
 
+  describe('writes', () => {
+    /*
+     * A gateway can return a 5xx, or drop the connection, after the instance has already
+     * applied the write. Retrying then creates a second issue or comment, or reports a failure
+     * for a change that landed (a page update's version conflict, a delete's 404). A write
+     * retries only what proves the instance did not act.
+     */
+    it('does not retry a write on a 5xx, and says the change may have been applied', async () => {
+      server.route('/issue', (_req, res) => {
+        respondJson(res, 502, { message: 'bad gateway' }, { 'retry-after': '0' });
+      });
+
+      const error = await transport()
+        .json({ method: 'POST', path: '/issue', body: {}, mutating: true })
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(HttpError);
+      expect((error as HttpError).status).toBe(502);
+      expect((error as HttpError).message).toContain('may have been applied');
+      expect(server.requests).toHaveLength(1);
+    });
+
+    it('still retries a write on a 429, which the instance refuses before acting', async () => {
+      let calls = 0;
+      server.route('/issue', (_req, res) => {
+        calls += 1;
+        if (calls === 1) {
+          respondJson(res, 429, { message: 'slow down' }, { 'retry-after': '0' });
+        } else {
+          respondJson(res, 201, { key: 'PROJ-1' });
+        }
+      });
+
+      await expect(transport().json({ method: 'POST', path: '/issue', body: {}, mutating: true })).resolves.toEqual({
+        key: 'PROJ-1',
+      });
+      expect(calls).toBe(2);
+    });
+
+    it('does not retry a write when the connection drops mid-request', async () => {
+      server.route('/issue', (_req, res) => {
+        res.socket?.destroy();
+      });
+
+      const error = await transport()
+        .json({ method: 'POST', path: '/issue', body: {}, mutating: true })
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(NetworkError);
+      expect((error as NetworkError).message).toContain('may have been applied');
+      expect(server.requests).toHaveLength(1);
+    });
+
+    it('retries a write whose connection was refused, since it never reached the instance', async () => {
+      const closedBase = server.baseUrl;
+      await server.close();
+      server = await startTestServer(); // keep afterEach happy
+
+      const refused = new HttpTransport({ baseUrl: closedBase, headers: {}, maxAttempts: 2 });
+      const error = await refused
+        .json({ method: 'POST', path: '/issue', body: {}, mutating: true })
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(NetworkError);
+      expect((error as NetworkError).message).toContain('2 attempts');
+      expect((error as NetworkError).message).not.toContain('may have been applied');
+    });
+
+    it('says a write that timed out may have been applied', async () => {
+      server.route('/issue', () => {
+        // Never respond.
+      });
+
+      const error = await transport({ timeoutMs: 100, maxAttempts: 1 })
+        .json({ method: 'POST', path: '/issue', body: {}, mutating: true })
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(NetworkError);
+      expect((error as NetworkError).message).toContain('may have been applied');
+    });
+  });
+
   it('times out when the server never sends headers, as a NetworkError naming the duration', async () => {
     server.route('/slow', () => {
       // Never respond; the deadline has to fire.
