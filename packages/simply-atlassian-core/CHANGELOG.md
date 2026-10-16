@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.7.2](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-core%400.7.1...%40simplysf%2Fsimply-atlassian-core%400.7.2) (2026-10-16)
+
+### Bug Fixes
+
+- **simply-atlassian-core:** keep macro titles, mentions and nested cells in rendered pages ([#55](https://github.com/SimplySF/simply-atlassian/issues/55)) ([cdc69cf](https://github.com/SimplySF/simply-atlassian/commit/cdc69cfec517deb6ec998928660dd8527bf385fd))
+
 ## [0.7.1](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-core%400.7.0...%40simplysf%2Fsimply-atlassian-core%400.7.1) (2026-10-16)
 
 ### Bug Fixes
