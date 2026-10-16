@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.7.1](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-mcp%400.7.0...%40simplysf%2Fsimply-atlassian-mcp%400.7.1) (2026-10-16)
+
+### Bug Fixes
+
+- **deps:** bump @modelcontextprotocol/sdk from 1.32.0 to 1.32.1 ([#54](https://github.com/SimplySF/simply-atlassian/issues/54)) ([bd059a2](https://github.com/SimplySF/simply-atlassian/commit/bd059a218070165592987c1a9fbca34f4bdde081))
+- **simply-atlassian-core:** never repeat a write that may have been applied ([#57](https://github.com/SimplySF/simply-atlassian/issues/57)) ([8d32263](https://github.com/SimplySF/simply-atlassian/commit/8d322630b0540bbd239a6913221c3c9e6df4ecbc)), closes [#56](https://github.com/SimplySF/simply-atlassian/issues/56)
+
 # [0.7.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-mcp%400.6.2...%40simplysf%2Fsimply-atlassian-mcp%400.7.0) (2026-10-06)
 
 ### Features

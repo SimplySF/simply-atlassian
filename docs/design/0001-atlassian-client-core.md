@@ -71,6 +71,8 @@ Resolution rules:
     takes precedence over the computed backoff. Error bodies are drained before retrying so
     connections return to the pool.
   - Transient transport failures (connection reset/refused) retry.
+  - A write (`mutating`) retries only a 429 and a refused connection, since anything else can
+    follow a change the instance already applied (0017).
   - Permanent failures never retry: 4xx other than 429, DNS misses (`ENOTFOUND`), untrusted
     certificates, and timeouts all fail immediately with a typed, explanatory error.
 - **Certificate verification is always on, and there is no opt-out.** An instance behind an
@@ -158,7 +160,8 @@ Vitest, in `packages/simply-atlassian/test/core/`:
   404 → `HttpError` carrying status and body; `Retry-After` beats the computed backoff (timed);
   retry then success on a transient 503; timeout fires for both never-responds and
   stalls-mid-body; DNS misses fail fast as `NetworkError`; connection-refused retries then
-  reports; a certificate failure names `NODE_EXTRA_CA_CERTS` in its message.
+  reports; a certificate failure names `NODE_EXTRA_CA_CERTS` in its message; a write is not
+  repeated after a 5xx, a dropped connection, or a timeout (0017).
 - **clients**: Jira Cloud client hits `/rest/api/3` and paginates with `nextPageToken`; Server
   client hits `/rest/api/2` with `startAt`; Confluence paths unaffected by deployment type.
 

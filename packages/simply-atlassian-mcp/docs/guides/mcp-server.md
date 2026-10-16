@@ -312,6 +312,11 @@ With writes allowed:
   `confluence_page_update` takes `append` to add to a page instead of replacing it. "Add a
   Decisions section to this page with these three bullets" becomes `confluence_page_update` with
   `markdown` and `append: true`.
+- **A failed write may still have landed.** A write is never retried after a `5xx`, a dropped
+  connection, or a timeout, because the instance may already have applied it; the error message
+  says `The change may have been applied; check before retrying.` An agent that sees it should
+  look for the issue, comment, or page change before calling the tool again, or it may create a
+  duplicate. See [Write safety](/guides/write-safety/).
 
 ## Tools
 

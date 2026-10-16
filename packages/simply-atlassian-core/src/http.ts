@@ -58,8 +58,22 @@ const CERT_CODES = new Set([
 /** Transport failures another attempt cannot fix: the host or the trust decision is wrong. */
 const PERMANENT_TRANSPORT_CODES = new Set(['ENOTFOUND', 'EAI_AGAIN', ...CERT_CODES]);
 
-/** What one attempt concluded: a parsed value, or a retryable failure that knows its own delay. */
-type AttemptOutcome<T> = { done: true; value: T } | { done: false; delayMs?: number; exhausted: () => HttpError };
+/**
+ * Transport failures that prove the request never reached the instance, so a write may retry
+ * them. Every other mid-flight failure — a reset, a dropped socket — can land after the
+ * instance has acted.
+ */
+const NEVER_SENT_CODES = new Set(['ECONNREFUSED']);
+
+/** Appended when a write fails in a way that does not say whether the instance applied it. */
+const MAY_HAVE_APPLIED = ' The change may have been applied; check before retrying.';
+
+/**
+ * What one attempt concluded: a parsed value, or a failure that knows its own delay and whether
+ * another attempt is safe.
+ */
+type AttemptOutcome<T> =
+  { done: true; value: T } | { done: false; delayMs?: number; retryable: boolean; exhausted: () => HttpError };
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -107,6 +121,11 @@ export class HttpTransport {
    * sent; other non-2xx become `HttpError`. Timeouts, DNS misses, and certificate failures
    * become `NetworkError` without pointless retries; transient socket failures retry. The
    * timeout covers the whole exchange, response body included.
+   *
+   * A `mutating` call retries only what proves the instance did not act — a 429, or a connection
+   * that was refused outright. A 5xx or a dropped connection can follow a write the instance
+   * already applied (a gateway giving up on a slow backend), and repeating it would create a
+   * second issue or comment, so those fail at once and say the change may have landed.
    */
   public async json<T>(call: JsonCall): Promise<T> {
     const url = this.resolve(call);
@@ -125,7 +144,7 @@ export class HttpTransport {
         continue;
       }
       if (outcome.done) return outcome.value;
-      if (attempt >= this.maxAttempts) throw outcome.exhausted();
+      if (!outcome.retryable || attempt >= this.maxAttempts) throw outcome.exhausted();
       await delay(outcome.delayMs ?? BACKOFF_BASE_MS * 2 ** (attempt - 1));
     }
     /* eslint-enable no-await-in-loop */
@@ -177,10 +196,14 @@ export class HttpTransport {
         const retryAfter = readRetryAfter(response.headers.get('retry-after'));
         const status = response.status;
         const detail = await describeBody(response);
+        // A 429 is refused before any work is done; a 5xx may follow a write that landed.
+        const retryable = call.mutating !== true || status === 429;
+        const hint = retryable ? '' : MAY_HAVE_APPLIED;
         return {
           done: false,
           delayMs: retryAfter,
-          exhausted: () => new HttpError(`${call.method} ${call.path} failed (${status}).${detail}`, status),
+          retryable,
+          exhausted: () => new HttpError(`${call.method} ${call.path} failed (${status}).${detail}${hint}`, status),
         };
       }
 
@@ -199,9 +222,11 @@ export class HttpTransport {
   private triage(error: unknown, call: JsonCall, url: URL, attempt: number): CliError | typeof TRANSIENT {
     if (error instanceof CliError) return error;
 
+    const unsure = call.mutating === true ? MAY_HAVE_APPLIED : '';
+
     if (isAbort(error)) {
       return new NetworkError(
-        `${call.method} ${call.path} did not complete within ${this.timeoutMs} ms (${url.host}).`,
+        `${call.method} ${call.path} did not complete within ${this.timeoutMs} ms (${url.host}).${unsure}`,
       );
     }
 
@@ -213,12 +238,18 @@ export class HttpTransport {
       return new NetworkError(`Cannot reach ${url.host}: ${code}.${hint}`);
     }
 
+    const description = code ?? (error instanceof Error ? error.message : String(error));
+
+    if (call.mutating === true && (code === undefined || !NEVER_SENT_CODES.has(code))) {
+      // The request may have reached the instance before the connection dropped: never repeat it.
+      return new NetworkError(`${call.method} ${call.path} failed: ${description}.${unsure}`);
+    }
+
     if (attempt < this.maxAttempts) {
       // Transient transport failure (connection reset, refused, mid-flight drop): try again.
       return TRANSIENT;
     }
 
-    const description = code ?? (error instanceof Error ? error.message : String(error));
     return new NetworkError(`${call.method} ${call.path} failed after ${attempt} attempts: ${description}.`);
   }
 
