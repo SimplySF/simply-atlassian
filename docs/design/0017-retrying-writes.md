@@ -60,9 +60,10 @@ thing, because a slow write is exactly the one most likely to have landed.
 ## Alternatives considered
 
 - **A list of writes that are safe to repeat.** `issue update`, `comment edit`, label adds, and
-  sprint adds converge, so they could keep retrying a 5xx. Rejected for now: it is a second list to
-  keep correct as commands are added, and an entry that is wrong fails silently, by duplicating.
-  One rule fails loudly. The list can come later if a 5xx on those proves common.
+  sprint adds converge, so they could keep retrying a 5xx. Rejected: it is a second list to keep
+  correct as commands are added, and an entry that is wrong fails silently, by duplicating, which
+  is the bug this record fixes. One rule fails loudly, and the cost of a needless failure on a
+  converging write is one check by the caller. Revisit only if a 5xx on those proves common.
 - **Idempotency keys.** Jira and Confluence offer no general idempotency header; only remote links
   have an equivalent (`globalId`). Not available.
 - **Look for the write, then retry.** Search for the issue just created, re-read the page version,
@@ -87,4 +88,5 @@ and a refused connection, without the sentence. The existing tests pin that read
 
 ## Open questions
 
-- Whether the converging writes above should keep retrying a 5xx (see the first alternative).
+- None. Whether converging writes should keep retrying a 5xx was decided against (the first
+  alternative).
