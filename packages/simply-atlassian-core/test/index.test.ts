@@ -92,6 +92,7 @@ describe('@simplysf/simply-atlassian-core', () => {
         'buildTransitionBody',
         'buildUpdateIssueBody',
         'changelogJson',
+        'pageHistoryJson',
         'compareCreated',
         'currentAccount',
         'deleteComment',

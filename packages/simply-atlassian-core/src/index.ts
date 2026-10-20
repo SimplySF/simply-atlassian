@@ -37,7 +37,13 @@ export {
   type Deployment,
   type EnvLike,
 } from './config.js';
-export { ConfluenceClient, type ConfluencePage } from './confluence-client.js';
+export {
+  ConfluenceClient,
+  type ConfluencePage,
+  type ConfluencePageHistory,
+  type ConfluencePageVersion,
+} from './confluence-client.js';
+export { pageHistoryJson, type PageHistoryJson } from './confluence-history.js';
 export { loadEnvFile, parseEnvFile } from './env-file.js';
 export { AuthError, CliError, ConfigError, HttpError, NetworkError } from './errors.js';
 export { HttpTransport, type JsonCall, type QueryValue, type TransportTarget } from './http.js';

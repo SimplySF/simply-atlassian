@@ -21,6 +21,9 @@ Use the smallest relevant topic document rather than loading the whole directory
   `confluence open` URL construction, browser-launch and fallback behavior, and output modes.
 - [Jira issue history](docs/design/0011-jira-issue-history.md): changelog paging, completeness
   reporting, and the split between normalized terminal output and raw JSON across Cloud and Server/DC.
+- [Confluence page history](docs/design/0019-confluence-page-history.md): the first Confluence read
+  that branches on deployment — Cloud's v2 versions endpoint and author-name lookup, Server/DC's
+  experimental version list and its supported per-version fallback.
 - [Jira Xray](docs/design/0015-jira-xray.md): the read-only, Server/DC-only `jira xray` subtopic,
   Xray field discovery and the per-instance record, test scopes and bulk export, and the rule that a
   Marketplace app lives under its host product.
