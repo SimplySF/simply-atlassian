@@ -51,7 +51,7 @@ refactors that keep the public surface identical (though a short doc is welcome 
 | 0016 | [Keeping a macro's visible words when rendering a page](0016-macro-text-in-rendered-pages.md)     | Implemented                     |
 | 0017 | [Retrying only the writes that cannot have landed](0017-retrying-writes.md)                       | Draft                           |
 | 0018 | [`atlassian mcp install`](0018-mcp-install.md)                                                    | In progress                     |
-| 0019 | [Confluence page history](0019-confluence-page-history.md)                                        | Implemented                     |
+| 0019 | [Confluence page history](0019-confluence-page-history.md)                                        | Implemented (PR #64)            |
 
 ## Template
 

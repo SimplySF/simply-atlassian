@@ -1,6 +1,6 @@
 # 0019 — Confluence page history
 
-**Status:** Implemented
+**Status:** Implemented (PR #64)
 **Package:** `packages/simply-atlassian-core`, `packages/simply-atlassian`, `packages/simply-atlassian-mcp`
 **Date:** 2026-10-20
 
