@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.8.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-core%400.7.2...%40simplysf%2Fsimply-atlassian-core%400.8.0) (2026-10-20)
+
+### Features
+
+- add confluence page history ([#64](https://github.com/SimplySF/simply-atlassian/issues/64)) ([037fa45](https://github.com/SimplySF/simply-atlassian/commit/037fa45e81928c37920c1e71de6c9779244677ca))
+
 ## [0.7.2](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-core%400.7.1...%40simplysf%2Fsimply-atlassian-core%400.7.2) (2026-10-16)
 
 ### Bug Fixes
