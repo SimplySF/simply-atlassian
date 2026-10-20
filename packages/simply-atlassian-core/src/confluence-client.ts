@@ -16,10 +16,56 @@
 
 import { buildAuthHeaders } from './auth.js';
 import type { AtlassianConfig } from './config.js';
+import { AuthError, HttpError } from './errors.js';
 import { HttpTransport, type JsonCall } from './http.js';
 
 const API_BASE = '/rest/api';
 const DEFAULT_LIMIT = 25;
+/** The v2 versions endpoint's documented maximum page size. */
+const CLOUD_VERSIONS_PAGE = 250;
+/** What the experimental Server/DC endpoint returns by default; asking for more is not documented. */
+const SERVER_VERSIONS_PAGE = 200;
+/** `user/bulk` returns at most this many users, silently dropping the rest. */
+const USER_BULK_MAX = 100;
+
+/** One page version, normalized across Cloud's v2 shape and Server/DC's v1 shape. */
+export interface ConfluencePageVersion {
+  readonly number?: number;
+  readonly when?: string;
+  /** Display name where the instance gives one, else the account id or username. */
+  readonly author?: string;
+  readonly message?: string;
+  readonly minorEdit?: boolean;
+}
+
+/** A page's versions, newest first, with the raw entries index-aligned to the normalized ones. */
+export interface ConfluencePageHistory {
+  readonly versions: ConfluencePageVersion[];
+  readonly rawEntries: unknown[];
+  /** False when `limit` stopped the read before the oldest version. */
+  readonly complete: boolean;
+}
+
+/** The fields of a version either deployment sends: Cloud `authorId`/`createdAt`, Server/DC `by`/`when`. */
+interface RawVersion {
+  readonly number?: unknown;
+  readonly when?: unknown;
+  readonly createdAt?: unknown;
+  readonly authorId?: unknown;
+  readonly by?: { readonly displayName?: unknown; readonly username?: unknown; readonly accountId?: unknown };
+  readonly message?: unknown;
+  readonly minorEdit?: unknown;
+}
+
+interface VersionsResponse {
+  readonly results?: unknown[];
+  readonly start?: number;
+  readonly _links?: { readonly next?: string };
+}
+
+interface UserBulkResponse {
+  readonly results?: Array<{ readonly accountId?: unknown; readonly displayName?: unknown }>;
+}
 
 /** Everything a caller needs after following pages: the results plus why paging stopped. */
 export interface ConfluencePage<T = unknown> {
@@ -45,9 +91,11 @@ interface PagedResponse {
  * Cloud/Server difference is absorbed earlier, when the base URL is canonicalized to `/wiki`.
  */
 export class ConfluenceClient {
+  public readonly deployment: AtlassianConfig['deployment'];
   private readonly transport: HttpTransport;
 
   public constructor(config: AtlassianConfig) {
+    this.deployment = config.deployment;
     this.transport = new HttpTransport({
       baseUrl: config.url,
       headers: buildAuthHeaders(config),
@@ -210,7 +258,198 @@ export class ConfluenceClient {
     return { results: collected.slice(0, limit), size, pages, complete: false };
   }
 
+  /**
+   * A page's versions, newest first, up to `limit`. This is the one read where the deployments
+   * share no endpoint — see design 0019 — so the branching stays here rather than in callers.
+   */
+  public async getAllPageVersions(pageId: string, limit: number): Promise<ConfluencePageHistory> {
+    const read =
+      this.deployment === 'cloud'
+        ? await this.cloudPageVersions(pageId, limit)
+        : await this.serverPageVersions(pageId, limit);
+    // Sorted whatever order the instance used, keeping raw and normalized entries aligned.
+    const order = read.rawEntries
+      .map((raw, index) => ({ raw, index, number: versionNumber(raw) }))
+      .sort((left, right) => (right.number ?? -1) - (left.number ?? -1))
+      .slice(0, limit);
+    const rawEntries = order.map((entry) => entry.raw);
+    const names = this.deployment === 'cloud' ? await this.displayNames(rawEntries) : new Map<string, string>();
+    return {
+      versions: rawEntries.map((raw) => normalizeVersion(raw, names)),
+      rawEntries,
+      complete: read.complete && read.rawEntries.length <= limit,
+    };
+  }
+
+  /** Cloud: v2 only, since v1 no longer lists versions. The cursor is lifted out of `_links.next`. */
+  private async cloudPageVersions(
+    pageId: string,
+    limit: number,
+  ): Promise<{ rawEntries: unknown[]; complete: boolean }> {
+    const rawEntries: unknown[] = [];
+    let cursor: string | undefined;
+
+    /* Paging is sequential by definition: each request needs the previous page's cursor. */
+    /* eslint-disable no-await-in-loop */
+    while (rawEntries.length < limit) {
+      const response = await this.transport.json<VersionsResponse>({
+        method: 'GET',
+        path: `/api/v2/pages/${encodeURIComponent(pageId)}/versions`,
+        query: { limit: Math.min(CLOUD_VERSIONS_PAGE, limit - rawEntries.length), sort: '-modified-date', cursor },
+      });
+      const results = response.results ?? [];
+      rawEntries.push(...results);
+      // Only the cursor is taken from the server's link. Requesting the link itself would let the
+      // instance choose where the next request goes.
+      /* eslint-disable-next-line no-underscore-dangle -- Atlassian's field name */
+      cursor = cursorFrom(response._links?.next);
+      if (cursor === undefined || results.length === 0) return { rawEntries, complete: true };
+    }
+    /* eslint-enable no-await-in-loop */
+    return { rawEntries, complete: false };
+  }
+
+  /**
+   * Server/DC: the experimental list when the instance still has it, else a walk down from the
+   * current version through the supported historical read. A 404 from the list is the signal,
+   * and is also what an unknown page answers — in which case the walk's first read reports it.
+   */
+  private async serverPageVersions(
+    pageId: string,
+    limit: number,
+  ): Promise<{ rawEntries: unknown[]; complete: boolean }> {
+    try {
+      return await this.experimentalPageVersions(pageId, limit);
+    } catch (error) {
+      if (error instanceof HttpError && error.status === 404) return this.walkPageVersions(pageId, limit);
+      throw error;
+    }
+  }
+
+  private async experimentalPageVersions(
+    pageId: string,
+    limit: number,
+  ): Promise<{ rawEntries: unknown[]; complete: boolean }> {
+    const rawEntries: unknown[] = [];
+    let start = 0;
+
+    /* eslint-disable no-await-in-loop */
+    while (rawEntries.length < limit) {
+      const response = await this.transport.json<VersionsResponse>({
+        method: 'GET',
+        path: `/rest/experimental/content/${encodeURIComponent(pageId)}/version`,
+        query: { start, limit: Math.min(SERVER_VERSIONS_PAGE, limit - rawEntries.length) },
+      });
+      const results = response.results ?? [];
+      rawEntries.push(...results);
+      // The same guards as `searchAllPages`: no next link, an empty page, or an offset the
+      // instance did not honour all end the read rather than looping on the same rows.
+      const paging = response.start === undefined || response.start === start;
+      /* eslint-disable-next-line no-underscore-dangle -- Atlassian's field name */
+      if (response._links?.next === undefined || results.length === 0 || !paging) {
+        return { rawEntries, complete: true };
+      }
+      start += results.length;
+    }
+    /* eslint-enable no-await-in-loop */
+    return { rawEntries, complete: false };
+  }
+
+  /** One supported read per version. A version that is gone (DC can delete them) is skipped. */
+  private async walkPageVersions(pageId: string, limit: number): Promise<{ rawEntries: unknown[]; complete: boolean }> {
+    const current = (await this.getPage(pageId, { expand: ['version'] })) as { version?: RawVersion };
+    const latest = current.version;
+    const top = typeof latest?.number === 'number' ? latest.number : undefined;
+    // Without a version number there is nothing to walk down from, so the current version is all there is.
+    if (latest === undefined || top === undefined) {
+      return { rawEntries: latest === undefined ? [] : [latest], complete: true };
+    }
+
+    const rawEntries: unknown[] = [latest];
+    let next = top - 1;
+    /* eslint-disable no-await-in-loop */
+    for (; next >= 1 && rawEntries.length < limit; next -= 1) {
+      try {
+        const page = await this.request<{ version?: unknown }>(`/content/${encodeURIComponent(pageId)}`, {
+          method: 'GET',
+          query: { status: 'historical', version: next, expand: 'version' },
+        });
+        if (page.version !== undefined) rawEntries.push(page.version);
+      } catch (error) {
+        if (!(error instanceof HttpError && error.status === 404)) throw error;
+      }
+    }
+    /* eslint-enable no-await-in-loop */
+    return { rawEntries, complete: next < 1 };
+  }
+
+  /**
+   * Cloud versions name their author by account id only. Names are a convenience, so a lookup the
+   * credential may not be allowed to make leaves the ids in place instead of failing the read.
+   */
+  private async displayNames(rawEntries: readonly unknown[]): Promise<Map<string, string>> {
+    const ids = [
+      ...new Set(
+        rawEntries
+          .map((raw) => (raw as RawVersion).authorId)
+          .filter((id): id is string => typeof id === 'string' && id !== ''),
+      ),
+    ];
+    const names = new Map<string, string>();
+    /* eslint-disable no-await-in-loop */
+    for (let index = 0; index < ids.length; index += USER_BULK_MAX) {
+      try {
+        const response = await this.request<UserBulkResponse>('/user/bulk', {
+          method: 'GET',
+          query: { accountId: ids.slice(index, index + USER_BULK_MAX) },
+        });
+        for (const user of response.results ?? []) {
+          if (typeof user.accountId === 'string' && typeof user.displayName === 'string') {
+            names.set(user.accountId, user.displayName);
+          }
+        }
+      } catch (error) {
+        if (!(error instanceof HttpError || error instanceof AuthError)) throw error;
+      }
+    }
+    /* eslint-enable no-await-in-loop */
+    return names;
+  }
+
   private request<T>(path: string, call: Omit<JsonCall, 'path'>): Promise<T> {
     return this.transport.json<T>({ ...call, path: `${API_BASE}${path}` });
   }
+}
+
+/** The `cursor` parameter of a v2 next link, which arrives as a relative URL. */
+function cursorFrom(next: string | undefined): string | undefined {
+  if (next === undefined) return undefined;
+  const cursor = new URL(next, 'http://next.invalid').searchParams.get('cursor');
+  return cursor === null || cursor === '' ? undefined : cursor;
+}
+
+function versionNumber(raw: unknown): number | undefined {
+  const value = (raw as RawVersion | null)?.number;
+  return typeof value === 'number' ? value : undefined;
+}
+
+function text(value: unknown): string | undefined {
+  return typeof value === 'string' && value !== '' ? value : undefined;
+}
+
+/** Both deployments' fields in one place; values are type-checked because they come from the instance. */
+function normalizeVersion(raw: unknown, names: ReadonlyMap<string, string>): ConfluencePageVersion {
+  const version = (raw ?? {}) as RawVersion;
+  const authorId = text(version.authorId);
+  return {
+    number: versionNumber(raw),
+    when: text(version.createdAt) ?? text(version.when),
+    author:
+      (authorId === undefined ? undefined : (names.get(authorId) ?? authorId)) ??
+      text(version.by?.displayName) ??
+      text(version.by?.username) ??
+      text(version.by?.accountId),
+    message: text(version.message),
+    minorEdit: typeof version.minorEdit === 'boolean' ? version.minorEdit : undefined,
+  };
 }

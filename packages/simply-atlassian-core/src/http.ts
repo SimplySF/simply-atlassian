@@ -17,7 +17,8 @@
 import { AuthError, CliError, HttpError, NetworkError } from './errors.js';
 import { stripControlOneLine } from './text.js';
 
-export type QueryValue = string | number | boolean | undefined;
+/** An array repeats the parameter once per value, as `?accountId=a&accountId=b`. */
+export type QueryValue = string | number | boolean | readonly string[] | undefined;
 
 /** One REST call, relative to the transport's base URL. */
 export interface JsonCall {
@@ -258,7 +259,11 @@ export class HttpTransport {
     const root = url.pathname.replace(/\/+$/, '');
     url.pathname = call.path.startsWith('/') ? `${root}${call.path}` : `${root}/${call.path}`;
     for (const [name, value] of Object.entries(call.query ?? {})) {
-      if (value !== undefined) url.searchParams.set(name, String(value));
+      if (Array.isArray(value)) {
+        for (const item of value as readonly string[]) url.searchParams.append(name, item);
+      } else if (value !== undefined) {
+        url.searchParams.set(name, String(value));
+      }
     }
     return url;
   }

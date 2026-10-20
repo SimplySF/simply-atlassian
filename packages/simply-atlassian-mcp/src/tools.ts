@@ -45,6 +45,7 @@ import {
   jiraTargetUrl,
   numericId,
   pageExpand,
+  pageHistoryJson,
   pageIdForInstance,
   pageIdFromInput,
   pageUrl,
@@ -712,6 +713,18 @@ export const TOOLS: readonly ToolSpec[] = [
     kind: 'read',
     inputSchema: { page: pageRef, limit: limit(25, 'children') },
     run: (ctx, input) => ctx.confluence().getPageChildren(pageIdFromInput(input.page), { limit: input.limit ?? 25 }),
+  }),
+  tool({
+    name: 'confluence_page_history',
+    title: 'Confluence: page version history',
+    description:
+      'List who edited a page, when, whether the edit was minor, and the version message, as raw ' +
+      'version entries newest first. "complete": false means "limit" stopped before the oldest version.',
+    command: ['atlassian', 'confluence', 'page', 'history'],
+    kind: 'read',
+    inputSchema: { page: pageRef, limit: limit(25, 'versions') },
+    run: async (ctx, input) =>
+      pageHistoryJson(await ctx.confluence().getAllPageVersions(pageIdFromInput(input.page), input.limit ?? 25)),
   }),
   tool({
     name: 'confluence_page_create',

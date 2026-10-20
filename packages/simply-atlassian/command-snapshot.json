@@ -129,6 +129,22 @@
   },
   {
     "alias": [],
+    "command": "atlassian:confluence:page:history",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "confluence-api-token",
+      "confluence-personal-token",
+      "confluence-url",
+      "confluence-username",
+      "env-file",
+      "json",
+      "limit"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
     "command": "atlassian:confluence:page:label:add",
     "flagAliases": [],
     "flagChars": ["e"],

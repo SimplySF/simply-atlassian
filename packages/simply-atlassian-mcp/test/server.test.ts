@@ -158,6 +158,17 @@ describe('read tools', () => {
     expect(jsonOf(result)).toMatchObject({ issues: [{ key: 'P-1' }], complete: true });
   });
 
+  it('return page history as the same envelope as page history --json', async () => {
+    atlassian.route('/rest/experimental/content/123/version', (_req, res) => {
+      respondJson(res, 200, { results: [{ number: 1 }, { number: 2 }], start: 0, _links: {} });
+    });
+    const c = await connect({ env: env() });
+
+    const result = await c.callTool({ name: 'confluence_page_history', arguments: { page: '123', limit: 5 } });
+
+    expect(jsonOf(result)).toEqual({ rawEntries: [{ number: 2 }, { number: 1 }], complete: true });
+  });
+
   it('answer the open tools with a URL and open nothing', async () => {
     const c = await connect({ env: env() });
     const result = await c.callTool({ name: 'jira_open', arguments: { target: 'P-7' } });

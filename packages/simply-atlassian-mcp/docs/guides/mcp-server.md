@@ -259,6 +259,7 @@ into:
 | "Who changed the priority on PROJ-42, and when?"      | `jira_issue_history` with `field: "priority"`                                                                   |
 | "What's in the current sprint on the Platform board?" | `jira_board_list` to find the board id, `jira_sprint_list` for the active sprint, then `jira_sprint_issues`     |
 | "Find our release-notes pages in the DOCS space."     | `confluence_page_search` with a CQL query                                                                       |
+| "Who last edited the deployment runbook page?"        | `confluence_page_history` with `limit: 1`                                                                       |
 | "Give me a link to PROJ-42."                          | `jira_open`, which returns the URL rather than launching a browser                                              |
 
 Each tool's inputs are the matching command's arguments and flags in camel case, with arrays where
@@ -374,6 +375,7 @@ With writes allowed:
 | `confluence_page_get`          |                                                         |
 | `confluence_page_search`       |                                                         |
 | `confluence_page_children`     |                                                         |
+| `confluence_page_history`      |                                                         |
 | `confluence_page_comment_list` |                                                         |
 
 ### Xray tools (`--xray`)
