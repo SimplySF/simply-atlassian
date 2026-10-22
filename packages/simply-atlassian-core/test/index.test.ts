@@ -121,6 +121,18 @@ describe('@simplysf/simply-atlassian-core', () => {
         'listFields',
         'listIssueTypes',
         'prepareSprintUpdate',
+        // attachments (docs/design/0020-jira-issue-attachments.md)
+        'INLINE_IMAGE_MAX_BYTES',
+        'INLINE_TEXT_MAX_BYTES',
+        'describeAttachment',
+        'formatBytes',
+        'inlineAttachment',
+        'planAttachmentDownloads',
+        'readAttachment',
+        'safeAttachmentFilename',
+        'saveAttachment',
+        'saveAttachmentToFolder',
+        'selectAttachments',
         // xray (docs/design/0015-jira-xray.md)
         'XRAY_FIELD_ROLES',
         'XRAY_PAGE_SIZE',

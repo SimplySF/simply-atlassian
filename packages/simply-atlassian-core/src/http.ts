@@ -34,6 +34,29 @@ export interface JsonCall {
   readonly mutating?: boolean;
 }
 
+/**
+ * A read whose body is handed back unread, for files. Never `mutating`: a stream is restarted
+ * from the beginning when it fails, which is only safe for a read.
+ */
+export type StreamCall = Pick<JsonCall, 'method' | 'path' | 'query'>;
+
+export interface StreamOptions {
+  /**
+   * How long the body may go without sending a byte before it is abandoned. The transport's
+   * timeout covers only the wait for headers here: a whole-exchange deadline would cut off any
+   * large file on a slow link, however steadily it was arriving.
+   */
+  readonly idleTimeoutMs?: number;
+}
+
+/** A response whose headers have arrived and whose body has not been read. */
+export interface StreamResponse {
+  /** Iterate once. Stopping early, or a failure, cancels the request. */
+  readonly body: AsyncIterable<Uint8Array>;
+  readonly contentType?: string;
+  readonly contentLength?: number;
+}
+
 /** Where and how a transport talks: fixed per client instance. */
 export interface TransportTarget {
   readonly baseUrl: string;
@@ -75,6 +98,13 @@ const MAY_HAVE_APPLIED = ' The change may have been applied; check before retryi
  */
 type AttemptOutcome<T> =
   { done: true; value: T } | { done: false; delayMs?: number; retryable: boolean; exhausted: () => HttpError };
+
+/** How one kind of call reads a successful response; everything before that is shared. */
+interface Exchange<T> {
+  readonly accept: string;
+  readonly redirect: NonNullable<RequestInit['redirect']>;
+  readonly read: (response: Response, controller: AbortController) => Promise<T>;
+}
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -129,6 +159,45 @@ export class HttpTransport {
    * second issue or comment, so those fail at once and say the change may have landed.
    */
   public async json<T>(call: JsonCall): Promise<T> {
+    return this.execute(call, {
+      accept: 'application/json',
+      redirect: 'follow',
+      read: async (response): Promise<T> => {
+        const text = await response.text();
+        if (text.trim() === '') return {} as T;
+        try {
+          return JSON.parse(text) as T;
+        } catch {
+          throw new HttpError(`${call.method} ${call.path} returned malformed JSON.`, response.status, text);
+        }
+      },
+    });
+  }
+
+  /**
+   * Executes a read and resolves as soon as the response headers arrive, with the body unread.
+   * Everything up to the headers — auth mapping, retries, the timeout — is what `json` does.
+   * Redirects are not followed: a file is fetched from the configured instance or not at all,
+   * so a `3xx` is an `HttpError`. A body that stalls past `idleTimeoutMs`, or drops mid-way,
+   * fails with a `NetworkError` while being iterated; restarting it is the caller's decision.
+   */
+  public async stream(call: StreamCall, options: StreamOptions = {}): Promise<StreamResponse> {
+    const idleTimeoutMs = options.idleTimeoutMs ?? this.timeoutMs;
+    return this.execute(call, {
+      accept: '*/*',
+      redirect: 'manual',
+      read: (response, controller): Promise<StreamResponse> => {
+        const length = Number(response.headers.get('content-length') ?? Number.NaN);
+        return Promise.resolve({
+          body: guardBody(response.body, controller, idleTimeoutMs, call),
+          contentType: response.headers.get('content-type') ?? undefined,
+          contentLength: Number.isSafeInteger(length) && length >= 0 ? length : undefined,
+        });
+      },
+    });
+  }
+
+  private async execute<T>(call: JsonCall, exchange: Exchange<T>): Promise<T> {
     const url = this.resolve(call);
 
     /* Each attempt must observe the previous one's outcome before starting — sequential awaiting
@@ -137,7 +206,7 @@ export class HttpTransport {
     for (let attempt = 1; ; attempt += 1) {
       let outcome: AttemptOutcome<T>;
       try {
-        outcome = await this.attempt<T>(url, call);
+        outcome = await this.attempt(url, call, exchange);
       } catch (error) {
         const verdict = this.triage(error, call, url, attempt);
         if (verdict !== TRANSIENT) throw verdict;
@@ -151,21 +220,25 @@ export class HttpTransport {
     /* eslint-enable no-await-in-loop */
   }
 
-  /** Runs one attempt under a deadline that spans connection, headers, AND body. */
-  private async attempt<T>(url: URL, call: JsonCall): Promise<AttemptOutcome<T>> {
+  /**
+   * Runs one attempt under a deadline. For `json` it spans connection, headers, AND body; for
+   * `stream` it ends at the headers, and the body's idle timer takes over.
+   */
+  private async attempt<T>(url: URL, call: JsonCall, exchange: Exchange<T>): Promise<AttemptOutcome<T>> {
     const controller = new AbortController();
     const deadline = setTimeout(() => {
       controller.abort();
     }, this.timeoutMs);
 
     try {
-      const headers: Record<string, string> = { Accept: 'application/json', ...this.target.headers };
+      const headers: Record<string, string> = { Accept: exchange.accept, ...this.target.headers };
       if (call.body !== undefined) headers['Content-Type'] = 'application/json';
 
       const response = await fetch(url, {
         method: call.method,
         headers,
         body: call.body === undefined ? undefined : JSON.stringify(call.body),
+        redirect: exchange.redirect,
         signal: controller.signal,
       });
 
@@ -183,14 +256,17 @@ export class HttpTransport {
         );
       }
 
-      if (response.ok) {
-        const text = await response.text();
-        if (text.trim() === '') return { done: true, value: {} as T };
-        try {
-          return { done: true, value: JSON.parse(text) as T };
-        } catch {
-          throw new HttpError(`${call.method} ${call.path} returned malformed JSON.`, response.status, text);
-        }
+      if (response.ok) return { done: true, value: await exchange.read(response, controller) };
+
+      if (response.status >= 300 && response.status < 400) {
+        // Only a call that declined to follow redirects sees one. The Location is not quoted:
+        // it is server-controlled, and where it pointed is not something to act on.
+        await response.body?.cancel();
+        throw new HttpError(
+          `${call.method} ${call.path} was redirected (${response.status}) instead of answering. ` +
+            'On Server/DC this usually means the credential was not accepted for this path.',
+          response.status,
+        );
       }
 
       if (response.status === 429 || response.status >= 500) {
@@ -271,6 +347,48 @@ export class HttpTransport {
 
 /** Sentinel: the triage step decided this attempt's failure is worth another try. */
 const TRANSIENT = Symbol('transient-transport-failure');
+
+/**
+ * Yields a response body chunk by chunk, abandoning it after `idleMs` without a byte. Every way
+ * out — the end, a failure, or the caller stopping early — aborts the request, so an unfinished
+ * body never holds a socket open.
+ */
+async function* guardBody(
+  body: ReadableStream<Uint8Array> | null,
+  controller: AbortController,
+  idleMs: number,
+  call: StreamCall,
+): AsyncGenerator<Uint8Array> {
+  if (body === null) return;
+  const reader = body.getReader();
+  let idle: NodeJS.Timeout | undefined;
+  try {
+    /* Chunks arrive in order; each read has to wait for the one before it. */
+    /* eslint-disable no-await-in-loop */
+    for (;;) {
+      clearTimeout(idle);
+      idle = setTimeout(() => {
+        controller.abort();
+      }, idleMs);
+      let chunk: Awaited<ReturnType<typeof reader.read>>;
+      try {
+        chunk = await reader.read();
+      } catch (error) {
+        if (isAbort(error)) {
+          throw new NetworkError(`${call.method} ${call.path} sent no data for ${idleMs} ms and was abandoned.`);
+        }
+        const description = transportCode(error) ?? (error instanceof Error ? error.message : String(error));
+        throw new NetworkError(`${call.method} ${call.path} failed while reading the response: ${description}.`);
+      }
+      if (chunk.done) return;
+      yield chunk.value;
+    }
+    /* eslint-enable no-await-in-loop */
+  } finally {
+    clearTimeout(idle);
+    controller.abort();
+  }
+}
 
 /** `Retry-After` arrives as delay-seconds or an HTTP date; both are capped so a hostile value can't park the CLI. */
 function readRetryAfter(header: string | null): number | undefined {

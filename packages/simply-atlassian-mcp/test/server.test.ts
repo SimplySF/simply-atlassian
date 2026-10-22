@@ -99,7 +99,14 @@ describe('createServer', () => {
     // App tools (Xray) are held back until the server is started for that app.
     const expected = TOOLS.filter((tool) => tool.kind === 'read' && tool.app === undefined).map((tool) => tool.name);
     expect(tools.map((tool) => tool.name).sort()).toEqual(expected.sort());
-    for (const tool of tools) expect(tool.annotations?.readOnlyHint).toBe(true);
+    // Read-only unless the tool says otherwise: an attachment download reads Jira but can save a file.
+    for (const tool of tools) {
+      const spec = TOOLS.find((candidate) => candidate.name === tool.name);
+      expect(tool.annotations?.readOnlyHint).toBe(spec?.annotations?.readOnlyHint ?? true);
+    }
+    expect(TOOLS.filter((tool) => tool.annotations?.readOnlyHint === false).map((tool) => tool.name)).toEqual([
+      'jira_issue_attachment_download',
+    ]);
   });
 
   it('registers every non-app tool with --allow-writes, with destructive ones annotated', async () => {

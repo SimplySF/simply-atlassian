@@ -72,6 +72,21 @@ if ! out=$(simply atlassian jira issue view PROJ-999 --json 2>err.json); then
 fi
 ```
 
+## Files on stdout
+
+`jira issue attachment download --stdout` is the one command whose stdout is not text: it writes a
+single attachment's raw bytes, so it suits a pipe or a redirect. Progress still goes to stderr. It
+refuses to write to a terminal, because a file can contain escape sequences, and it cannot be
+combined with `--json`. A transfer that fails part-way exits 1 and says the output is incomplete;
+it is not retried, since the bytes already written cannot be taken back.
+
+```sh
+simply atlassian jira issue attachment download PROJ-42 --id 10234 --stdout | grep ERROR
+```
+
+To save files instead, leave out `--stdout`; downloads to disk are restarted automatically when a
+connection drops.
+
 ## Never interactive
 
 No command prompts or blocks on stdin. A destructive command that wants a safety check takes an

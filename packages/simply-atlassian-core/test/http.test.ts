@@ -344,3 +344,118 @@ describe('server text in error messages', () => {
     expect(error.message).toContain('approved');
   });
 });
+
+describe('HttpTransport.stream', () => {
+  async function collect(body: AsyncIterable<Uint8Array>): Promise<string> {
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of body) chunks.push(chunk);
+    return Buffer.concat(chunks).toString('utf8');
+  }
+
+  it('resolves at the headers with the body unread, asking for any type', async () => {
+    server.route('/file', (req, res) => {
+      res.writeHead(200, { 'content-type': 'text/plain', 'content-length': '5' });
+      res.end(req.headers.accept === '*/*' ? 'hello' : 'wrong');
+    });
+
+    const response = await transport().stream({ method: 'GET', path: '/file' });
+
+    expect(response.contentType).toBe('text/plain');
+    expect(response.contentLength).toBe(5);
+    expect(await collect(response.body)).toBe('hello');
+  });
+
+  it('returns an empty body as no bytes rather than as {}', async () => {
+    server.route('/empty', (_req, res) => {
+      res.writeHead(200, { 'content-length': '0' });
+      res.end();
+    });
+
+    const response = await transport().stream({ method: 'GET', path: '/empty' });
+    expect(await collect(response.body)).toBe('');
+  });
+
+  it('does not follow a redirect, and does not quote where it pointed', async () => {
+    server.route('/moved', (_req, res) => {
+      res.writeHead(302, { location: 'https://elsewhere.example/login.jsp' });
+      res.end();
+    });
+
+    const error = await transport()
+      .stream({ method: 'GET', path: '/moved' })
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(HttpError);
+    expect((error as HttpError).status).toBe(302);
+    expect((error as HttpError).message).toContain('credential was not accepted');
+    expect((error as HttpError).message).not.toContain('elsewhere');
+    expect(server.requests).toHaveLength(1);
+  });
+
+  it('retries a 5xx before the headers, as a read', async () => {
+    let calls = 0;
+    server.route('/flaky', (_req, res) => {
+      calls += 1;
+      if (calls === 1) {
+        respondJson(res, 503, {});
+        return;
+      }
+      res.writeHead(200);
+      res.end('ok');
+    });
+
+    const response = await transport().stream({ method: 'GET', path: '/flaky' });
+    expect(await collect(response.body)).toBe('ok');
+    expect(calls).toBe(2);
+  });
+
+  it('maps 401 to AuthError as json does', async () => {
+    server.route('/denied', (_req, res) => respondJson(res, 401, {}));
+    await expect(transport().stream({ method: 'GET', path: '/denied' })).rejects.toBeInstanceOf(AuthError);
+  });
+
+  it('abandons a body that stalls past the idle timeout', async () => {
+    server.route('/stall', (_req, res) => {
+      res.writeHead(200);
+      res.write('partial');
+    });
+
+    const response = await transport().stream({ method: 'GET', path: '/stall' }, { idleTimeoutMs: 100 });
+    const error = await collect(response.body).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(NetworkError);
+    expect((error as NetworkError).message).toContain('sent no data for 100 ms');
+  });
+
+  it('keeps a slow body alive while it makes progress, past the transport timeout', async () => {
+    server.route('/slow', (_req, res) => {
+      res.writeHead(200);
+      let sent = 0;
+      const tick = setInterval(() => {
+        res.write('x');
+        sent += 1;
+        if (sent === 5) {
+          clearInterval(tick);
+          res.end();
+        }
+      }, 60);
+    });
+
+    const response = await transport({ timeoutMs: 150 }).stream(
+      { method: 'GET', path: '/slow' },
+      { idleTimeoutMs: 150 },
+    );
+    expect(await collect(response.body)).toBe('xxxxx');
+  });
+
+  it('fails with a NetworkError when the connection drops mid-body', async () => {
+    server.route('/drop', (_req, res) => {
+      res.writeHead(200, { 'content-length': '100' });
+      res.write('half');
+      setTimeout(() => res.destroy(), 20);
+    });
+
+    const response = await transport().stream({ method: 'GET', path: '/drop' });
+    await expect(collect(response.body)).rejects.toBeInstanceOf(NetworkError);
+  });
+});
