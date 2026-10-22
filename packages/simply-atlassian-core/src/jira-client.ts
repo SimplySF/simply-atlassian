@@ -16,7 +16,7 @@
 
 import { buildAuthHeaders } from './auth.js';
 import type { AtlassianConfig } from './config.js';
-import { HttpTransport, type JsonCall } from './http.js';
+import { HttpTransport, type JsonCall, type StreamOptions, type StreamResponse } from './http.js';
 
 export interface JiraSearchOptions {
   readonly jql: string;
@@ -164,9 +164,11 @@ export class JiraClient {
   public readonly deployment: AtlassianConfig['deployment'];
   private readonly transport: HttpTransport;
   private readonly apiBase: string;
+  private readonly baseUrl: string;
 
   public constructor(config: AtlassianConfig) {
     this.deployment = config.deployment;
+    this.baseUrl = config.url;
     this.transport = new HttpTransport({
       baseUrl: config.url,
       headers: buildAuthHeaders(config),
@@ -184,6 +186,50 @@ export class JiraClient {
       method: 'GET',
       query: { fields: joinFields(options.fields), expand: options.expand },
     });
+  }
+
+  /**
+   * An issue's attachments, as the instance describes them. Neither deployment has a list
+   * endpoint: the issue's `attachment` field is the list, so only that field is asked for.
+   */
+  public async getAttachments(issueKey: string): Promise<unknown[]> {
+    const issue = await this.request<{ fields?: { attachment?: unknown } }>(`/issue/${encodeURIComponent(issueKey)}`, {
+      method: 'GET',
+      query: { fields: 'attachment' },
+    });
+    const attachments = issue.fields?.attachment;
+    return Array.isArray(attachments) ? (attachments as unknown[]) : [];
+  }
+
+  /**
+   * Opens one attachment's content with the body unread. Cloud is asked not to redirect, because
+   * its default answer is a 303 to a media host outside the configured site; Server/DC has no REST
+   * path for content, so this uses the web path its own `content` field names. Either way the
+   * path is built from the id rather than taken from the instance, so the request stays here.
+   */
+  public openAttachment(
+    attachment: { readonly id: string; readonly filename: string },
+    options: StreamOptions = {},
+  ): Promise<StreamResponse> {
+    return this.transport.stream(
+      {
+        method: 'GET',
+        path: this.attachmentPath(attachment),
+        query: this.deployment === 'cloud' ? { redirect: false } : undefined,
+      },
+      options,
+    );
+  }
+
+  /**
+   * Where a person signed in to Jira can download an attachment in a browser. It carries no
+   * credential of its own, which is why it, and not Cloud's redirect target, is what an agent
+   * may be handed.
+   */
+  public attachmentBrowserUrl(attachment: { readonly id: string; readonly filename: string }): string {
+    const url = new URL(this.baseUrl);
+    url.pathname = `${url.pathname.replace(/\/+$/, '')}${this.attachmentPath(attachment)}`;
+    return url.toString();
   }
 
   /** Gets one changelog page and hides the Cloud versus Server/DC retrieval difference. */
@@ -661,6 +707,13 @@ export class JiraClient {
     }
     /* eslint-enable no-await-in-loop */
     return { chunks, issueCount: issueKeys.length };
+  }
+
+  private attachmentPath(attachment: { readonly id: string; readonly filename: string }): string {
+    const id = encodeURIComponent(attachment.id);
+    return this.deployment === 'cloud'
+      ? `${this.apiBase}/attachment/content/${id}`
+      : `/secure/attachment/${id}/${encodeURIComponent(attachment.filename)}`;
   }
 
   private request<T>(path: string, call: Omit<JsonCall, 'path'>, base = this.apiBase): Promise<T> {

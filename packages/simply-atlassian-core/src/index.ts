@@ -46,7 +46,15 @@ export {
 export { pageHistoryJson, type PageHistoryJson } from './confluence-history.js';
 export { loadEnvFile, parseEnvFile } from './env-file.js';
 export { AuthError, CliError, ConfigError, HttpError, NetworkError } from './errors.js';
-export { HttpTransport, type JsonCall, type QueryValue, type TransportTarget } from './http.js';
+export {
+  HttpTransport,
+  type JsonCall,
+  type QueryValue,
+  type StreamCall,
+  type StreamOptions,
+  type StreamResponse,
+  type TransportTarget,
+} from './http.js';
 export {
   JiraClient,
   MAX_ISSUES_PER_SPRINT_MOVE,
@@ -104,6 +112,24 @@ export { storageToMarkdown } from './storage-markdown.js';
 
 // --- Operations: what each command does between parsing its input and rendering its result ---
 export { addIssuesToSprint, numericId, sprintChunkSizes, type SprintAddResult } from './jira-agile.js';
+export {
+  describeAttachment,
+  formatBytes,
+  INLINE_IMAGE_MAX_BYTES,
+  INLINE_TEXT_MAX_BYTES,
+  inlineAttachment,
+  planAttachmentDownloads,
+  readAttachment,
+  safeAttachmentFilename,
+  saveAttachment,
+  saveAttachmentToFolder,
+  selectAttachments,
+  type AttachmentDownload,
+  type AttachmentPlanOptions,
+  type FolderSaveOutcome,
+  type InlineAttachment,
+  type JiraAttachment,
+} from './jira-attachments.js';
 export {
   buildCommentBody,
   buildCommentEditBody,

@@ -1,6 +1,6 @@
 # 0020 — Reading Jira issue attachments
 
-**Status:** Draft
+**Status:** In progress
 **Package:** `packages/simply-atlassian-core`, `packages/simply-atlassian`, `packages/simply-atlassian-mcp`
 **Date:** 2026-10-22
 
@@ -87,16 +87,19 @@ timeout as the deadline for the headers. After that, a single whole-exchange dea
 any large file on a slow link, so the body is governed by an idle timeout instead: no bytes for
 30 seconds aborts it. A download that keeps making progress can take as long as it needs.
 
-Core's `saveAttachment(client, attachment, directory, filename)` streams the body to a temporary
-file in the target directory, checks the byte count against the size Jira listed, and renames the
-file into place. If the body fails part-way, or the count does not match, the temporary file is
-deleted. Body failures that are transient (a reset or an idle timeout) restart that file from the
-beginning, up to the transport's usual three attempts. A restart is safe because the request only
-reads. No partial file is ever left under the real name.
+Core's `saveAttachment(client, attachment, file, { overwrite? })` streams the body to a temporary
+file beside `file`, opened with `wx` so it can never replace anything, checks the byte count
+against the size Jira listed, and renames the file into place. If the body fails part-way, or the
+count does not match, the temporary file is deleted. A body that drops or stalls (a `NetworkError`
+while reading) restarts that file from the beginning, up to three attempts in all. A failure before
+the headers is not restarted here, because the transport has already retried it, and an
+`HttpError` or a size mismatch is not restarted at all. A restart is safe because the request only
+reads. No partial file is ever left under the real name. Without `overwrite`, the file is checked
+again just before the rename, so a file that appeared during the download is left alone.
 
 `readAttachment(client, attachment, maxBytes)` is the bounded read the MCP server uses for inline
-content. It reads into memory and aborts the request once `maxBytes` is exceeded, which covers the
-case where Jira's listed size is wrong.
+content. It reads into memory and stops reading, which cancels the request, once `maxBytes` is
+exceeded. That covers the case where Jira's listed size is wrong.
 
 ## Behavior
 
@@ -165,11 +168,14 @@ path as-is:
 | Control characters, and `< > : " \| ? *`                                       | Replaced with `_`, so a name is valid on Windows and POSIX |
 | Trailing dots or spaces                                                        | Removed (Windows silently drops them)                      |
 | Windows reserved names (`CON`, `NUL`, `COM1`, …), with or without an extension | Prefixed with `_`                                          |
+| Longer than 180 characters                                                     | Shortened, keeping the extension                           |
 | Empty after the above                                                          | `attachment-<id>`                                          |
-| Two selected attachments with the same resulting name                          | Each becomes `<stem> (<id>)<ext>`                          |
+| Two selected attachments with the same resulting name, ignoring case           | Each becomes `<stem> (<id>)<ext>`                          |
 
 Jira allows several attachments with the same name on one issue, which is why duplicates are
-renamed rather than treated as errors. After sanitizing, the resolved path is checked to be
+renamed rather than treated as errors. Names are compared ignoring case because the default file
+systems on Windows and macOS do. The 180-character limit leaves room under the usual 255-byte limit
+for the `(<id>)` suffix and the temporary file's suffix. After sanitizing, the resolved path is checked to be
 directly inside `--output-dir`, and the command refuses to write anywhere else. This is a second
 guard, not the main one.
 
@@ -202,8 +208,9 @@ usual `AuthError` (exit 3) with Jira's message.
 
 Both are `read` kind, so both are registered without `--allow-writes`: neither changes anything in
 Jira. `jira_issue_attachment_download` can write a local file, but only to a folder the user typed
-in, so it carries `readOnlyHint: false` rather than the read kind's usual annotations. That needs a
-per-tool annotation override on `ToolSpec`, which no tool has had before.
+in, so it carries `readOnlyHint: false` and `idempotentHint: false` rather than the read kind's
+usual annotations. That needs a per-tool `annotations` override on `ToolSpec`, which no tool has
+had before.
 
 The download tool checks that `id` belongs to `issue`, as the CLI does. Its first block is always a
 `text` block of metadata:
@@ -226,26 +233,38 @@ What follows depends on the file and on `save`:
 browser's guess, so the type check is a first filter and decoding is the real test. The size caps
 are checked against Jira's listed size before any request, and again while reading.
 
-**Asking for a folder.** The server checks the client's declared `elicitation` capability when the
-call arrives. If it is present, the server sends an `elicitation/create` request with:
+**Asking for a folder.** The server checks the client's declared `elicitation` capability on each
+call, because capabilities arrive in the handshake after the tools are registered. Form elicitation
+counts as supported when the capability names `form`, or names no mode at all, which is how clients
+from before modes existed declared it. If it is supported, the server sends an
+`elicitation/create` request with:
 
-- a message naming the file, its size and the issue, for example `Save "server.log" (1.2 MiB) from
-PROJ-123?`. The filename is control-stripped and shortened to 120 characters, since it is
-  uploader-chosen text shown in the client's own UI.
-- a form with `directory`, a required string described as "Absolute path of an existing folder",
-  and `rememberForSession`, an optional boolean.
+- a message naming the file, its size and the issue, such as
+  `Save "server.log" (1.2 MiB) from PROJ-123?`. The filename is control-stripped and shortened to
+  120 characters, because it is uploader-chosen text shown in the client's own UI.
+- a form with `directory`, a required string described as "Absolute path of an existing folder to
+  save the file in", and `rememberForSession`, an optional boolean titled "Save later attachments
+  here without asking".
+
+The request waits up to 10 minutes for an answer instead of the SDK's default of one, since a
+person has to find and type a folder.
 
 | User response                                 | Result                                                                                     |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | Accepts with a valid folder                   | The file is streamed there; `saved: true`, `path` set                                      |
 | Accepts with a relative path, or not a folder | Nothing is saved; `saved: false`, and the `reason` says why. The server does not ask again |
+| Accepts with an empty folder                  | Treated as a cancel                                                                        |
 | Declines or cancels                           | `saved: false`, `reason: "The user declined to save the file."`                            |
 
 The folder must already exist. A typo should not create a directory somewhere unexpected. The file
 gets the CLI's sanitized name and is never overwritten: if the name is taken, it becomes
 `<stem> (<id>)<ext>`, and if that is taken too, nothing is saved and the `reason` says so. With
 `rememberForSession`, later saves in the same server process go to that folder without asking. The
-folder is held in memory only and is forgotten when the server exits.
+folder is remembered only after a save to it succeeds, so a mistyped folder is never reused. It is
+held in memory only and is forgotten when the server exits.
+
+When the file could not be returned inline, the `reason` starts with why, then gives the save
+outcome, so an agent can tell the user both.
 
 None of these outcomes is an `isError` result. The tool worked; the user chose. The `browserUrl` in
 the metadata is still there for the user to fall back on.
@@ -265,8 +284,9 @@ file and is data, not instructions, for the same reason
 - `ToolSpec.run` may now resolve to a `ToolContent` value, a small class in `tools.ts` holding an
   array of MCP content blocks. `invokeTool` passes a `ToolContent`'s blocks through and serializes
   everything else as before, so no other tool changes. 0007's "Results" table gains a row for it.
-- `ToolContext` gains an optional `elicit` function, set per call only when the client declared the
-  capability. Tools that do not use it see no change, and tests supply a fake.
+- `ToolContext` gains an optional `askForFolder(message)`, bound per call in `server.ts` only when
+  the client supports form elicitation, and a `session` object shared by every call that holds the
+  remembered folder. Tools that do not use them see no change.
 
 ## Alternatives considered
 
@@ -317,16 +337,18 @@ file and is data, not instructions, for the same reason
 2. `simply-atlassian-core/src/jira-client.ts`: `getAttachments(issueKey)`,
    `openAttachment(attachment)`, and `attachmentBrowserUrl(attachment)`, branching on `deployment`
    for the content path.
-3. `simply-atlassian-core/src/jira-attachments.ts`: the attachment type, `formatBytes`,
-   `safeAttachmentFilename`, `planAttachmentDownloads` (selection, id checks, naming, collisions),
-   `saveAttachment` (streamed write, byte check, restart, rename), `readAttachment` (bounded
-   read), and `classifyAttachmentContent` (the MCP text/image/other decision). Exported from
-   `index.ts`.
+3. `simply-atlassian-core/src/jira-attachments.ts`: `JiraAttachment` and `describeAttachment`,
+   `formatBytes`, `safeAttachmentFilename`, `selectAttachments` (id checks, shared by the CLI's
+   `--stdout` path and the MCP tool), `planAttachmentDownloads` (naming, collisions),
+   `saveAttachment` (streamed write, byte check, restart, rename), `saveAttachmentToFolder` (the
+   MCP save, with its folder checks and no-overwrite naming), `readAttachment` (bounded read), and
+   `inlineAttachment` (the MCP text/image/other decision). Exported from `index.ts`.
 4. `simply-atlassian/src/commands/atlassian/jira/issue/attachment/list.ts` and `download.ts`.
-5. `simply-atlassian-mcp/src/tools.ts`: `ToolContent`, the per-tool annotation override, and the
-   two tools. `simply-atlassian-mcp/src/context.ts`: the optional `elicit`.
-   `simply-atlassian-mcp/src/server.ts`: `invokeTool` passes `ToolContent` through, and the tool
-   handler binds `elicit` from the request when the client declared the capability.
+5. `simply-atlassian-mcp/src/tools.ts`: `ToolContent`, the per-tool `annotations` override, and the
+   two tools. `simply-atlassian-mcp/src/context.ts`: the optional `askForFolder` and the `session`.
+   `simply-atlassian-mcp/src/server.ts`: `invokeTool` passes `ToolContent` through, the kind's
+   annotations are merged with the tool's, and each call binds `askForFolder` when the client
+   supports form elicitation.
 6. Docs: this file's status and the index row; 0007's tool table, counts, and "Results" table; the
    MCP guide, including which clients support elicitation; the `scripting` guide's note on stdout;
    an `AGENTS.md` map entry.
@@ -356,14 +378,15 @@ file and is data, not instructions, for the same reason
   without `--id`; collision refusal; `--stdout` with one, none and several selections, under a TTY,
   with `--json`, and with a body that fails after bytes were written; the `--json` envelope; a 404
   part-way through reports how many files were written.
-- MCP: both tools are registered without `--allow-writes`, and the download tool carries
-  `readOnlyHint: false`; text and images within their caps come back inline; with a fake `elicit`,
-  an oversized or unsupported file, and `save: true` on a small one, each prompt once; accept saves
+- MCP, through a real in-memory client: both tools are registered without `--allow-writes`, the
+  download tool carries `readOnlyHint: false` and has no path input, and it is the only tool with
+  that override; text and images within their caps come back inline; with a client that answers
+  elicitation, an unsupported file and `save: true` on a small one each prompt once; accept saves
   with a sanitized, non-overwriting name; a relative path, a missing folder, decline and cancel
   each return `saved: false` with a reason and no second prompt; `rememberForSession` skips the
-  prompt on the next call; with no `elicit`, the result is metadata and `browserUrl`; the prompt's
-  message strips control characters from the filename; an id from another issue is an `isError`
-  result; the catalogue-parity test covers both new commands.
+  prompt on the next call; a client without elicitation gets metadata and `browserUrl` and no
+  content request; the prompt strips control characters from the filename; an id the issue does
+  not have is an `isError` result; the catalogue-parity test covers both new commands.
 
 ## Verification boundary
 

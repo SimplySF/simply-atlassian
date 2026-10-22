@@ -17,7 +17,13 @@
 import { createRequire } from 'node:module';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import type { CallToolResult, ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
+import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type {
+  CallToolResult,
+  ServerNotification,
+  ServerRequest,
+  ToolAnnotations,
+} from '@modelcontextprotocol/sdk/types.js';
 import {
   assertWritesAllowed,
   AuthError,
@@ -29,8 +35,11 @@ import {
   secretValues,
   stripControl,
 } from '@simplysf/simply-atlassian-core';
-import { createContext, type ServerOptions, type ToolContext } from './context.js';
-import { TOOLS, type ToolKind, type ToolSpec } from './tools.js';
+import { createContext, type FolderAnswer, type ServerOptions, type ToolContext } from './context.js';
+import { ToolContent, TOOLS, type ToolKind, type ToolSpec } from './tools.js';
+
+/** What the SDK hands a tool handler besides its input: the request's id and cancellation signal. */
+type ToolCallExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
 
 const { version } = createRequire(import.meta.url)('../package.json') as { version: string };
 
@@ -102,13 +111,63 @@ export function createServer(options: ServerOptions = {}): McpServer {
         title: spec.title,
         description: spec.description,
         inputSchema: spec.inputSchema,
-        annotations: { title: spec.title, ...ANNOTATIONS[spec.kind] },
+        annotations: { title: spec.title, ...ANNOTATIONS[spec.kind], ...spec.annotations },
       },
-      (input) => invokeTool(spec, context, input),
+      (input, extra) => invokeTool(spec, withFolderPrompt(context, server, extra), input),
     );
   }
 
   return server;
+}
+
+/** Long enough for a person to find and type a folder; the SDK's default is a minute. */
+const FOLDER_PROMPT_TIMEOUT_MS = 10 * 60_000;
+
+/**
+ * The context for one call, with `askForFolder` when the client can show a form. Checked per
+ * call because capabilities arrive in the handshake, after the tools are registered. An
+ * `elicitation` capability with neither mode named is a client from before modes existed, which
+ * meant a form.
+ */
+function withFolderPrompt(context: ToolContext, server: McpServer, extra: ToolCallExtra): ToolContext {
+  const elicitation = server.server.getClientCapabilities()?.elicitation;
+  const formSupported =
+    elicitation !== undefined &&
+    (elicitation.form !== undefined || (elicitation.url === undefined && Object.keys(elicitation).length === 0));
+  if (!formSupported) return context;
+
+  return {
+    ...context,
+    askForFolder: async (message): Promise<FolderAnswer> => {
+      const result = await server.server.elicitInput(
+        {
+          mode: 'form',
+          message,
+          requestedSchema: {
+            type: 'object',
+            properties: {
+              directory: {
+                type: 'string',
+                title: 'Folder',
+                description: 'Absolute path of an existing folder to save the file in.',
+              },
+              rememberForSession: {
+                type: 'boolean',
+                title: 'Save later attachments here without asking',
+                default: false,
+              },
+            },
+            required: ['directory'],
+          },
+        },
+        { signal: extra.signal, relatedRequestId: extra.requestId, timeout: FOLDER_PROMPT_TIMEOUT_MS },
+      );
+      if (result.action !== 'accept') return { action: result.action };
+      const directory = result.content?.directory;
+      if (typeof directory !== 'string' || directory.trim() === '') return { action: 'cancel' };
+      return { action: 'accept', directory: directory.trim(), remember: result.content?.rememberForSession === true };
+    },
+  };
 }
 
 /**
@@ -150,6 +209,7 @@ export async function invokeTool(
     // writes but points the server at a read-only credential file still gets the refusal.
     if (spec.kind !== 'read') assertWritesAllowed(context.env);
     const result = await spec.run(context, input);
+    if (result instanceof ToolContent) return { content: result.blocks };
     // Handed through untouched so the payload shape stays Atlassian's contract, not this server's.
     return { content: [{ type: 'text', text: JSON.stringify(result ?? null) }] };
   } catch (error) {
