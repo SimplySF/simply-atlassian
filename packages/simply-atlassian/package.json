@@ -112,7 +112,7 @@
   },
   "devDependencies": {
     "@oclif/plugin-command-snapshot": "^5.4.0",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.12",
     "oclif": "^4.23.0",
     "shx": "^0.4.0",
     "vitest": "^4.1.10"
