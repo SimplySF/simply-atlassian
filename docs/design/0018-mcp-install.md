@@ -43,6 +43,16 @@ The args are always `atlassian mcp …`. The `absolute` launcher runs `process.e
 standalone server and doesn't take `atlassian mcp`, so the command refuses `--launcher absolute`
 (exit 2) when it isn't running under `@simplysf/simply-cli`.
 
+An existing entry of the same name is the user's as much as the installer's. The installer owns the
+keys that say how the server is started or reached (`type`, `command`, `args`, and the remote
+transports' `url`, `httpUrl`, `serverUrl`); every other key — `env` above all, since it is how a
+client hands the server its connection settings — is carried into the entry a `--force` replace
+writes, and doesn't make an entry differ. Claude Code and Codex are edited through their CLIs, which
+only take `env` (`add-json`'s `env`, `codex mcp add --env`), so for them `env` is what is carried.
+Previews and `--json` show `env` names with each value as `<kept>`. Before this
+([#66](https://github.com/SimplySF/simply-atlassian/issues/66)) a replace wrote the bare launch and
+silently dropped `env`.
+
 `atlassian mcp` remains a command and also becomes a topic. oclif matches the longest command id,
 so `atlassian mcp install` reaches the new command and `atlassian mcp` still serves.
 
@@ -76,7 +86,8 @@ Flag forwarding (`--allow-writes`, `--xray`, `--env-file` made absolute), the de
 missing env file (exit 2, nothing written), `--dry-run --json`, and the exit code being the highest
 across clients. Every case writes project-scope files under a temp directory. The client logic
 itself is tested in `test/mcpClients/`: paths per platform, every outcome, comment- and
-format-preserving JSONC edits, the `claude`/`codex` argv, launchers and the env file.
+format-preserving JSONC edits, the `claude`/`codex` argv, launchers and the env file, and an
+existing entry's `env` and other settings surviving a replace with their values redacted in previews.
 
 ## Open questions
 

@@ -21,9 +21,9 @@ const launch = { command: 'simply', args: ['gitlab', 'mcp', '--env-file', 'C:\\U
 
 describe('compareCodexEntry', () => {
   it('is absent when there is no table for the name', () => {
-    expect(compareCodexEntry('model = "o3"\n\n[mcp_servers.other]\ncommand = "x"\n', 'simply-gitlab', launch)).toBe(
-      'absent',
-    );
+    expect(
+      compareCodexEntry('model = "o3"\n\n[mcp_servers.other]\ncommand = "x"\n', 'simply-gitlab', launch),
+    ).toStrictEqual({ status: 'absent' });
   });
 
   it('is the same for the table codex writes, including escaped backslashes and comments', () => {
@@ -42,13 +42,13 @@ describe('compareCodexEntry', () => {
       '[profiles.fast]',
       'model = "o4-mini"',
     ].join('\n');
-    expect(compareCodexEntry(toml, 'simply-gitlab', launch)).toBe('same');
+    expect(compareCodexEntry(toml, 'simply-gitlab', launch)).toStrictEqual({ status: 'same', env: {} });
   });
 
   it('accepts a quoted table key', () => {
     const toml =
       '[mcp_servers."simply-gitlab"]\ncommand = "simply"\nargs = ["gitlab", "mcp", "--env-file", \'C:\\Users\\me\\gitlab.env\']\n';
-    expect(compareCodexEntry(toml, 'simply-gitlab', launch)).toBe('same');
+    expect(compareCodexEntry(toml, 'simply-gitlab', launch)).toStrictEqual({ status: 'same', env: {} });
   });
 
   it('differs when the args differ', () => {
@@ -58,15 +58,28 @@ describe('compareCodexEntry', () => {
         'simply-gitlab',
         launch,
       ),
-    ).toBe('differs');
+    ).toStrictEqual({ status: 'differs', env: {} });
   });
 
-  it('differs when the table carries anything beyond the launch', () => {
+  it('reads an env sub-table, which leaves the launch the same', () => {
+    const toml =
+      '[mcp_servers.simply-gitlab]\ncommand = "simply"\nargs = []\n\n[mcp_servers.simply-gitlab.env]\nGITLAB_TOKEN = "x"\n';
+    expect(compareCodexEntry(toml, 'simply-gitlab', { command: 'simply', args: [] })).toStrictEqual({
+      status: 'same',
+      env: { GITLAB_TOKEN: 'x' },
+    });
+    expect(compareCodexEntry(toml, 'simply-gitlab', { command: 'npx', args: [] })).toStrictEqual({
+      status: 'differs',
+      env: { GITLAB_TOKEN: 'x' },
+    });
+  });
+
+  it('differs when the table carries anything beyond the launch and env', () => {
     const extraKey = '[mcp_servers.simply-gitlab]\ncommand = "simply"\nargs = []\nstartup_timeout_sec = 20\n';
     const subTable =
-      '[mcp_servers.simply-gitlab]\ncommand = "simply"\nargs = []\n[mcp_servers.simply-gitlab.env]\nX = "1"\n';
-    expect(compareCodexEntry(extraKey, 'simply-gitlab', { command: 'simply', args: [] })).toBe('differs');
-    expect(compareCodexEntry(subTable, 'simply-gitlab', { command: 'simply', args: [] })).toBe('differs');
+      '[mcp_servers.simply-gitlab]\ncommand = "simply"\nargs = []\n[mcp_servers.simply-gitlab.tools]\nX = "1"\n';
+    expect(compareCodexEntry(extraKey, 'simply-gitlab', { command: 'simply', args: [] }).status).toBe('differs');
+    expect(compareCodexEntry(subTable, 'simply-gitlab', { command: 'simply', args: [] }).status).toBe('differs');
   });
 });
 
@@ -74,20 +87,33 @@ describe('compareClaudeEntry', () => {
   const file = (entry: unknown): string => JSON.stringify({ projects: {}, mcpServers: { 'simply-gitlab': entry } });
 
   it('is the same for what add-json writes', () => {
-    expect(compareClaudeEntry(file({ type: 'stdio', ...launch, env: {} }), 'simply-gitlab', launch)).toBe('same');
+    expect(compareClaudeEntry(file({ type: 'stdio', ...launch, env: {} }), 'simply-gitlab', launch)).toStrictEqual({
+      status: 'same',
+      env: {},
+    });
   });
 
-  it('differs on a different launch or extra env', () => {
-    expect(compareClaudeEntry(file({ type: 'stdio', command: 'npx', args: [] }), 'simply-gitlab', launch)).toBe(
-      'differs',
-    );
-    expect(compareClaudeEntry(file({ ...launch, env: { GITLAB_TOKEN: 'x' } }), 'simply-gitlab', launch)).toBe(
-      'differs',
-    );
+  it('is the same launch with an env, and reports the env', () => {
+    expect(compareClaudeEntry(file({ ...launch, env: { GITLAB_TOKEN: 'x' } }), 'simply-gitlab', launch)).toStrictEqual({
+      status: 'same',
+      env: { GITLAB_TOKEN: 'x' },
+    });
+  });
+
+  it('differs on a different launch, keeping the env', () => {
+    expect(
+      compareClaudeEntry(
+        file({ type: 'stdio', command: 'npx', args: [], env: { GITLAB_TOKEN: 'x' } }),
+        'simply-gitlab',
+        launch,
+      ),
+    ).toStrictEqual({ status: 'differs', env: { GITLAB_TOKEN: 'x' } });
   });
 
   it('is absent when missing, or when the file cannot be read', () => {
-    expect(compareClaudeEntry(JSON.stringify({ mcpServers: {} }), 'simply-gitlab', launch)).toBe('absent');
-    expect(compareClaudeEntry('{ not json', 'simply-gitlab', launch)).toBe('absent');
+    expect(compareClaudeEntry(JSON.stringify({ mcpServers: {} }), 'simply-gitlab', launch)).toStrictEqual({
+      status: 'absent',
+    });
+    expect(compareClaudeEntry('{ not json', 'simply-gitlab', launch)).toStrictEqual({ status: 'absent' });
   });
 });

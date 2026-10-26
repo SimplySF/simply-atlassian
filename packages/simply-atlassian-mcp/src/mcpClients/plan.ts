@@ -26,6 +26,27 @@ export function isValidServerName(name: string): boolean {
 }
 
 /**
+ * The arguments that add an entry through a client's own CLI. `env` is an existing entry's
+ * environment being carried over a replace; a new entry never has one.
+ *
+ * @returns The argv after the executable.
+ */
+export function cliAddArgs(
+  executable: 'claude' | 'codex',
+  name: string,
+  launch: { command: string; args: readonly string[] },
+  env: Readonly<Record<string, string>> = {},
+): string[] {
+  const hasEnv = Object.keys(env).length > 0;
+  if (executable === 'claude') {
+    const entry = { type: 'stdio', command: launch.command, args: [...launch.args], ...(hasEnv ? { env } : {}) };
+    return ['mcp', 'add-json', name, JSON.stringify(entry), '--scope', 'user'];
+  }
+  const envArgs = Object.entries(env).flatMap(([key, value]) => ['--env', `${key}=${value}`]);
+  return ['mcp', 'add', name, ...envArgs, '--', launch.command, ...launch.args];
+}
+
+/**
  * Works out what installing `spec` into one client means: which file, or which CLI command. Reads
  * nothing and writes nothing; `applyPlan` does the rest.
  *
@@ -79,7 +100,7 @@ export function planInstall(
         ...base,
         kind: 'cli',
         executable: 'claude',
-        addArgs: ['mcp', 'add-json', spec.name, JSON.stringify({ type: 'stdio', ...launch }), '--scope', 'user'],
+        addArgs: cliAddArgs('claude', spec.name, launch),
         removeArgs: ['mcp', 'remove', spec.name, '--scope', 'user'],
         launch,
         configFile: location.configFile,
@@ -90,7 +111,7 @@ export function planInstall(
       ...base,
       kind: 'cli',
       executable: 'codex',
-      addArgs: ['mcp', 'add', spec.name, '--', launch.command, ...launch.args],
+      addArgs: cliAddArgs('codex', spec.name, launch),
       removeArgs: ['mcp', 'remove', spec.name],
       launch,
       configFile: location.configFile,
