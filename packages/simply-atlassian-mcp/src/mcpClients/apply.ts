@@ -21,6 +21,7 @@ import { parse, printParseErrorCode, type ParseError } from 'jsonc-parser';
 import { CLIENTS } from './clients.js';
 import { compareClaudeEntry, compareCodexEntry, type ExistingEntry } from './existingEntry.js';
 import { setNestedEntry } from './jsonEdit.js';
+import { cliAddArgs } from './plan.js';
 import { formatCommandLine, runProcess } from './runner.js';
 import type {
   ApplyOptions,
@@ -59,8 +60,16 @@ export async function applyPlan(plan: InstallPlan, options: ApplyOptions = {}): 
   }
 }
 
+/**
+ * The keys that say how a client starts or reaches the server. They are the installer's to write;
+ * every other key in an existing entry (`env` above all, but also settings such as Gemini's `trust`
+ * or `timeout`) belongs to the user and survives a replace.
+ */
+const LAUNCH_KEYS = new Set(['type', 'command', 'args', 'url', 'httpUrl', 'serverUrl']);
+
 async function applyFilePlan(plan: FileInstallPlan, options: ApplyOptions): Promise<InstallResult> {
   const dryRun = Boolean(options.dryRun);
+  let entry = plan.entry;
   const result = (outcome: InstallOutcome, exitCode: 0 | 1 | 2, message?: string): InstallResult => ({
     client: plan.client,
     name: plan.name,
@@ -69,7 +78,7 @@ async function applyFilePlan(plan: FileInstallPlan, options: ApplyOptions): Prom
     dryRun,
     exitCode,
     message,
-    preview: JSON.stringify({ [plan.key]: { [plan.name]: plan.entry } }, null, 2),
+    preview: JSON.stringify({ [plan.key]: { [plan.name]: redactEnv(entry) } }, null, 2),
   });
 
   const config = await readConfigFile(plan);
@@ -77,15 +86,19 @@ async function applyFilePlan(plan: FileInstallPlan, options: ApplyOptions): Prom
   const { text, servers } = config;
 
   const existing = servers?.[plan.name];
+  if (isRecord(existing)) {
+    const kept = Object.entries(existing).filter(([key]) => !LAUNCH_KEYS.has(key));
+    entry = { ...plan.entry, ...Object.fromEntries(kept) };
+  }
   if (existing !== undefined) {
-    if (isDeepStrictEqual(existing, plan.entry)) return result('unchanged', 0);
+    if (isDeepStrictEqual(existing, entry)) return result('unchanged', 0);
     if (!options.force) return result('conflict', 2, conflictMessage(plan.name, plan.file));
   }
   const outcome = existing === undefined ? 'added' : 'replaced';
   if (dryRun) return result(outcome, 0);
 
   try {
-    const updated = setNestedEntry(text ?? '', plan.key, plan.name, plan.entry);
+    const updated = setNestedEntry(text ?? '', plan.key, plan.name, entry);
     await fs.mkdir(path.dirname(plan.file), { recursive: true });
     if (text !== undefined) await fs.copyFile(plan.file, `${plan.file}.bak`);
     await writeAtomically(plan.file, updated);
@@ -137,7 +150,7 @@ async function readConfigFile(plan: FileInstallPlan): Promise<ConfigFile> {
 
 async function applyCliPlan(plan: CliInstallPlan, options: ApplyOptions): Promise<InstallResult> {
   const dryRun = Boolean(options.dryRun);
-  const addCommand = formatCommandLine(plan.executable, plan.addArgs);
+  let addCommand = formatCommandLine(plan.executable, plan.addArgs);
   const removeCommand = formatCommandLine(plan.executable, plan.removeArgs);
   const result = (
     outcome: InstallOutcome,
@@ -156,13 +169,18 @@ async function applyCliPlan(plan: CliInstallPlan, options: ApplyOptions): Promis
   });
 
   const existing = await readExistingCliEntry(plan);
-  if (existing === 'same') return result('unchanged', 0);
-  if (existing === 'differs' && !options.force)
+  if (existing.status === 'same') return result('unchanged', 0);
+  if (existing.status === 'differs' && !options.force)
     return result('conflict', 2, conflictMessage(plan.name, plan.configFile));
 
-  const outcome = existing === 'absent' ? 'added' : 'replaced';
-  const commands = existing === 'absent' ? [plan.addArgs] : [plan.removeArgs, plan.addArgs];
-  const target = existing === 'absent' ? addCommand : `${removeCommand} && ${addCommand}`;
+  // A replace carries the existing entry's `env` into the new one; only its names are ever shown.
+  const env = existing.status === 'absent' ? {} : existing.env;
+  const addArgs = cliAddArgs(plan.executable, plan.name, plan.launch, env);
+  addCommand = formatCommandLine(plan.executable, cliAddArgs(plan.executable, plan.name, plan.launch, redact(env)));
+
+  const outcome = existing.status === 'absent' ? 'added' : 'replaced';
+  const commands = existing.status === 'absent' ? [addArgs] : [plan.removeArgs, addArgs];
+  const target = existing.status === 'absent' ? addCommand : `${removeCommand} && ${addCommand}`;
   if (dryRun) return result(outcome, 0, undefined, target);
 
   const run = options.runner ?? runProcess;
@@ -201,7 +219,7 @@ async function readExistingCliEntry(plan: CliInstallPlan): Promise<ExistingEntry
     text = await fs.readFile(plan.configFile, 'utf8');
   } catch {
     // No file means no entry; any other read problem is the client's to report when it runs.
-    return 'absent';
+    return { status: 'absent' };
   }
   return plan.configFormat === 'claude-json'
     ? compareClaudeEntry(text, plan.name, plan.launch)
@@ -218,6 +236,18 @@ async function writeAtomically(file: string, contents: string): Promise<void> {
     await fs.rm(temporary, { force: true });
     throw error;
   }
+}
+
+/** An `env` value as previews show it: credentials live there, and previews reach stdout and `--json`. */
+const REDACTED = '<kept>';
+
+function redact(env: Readonly<Record<string, unknown>>): Record<string, string> {
+  return Object.fromEntries(Object.keys(env).map((key) => [key, REDACTED]));
+}
+
+/** @returns `entry` with each `env` value replaced, for display. */
+function redactEnv(entry: Record<string, unknown>): Record<string, unknown> {
+  return isRecord(entry.env) ? { ...entry, env: redact(entry.env) } : entry;
 }
 
 function conflictMessage(name: string, file: string): string {

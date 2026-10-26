@@ -1,7 +1,7 @@
 {
   "name": "@simplysf/simply-atlassian-core",
   "description": "Configuration, authentication, HTTP clients, and shared logic for working with Atlassian products",
-  "version": "0.8.0",
+  "version": "0.8.2",
   "author": "@ClayChipps",
   "homepage": "https://github.com/SimplySF/simply-atlassian",
   "bugs": "https://github.com/SimplySF/simply-atlassian/issues",
@@ -38,8 +38,8 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.1.10",
-    "vitest": "^4.1.10"
+    "@vitest/coverage-v8": "^4.1.12",
+    "vitest": "^4.1.12"
   },
   "publishConfig": {
     "access": "public"

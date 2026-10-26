@@ -168,6 +168,59 @@ describe('applyPlan: file clients', () => {
     expect(JSON.parse(after)).toMatchObject({ theme: 'Dracula', selectedAuthType: 'oauth-personal' });
   });
 
+  it('keeps the env block and other settings of a Gemini entry it replaces under --force', async () => {
+    const file = write(
+      path.join(environment.homedir, '.gemini', 'settings.json'),
+      JSON.stringify({
+        mcpServers: {
+          'simply-gitlab': { command: 'old', args: [], env: { GITLAB_TOKEN: 'secret' }, trust: true, timeout: 30000 },
+        },
+      }),
+    );
+
+    const result = await applyPlan(plan('gemini'), { force: true });
+
+    expect(result).toMatchObject({ outcome: 'replaced', exitCode: 0 });
+    expect(JSON.parse(fs.readFileSync(file, 'utf8'))).toStrictEqual({
+      mcpServers: {
+        'simply-gitlab': {
+          command: 'simply',
+          args: ['gitlab', 'mcp'],
+          env: { GITLAB_TOKEN: 'secret' },
+          trust: true,
+          timeout: 30000,
+        },
+      },
+    });
+    expect(result.preview).toContain('"GITLAB_TOKEN": "<kept>"');
+    expect(result.preview).not.toContain('secret');
+  });
+
+  it('is unchanged when only the env block differs from a bare launch', async () => {
+    const original = JSON.stringify({
+      mcpServers: { 'simply-gitlab': { command: 'simply', args: ['gitlab', 'mcp'], env: { GITLAB_TOKEN: 'x' } } },
+    });
+    write(cursorFile(), original);
+
+    expect(await applyPlan(plan('cursor'))).toMatchObject({ outcome: 'unchanged', exitCode: 0 });
+    expect(fs.readFileSync(cursorFile(), 'utf8')).toBe(original);
+  });
+
+  it('drops the launch keys of the entry it replaces', async () => {
+    write(
+      cursorFile(),
+      JSON.stringify({ mcpServers: { 'simply-gitlab': { url: 'https://example.test/mcp', env: { A: '1' } } } }),
+    );
+
+    await applyPlan(plan('cursor'), { force: true });
+
+    expect(
+      (JSON.parse(fs.readFileSync(cursorFile(), 'utf8')) as { mcpServers: Record<string, unknown> }).mcpServers[
+        'simply-gitlab'
+      ],
+    ).toStrictEqual({ command: 'simply', args: ['gitlab', 'mcp'], env: { A: '1' } });
+  });
+
   it('refuses an unparseable file and leaves it untouched', async () => {
     const broken = '{ "mcpServers": { "a": 1, } "oops" }';
     write(cursorFile(), broken);
@@ -258,6 +311,50 @@ describe('applyPlan: CLI clients', () => {
       ['codex', ['mcp', 'remove', 'simply-gitlab']],
       ['codex', ['mcp', 'add', 'simply-gitlab', '--', 'simply', 'gitlab', 'mcp']],
     ]);
+  });
+
+  it('carries the env of a claude entry it replaces, and shows only its names', async () => {
+    write(
+      path.join(environment.homedir, '.claude.json'),
+      JSON.stringify({
+        mcpServers: { 'simply-gitlab': { type: 'stdio', command: 'old', args: [], env: { GITLAB_TOKEN: 'secret' } } },
+      }),
+    );
+    const runner = vi.fn(ok);
+
+    const result = await applyPlan(plan('claude-code'), { runner, force: true });
+
+    expect(result).toMatchObject({ outcome: 'replaced', exitCode: 0 });
+    expect(runner.mock.calls[1]).toStrictEqual([
+      'claude',
+      [
+        'mcp',
+        'add-json',
+        'simply-gitlab',
+        '{"type":"stdio","command":"simply","args":["gitlab","mcp"],"env":{"GITLAB_TOKEN":"secret"}}',
+        '--scope',
+        'user',
+      ],
+    ]);
+    expect(result.target).not.toContain('secret');
+    expect(result.preview).not.toContain('secret');
+  });
+
+  it('carries the env table of a codex entry it replaces', async () => {
+    write(
+      path.join(environment.homedir, '.codex', 'config.toml'),
+      '[mcp_servers.simply-gitlab]\ncommand = "old"\n\n[mcp_servers.simply-gitlab.env]\nGITLAB_TOKEN = "secret"\n',
+    );
+    const runner = vi.fn(ok);
+
+    const result = await applyPlan(plan('codex'), { runner, force: true });
+
+    expect(runner.mock.calls[1]).toStrictEqual([
+      'codex',
+      ['mcp', 'add', 'simply-gitlab', '--env', 'GITLAB_TOKEN=secret', '--', 'simply', 'gitlab', 'mcp'],
+    ]);
+    expect(result.target).toContain('GITLAB_TOKEN=<kept>');
+    expect(result.target).not.toContain('secret');
   });
 
   it('gives the exact command to run by hand when the CLI is not on PATH', async () => {

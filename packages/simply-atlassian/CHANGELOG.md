@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.14.2](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.14.1...%40simplysf%2Fsimply-atlassian%400.14.2) (2026-10-26)
+
+**Note:** Version bump only for package @simplysf/simply-atlassian
+
+## [0.14.1](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.14.0...%40simplysf%2Fsimply-atlassian%400.14.1) (2026-10-26)
+
+**Note:** Version bump only for package @simplysf/simply-atlassian
+
 # [0.14.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.13.2...%40simplysf%2Fsimply-atlassian%400.14.0) (2026-10-20)
 
 ### Features

@@ -69,7 +69,8 @@ export type CliInstallPlan = {
   client: ClientId;
   scope: InstallScope;
   name: string;
-  executable: string;
+  executable: 'claude' | 'codex';
+  /** Adds the entry with no `env`; a replace rebuilds this with the existing entry's. */
   addArgs: string[];
   removeArgs: string[];
   /** What the entry launches, compared with what is already configured. */
