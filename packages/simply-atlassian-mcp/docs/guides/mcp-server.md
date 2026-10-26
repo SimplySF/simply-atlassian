@@ -85,6 +85,10 @@ Running it without `--client` lists them, and marks the ones found on this machi
 - **Running it twice is safe.** An identical entry is left alone. An entry that differs is reported
   as a conflict (exit 2) and is replaced only with `--force`. `--dry-run` shows what would be
   written, and `--json` returns the per-client results.
+- **Your own settings in an entry are kept.** The command owns only how the server is launched
+  (`command`, `args`, `type`). An `env` block you added, and settings such as Gemini's `trust` or
+  `timeout`, survive a `--force` replace, and an entry that differs only in them counts as
+  identical. Previews show `env` names with their values as `<kept>`.
 
 Restart Claude Desktop or Windsurf afterwards. In Claude Code or Gemini CLI, run `/mcp`. The
 sections below show what the command writes, for editing by hand or for any other client.

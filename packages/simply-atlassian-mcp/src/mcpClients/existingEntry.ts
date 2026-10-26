@@ -22,8 +22,14 @@ import { parse, type ParseError } from 'jsonc-parser';
  * (`~/.claude.json`, `config.toml`). `differs` covers anything that isn't provably the same launch,
  * including an entry this reader can't make sense of: `--force` is then the way through, which is
  * the safe direction to be wrong in.
+ *
+ * `env` is the entry's environment, which the user put there and a replace carries over: it is how
+ * a client hands the server its connection settings, so an entry that differs only in `env` is
+ * still the same launch.
  */
-export type ExistingEntry = 'absent' | 'same' | 'differs';
+export type ExistingEntry = { status: 'absent' } | { status: 'same' | 'differs'; env: Record<string, string> };
+
+const ABSENT: ExistingEntry = { status: 'absent' };
 
 type Launch = { command: string; args: readonly string[] };
 
@@ -32,48 +38,61 @@ export function compareClaudeEntry(text: string, name: string, launch: Launch): 
   const errors: ParseError[] = [];
   const root: unknown = parse(text, errors, { allowTrailingComma: true });
   // An unreadable file can't show an entry; `claude` itself reports whatever is wrong with it.
-  if (errors.length > 0 || !isRecord(root) || !isRecord(root.mcpServers)) return 'absent';
+  if (errors.length > 0 || !isRecord(root) || !isRecord(root.mcpServers)) return ABSENT;
 
   const entry = root.mcpServers[name];
-  if (entry === undefined) return 'absent';
-  if (!isRecord(entry)) return 'differs';
+  if (entry === undefined) return ABSENT;
+  if (!isRecord(entry)) return { status: 'differs', env: {} };
 
   const { type = 'stdio', command, args = [], env = {}, ...rest } = entry;
   const same =
     type === 'stdio' &&
     command === launch.command &&
     isDeepStrictEqual(args, launch.args) &&
-    isDeepStrictEqual(env, {}) &&
+    isStringRecord(env) &&
     Object.keys(rest).length === 0;
-  return same ? 'same' : 'differs';
+  return { status: same ? 'same' : 'differs', env: isStringRecord(env) ? env : {} };
 }
 
 /** @returns How `launch` compares with the `[mcp_servers.<name>]` table in Codex's `config.toml`. */
 export function compareCodexEntry(text: string, name: string, launch: Launch): ExistingEntry {
   const lines = text.split(/\r?\n/);
   const header = lines.findIndex((line) => tableName(line) === `mcp_servers.${name}`);
-  if (header === -1) return 'absent';
+  if (header === -1) return ABSENT;
 
-  const body: string[] = [];
-  for (const line of lines.slice(header + 1)) {
+  const envTable = `mcp_servers.${name}.env`;
+  const envHeader = lines.findIndex((line) => tableName(line) === envTable);
+  const envValues = envHeader === -1 ? {} : parseKeyValues(tableBody(lines, envHeader));
+  const env = envValues && isStringRecord(envValues) ? envValues : undefined;
+  // Any other sub-table, such as `[mcp_servers.<name>.tools]`, is more than a bare launch.
+  const otherSubTable = lines.some((line) => {
     const table = tableName(line);
-    if (table !== undefined) {
-      // A sub-table such as `[mcp_servers.<name>.env]` is more than a bare launch.
-      if (table.startsWith(`mcp_servers.${name}.`)) return 'differs';
-      break;
-    }
-    body.push(line);
-  }
+    return table !== undefined && table.startsWith(`mcp_servers.${name}.`) && table !== envTable;
+  });
 
-  const values = parseKeyValues(body.join('\n'));
-  if (!values) return 'differs';
+  const values = parseKeyValues(tableBody(lines, header));
+  if (!values || !env || otherSubTable) return { status: 'differs', env: env ?? {} };
   const { command, args = [], ...rest } = values;
   const same = command === launch.command && isDeepStrictEqual(args, launch.args) && Object.keys(rest).length === 0;
-  return same ? 'same' : 'differs';
+  return { status: same ? 'same' : 'differs', env };
+}
+
+/** @returns The text between the `[table]` header at `header` and the next header. */
+function tableBody(lines: readonly string[], header: number): string {
+  const body: string[] = [];
+  for (const line of lines.slice(header + 1)) {
+    if (tableName(line) !== undefined) break;
+    body.push(line);
+  }
+  return body.join('\n');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return isRecord(value) && Object.values(value).every((item) => typeof item === 'string');
 }
 
 /** @returns The dotted name of a `[table]` header line, with quoted keys unquoted, or undefined. */
