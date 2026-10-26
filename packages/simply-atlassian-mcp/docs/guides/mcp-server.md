@@ -261,6 +261,7 @@ into:
 | "What's open in PROJ and assigned to me?"             | `jira_issue_search` with `jql` such as `project = PROJ AND assignee = currentUser() AND statusCategory != Done` |
 | "Summarise PROJ-42 and its comments."                 | `jira_issue_view`, then `jira_issue_comment_list`                                                               |
 | "Who changed the priority on PROJ-42, and when?"      | `jira_issue_history` with `field: "priority"`                                                                   |
+| "What does the log attached to PROJ-42 say?"          | `jira_issue_attachment_list`, then `jira_issue_attachment_download` with the log's `id`                         |
 | "What's in the current sprint on the Platform board?" | `jira_board_list` to find the board id, `jira_sprint_list` for the active sprint, then `jira_sprint_issues`     |
 | "Find our release-notes pages in the DOCS space."     | `confluence_page_search` with a CQL query                                                                       |
 | "Who last edited the deployment runbook page?"        | `confluence_page_history` with `limit: 1`                                                                       |
@@ -299,6 +300,33 @@ A few things make the agent's job easier:
 - **`open` tools return URLs.** A server cannot launch a browser, so `jira_open` and
   `confluence_open` hand back the address for you to follow.
 
+### Attachments
+
+`jira_issue_attachment_download` reads one file attached to an issue. What the agent gets depends
+on the file:
+
+| The file                                            | What happens                                                            |
+| --------------------------------------------------- | ----------------------------------------------------------------------- |
+| UTF-8 text up to 1 MiB (logs, JSON, CSV, XML, YAML) | Returned to the agent, after a JSON block describing the file           |
+| A PNG, JPEG, GIF or WebP image up to 5 MiB          | Returned to the agent as an image                                       |
+| Anything else, or the agent passes `save: true`     | Your client asks **you** for a folder to save it in, as described below |
+
+When the server needs a folder, your MCP client shows a prompt naming the file, its size and the
+issue. Type the absolute path of an existing folder, or decline. The agent cannot choose the folder:
+the tool has no path input, because the file's contents come from whoever uploaded it, and a
+ticket's text can steer an agent. Tick **Save later attachments here without asking** to reuse the
+folder until the server stops. A file is never overwritten: if its name is taken, it is saved as
+`name (id).ext`.
+
+Clients that cannot show prompts (they do not support MCP _elicitation_) get the file's details and
+a reason instead of a prompt. Either way, every result carries a `browserUrl`: open it in a browser
+where you are signed in to Jira to download the file yourself. The link carries no credential of
+its own. For a large or bulk download, the CLI's `atlassian jira issue attachment download` streams
+any number of files of any size.
+
+Text that comes back is the file exactly as uploaded. Like ticket text, treat it as data rather than
+as instructions to the agent; [Write safety](/guides/write-safety/) explains why that matters.
+
 ## Let the agent write
 
 Started without options, the server registers only the read tools. Start it with `--allow-writes`
@@ -328,7 +356,9 @@ agent write. In a `mcpServers` configuration the pair looks like this:
 A read-scoped token is still the only layer that binds; the server-side default just keeps write
 tools out of the agent's normal loop entirely. Most clients also ask you to approve each tool call,
 and the tools carry MCP annotations (`readOnlyHint`, `destructiveHint`) so a host can tell a read
-from a delete when it asks.
+from a delete when it asks. `jira_issue_attachment_download` is registered with the reads, because
+it changes nothing in Jira, but is not marked read-only, because it can save a file to a folder you
+chose.
 
 With writes allowed:
 
@@ -359,28 +389,30 @@ With writes allowed:
 
 ## Tools
 
-| Read tools                     | Write tools (`--allow-writes`)                          |
-| ------------------------------ | ------------------------------------------------------- |
-| `jira_whoami`                  | `jira_issue_create`                                     |
-| `jira_user_search`             | `jira_issue_update`                                     |
-| `jira_user_view`               | `jira_issue_transition`                                 |
-| `jira_open`                    | `jira_issue_delete` (needs `confirm`)                   |
-| `jira_issue_search`            | `jira_issue_comment_add`                                |
-| `jira_issue_view`              | `jira_issue_comment_edit`                               |
-| `jira_issue_history`           | `jira_issue_comment_delete` (needs `confirm`)           |
-| `jira_issue_transitions`       | `jira_issue_link_create`                                |
-| `jira_issue_comment_list`      | `jira_issue_link_delete`                                |
-| `jira_issue_link_list`         | `jira_sprint_add`                                       |
-| `jira_issue_link_types`        | `confluence_page_create`                                |
-| `jira_board_list`              | `confluence_page_update`                                |
-| `jira_sprint_list`             | `confluence_page_delete` (needs `confirm` with `purge`) |
-| `jira_sprint_issues`           | `confluence_page_comment_add`                           |
-| `confluence_open`              |                                                         |
-| `confluence_page_get`          |                                                         |
-| `confluence_page_search`       |                                                         |
-| `confluence_page_children`     |                                                         |
-| `confluence_page_history`      |                                                         |
-| `confluence_page_comment_list` |                                                         |
+| Read tools                       | Write tools (`--allow-writes`)                          |
+| -------------------------------- | ------------------------------------------------------- |
+| `jira_whoami`                    | `jira_issue_create`                                     |
+| `jira_user_search`               | `jira_issue_update`                                     |
+| `jira_user_view`                 | `jira_issue_transition`                                 |
+| `jira_open`                      | `jira_issue_delete` (needs `confirm`)                   |
+| `jira_issue_search`              | `jira_issue_comment_add`                                |
+| `jira_issue_view`                | `jira_issue_comment_edit`                               |
+| `jira_issue_history`             | `jira_issue_comment_delete` (needs `confirm`)           |
+| `jira_issue_attachment_list`     | `jira_issue_link_create`                                |
+| `jira_issue_attachment_download` | `jira_issue_link_delete`                                |
+| `jira_issue_transitions`         | `jira_sprint_add`                                       |
+| `jira_issue_comment_list`        | `confluence_page_create`                                |
+| `jira_issue_link_list`           | `confluence_page_update`                                |
+| `jira_issue_link_types`          | `confluence_page_delete` (needs `confirm` with `purge`) |
+| `jira_board_list`                | `confluence_page_comment_add`                           |
+| `jira_sprint_list`               |                                                         |
+| `jira_sprint_issues`             |                                                         |
+| `confluence_open`                |                                                         |
+| `confluence_page_get`            |                                                         |
+| `confluence_page_search`         |                                                         |
+| `confluence_page_children`       |                                                         |
+| `confluence_page_history`        |                                                         |
+| `confluence_page_comment_list`   |                                                         |
 
 ### Xray tools (`--xray`)
 
