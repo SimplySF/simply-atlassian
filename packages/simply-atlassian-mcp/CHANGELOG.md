@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.9.3](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-mcp%400.9.2...%40simplysf%2Fsimply-atlassian-mcp%400.9.3) (2026-10-26)
+
+### Bug Fixes
+
+- **simply-atlassian-mcp:** keep an entry's env when mcp install replaces it ([#71](https://github.com/SimplySF/simply-atlassian/issues/71)) ([c847fba](https://github.com/SimplySF/simply-atlassian/commit/c847fba9c38d5adbba7d7830de47be5c3dc838a0)), closes [SimplySF/simply-atlassian#66](https://github.com/SimplySF/simply-atlassian/issues/66)
+
 ## [0.9.2](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-mcp%400.9.1...%40simplysf%2Fsimply-atlassian-mcp%400.9.2) (2026-10-26)
 
 **Note:** Version bump only for package @simplysf/simply-atlassian-mcp
