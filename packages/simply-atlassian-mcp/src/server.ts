@@ -24,7 +24,9 @@ import {
   CliError,
   ConfigError,
   HttpError,
+  ReadRequiredError,
   redactSecrets,
+  StaleError,
   sanitiseDeep,
   secretValues,
   stripControl,
@@ -42,9 +44,10 @@ export const SERVER_VERSION = version;
 
 /**
  * Stable, machine-readable failure categories. The first three mirror the CLI's exit codes
- * (2, 3, and 1); `confirm-required` is this server's own gate.
+ * (2, 3, and 1); `confirm-required` is this server's own gate. `read-required` and `stale` are
+ * the work item save's read-before-write refusals (design 0020): read first, or merge and retry.
  */
-export type ToolErrorCode = 'config' | 'auth' | 'error' | 'confirm-required';
+export type ToolErrorCode = 'config' | 'auth' | 'error' | 'confirm-required' | 'read-required' | 'stale';
 
 /** The JSON object an `isError` result carries: the same fields as the CLI's `--json` error line. */
 export interface ToolError {
@@ -56,6 +59,8 @@ export interface ToolError {
   readonly status?: number;
   /** The response body, sanitised the same way the message is, when the instance sent one. */
   readonly body?: unknown;
+  /** For `stale`: the current content to merge into the refused edit, sanitised like the rest. */
+  readonly details?: unknown;
 }
 
 const INSTRUCTIONS =
@@ -64,11 +69,17 @@ const INSTRUCTIONS =
   'the server was started with --allow-writes. Every write tool accepts dryRun: true to preview ' +
   'the request without sending it, and the irreversible ones (issue and comment deletes, and a ' +
   'page purge) additionally require confirm: true. Failures come back as isError results whose ' +
-  'text is JSON with a stable "code": config, auth, error, or confirm-required. Prefer "fields" ' +
+  'text is JSON with a stable "code": config, auth, error, confirm-required, read-required, or stale. Prefer "fields" ' +
   'on issue tools to keep payloads small. Xray tools (jira_xray_*, Server/Data Center only) are ' +
   'registered only when the server was started with --xray; they return assembled records and rows ' +
   'keyed by field name rather than raw payloads, and their "fields" input adds to the defaults ' +
-  'instead of replacing them.';
+  'instead of replacing them. Work items (jira_work_*) are one Jira issue plus an optional linked ' +
+  "Confluence page, shaped by the project's config: call jira_work_get first and follow its " +
+  '"guidance" and each field and section "description"; save with jira_work_save passing the ' +
+  'revisions you read as basedOn, and dryRun first so the user sees the diff. On a "stale" error, ' +
+  'merge the current content it returns into your edit and save again — never discard the other ' +
+  'person\'s change. Create a page only when the page "when" rule calls for one. These tools never ' +
+  'change issue status: status belongs to the team.';
 
 const ANNOTATIONS: Readonly<Record<ToolKind, ToolAnnotations>> = {
   read: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
@@ -167,6 +178,18 @@ export function mapError(error: unknown, context: Pick<ToolContext, 'env'>): Too
   const clean = (text: string): string => stripControl(redactSecrets(text, secrets));
   const message = clean(error instanceof Error ? error.message : String(error));
 
+  if (error instanceof ReadRequiredError) {
+    return { code: 'read-required', name: error.name, message, exitCode: error.exitCode };
+  }
+  if (error instanceof StaleError) {
+    return {
+      code: 'stale',
+      name: error.name,
+      message,
+      exitCode: error.exitCode,
+      details: sanitiseDeep(error.details, secrets),
+    };
+  }
   if (error instanceof ConfigError) return { code: 'config', name: error.name, message, exitCode: error.exitCode };
   if (error instanceof AuthError) {
     return { code: 'auth', name: error.name, message, exitCode: error.exitCode, status: error.status };

@@ -481,3 +481,127 @@ describe('Xray tools', () => {
     expect(jsonOf(result)).toMatchObject({ code: 'config', exitCode: 2 });
   });
 });
+
+describe('work item tools (design 0020)', () => {
+  let configDir: string;
+
+  beforeEach(() => {
+    configDir = mkdtempSync(join(tmpdir(), 'work-mcp-'));
+    writeFileSync(
+      join(configDir, 'atlassian.json'),
+      JSON.stringify({
+        guidance: 'Plain language.',
+        jira: {
+          project: 'PAY',
+          issueType: 'Story',
+          fields: [
+            { name: 'Summary', key: 'summary', type: 'text', required: true, description: 'Short.' },
+            { name: 'Acceptance Criteria', key: 'customfield_10045', type: 'markdown', required: true },
+          ],
+        },
+      }),
+    );
+  });
+
+  afterEach(() => {
+    rmSync(configDir, { recursive: true, force: true });
+  });
+
+  const options = (extra: Partial<ServerOptions> = {}): ServerOptions => ({
+    env: env(),
+    config: join(configDir, 'atlassian.json'),
+    ...extra,
+  });
+
+  function routeIssue(summary: string): void {
+    atlassian.route('/rest/api/2/issue/PAY-1', (_req, res) =>
+      respondJson(res, 200, {
+        key: 'PAY-1',
+        // eslint-disable-next-line camelcase -- a real Jira custom field is named exactly this
+        fields: { issuetype: { name: 'Story' }, summary, customfield_10045: '# Given' },
+      }),
+    );
+  }
+
+  it('reads without --allow-writes, and saves only with it', async () => {
+    const readOnly = await connect(options());
+    const names = (await readOnly.listTools()).tools.map((tool) => tool.name);
+    expect(names).toContain('jira_work_get');
+    expect(names).toContain('jira_work_config_check');
+    expect(names).not.toContain('jira_work_save');
+  });
+
+  it('returns the project shape and guidance from the config', async () => {
+    const c = await connect(options());
+    const view = jsonOf(await c.callTool({ name: 'jira_work_get', arguments: {} })) as {
+      guidance: string;
+      issue: { fields: Array<{ name: string; description?: string }> };
+    };
+    expect(view.guidance).toBe('Plain language.');
+    expect(view.issue.fields[0]).toMatchObject({ name: 'Summary', description: 'Short.' });
+  });
+
+  it('reports a missing config as a config error naming the fix', async () => {
+    const c = await connect(options({ config: join(configDir, 'nope.json') }));
+    const result = await c.callTool({ name: 'jira_work_get', arguments: {} });
+    expect(result.isError).toBe(true);
+    expect(jsonOf(result)).toMatchObject({ code: 'config' });
+  });
+
+  it('answers an update without basedOn with read-required', async () => {
+    routeIssue('S');
+    const c = await connect(options({ allowWrites: true }));
+    const result = await c.callTool({
+      name: 'jira_work_save',
+      arguments: { issue: { key: 'PAY-1', fields: { Summary: 'T' } } },
+    });
+    expect(result.isError).toBe(true);
+    expect(jsonOf(result)).toMatchObject({ code: 'read-required' });
+  });
+
+  it('answers a save built on an old read with stale, carrying the current fields', async () => {
+    routeIssue('Before');
+    const c = await connect(options({ allowWrites: true }));
+    const read = jsonOf(await c.callTool({ name: 'jira_work_get', arguments: { issue: 'PAY-1' } })) as {
+      issue: { revision: string };
+    };
+    routeIssue('Changed by a reviewer');
+
+    const result = await c.callTool({
+      name: 'jira_work_save',
+      arguments: { issue: { key: 'PAY-1', basedOn: read.issue.revision, fields: { Summary: 'Mine' } } },
+    });
+    expect(result.isError).toBe(true);
+    const error = jsonOf(result) as { code: string; details: { issue: { fields: Array<{ value: unknown }> } } };
+    expect(error.code).toBe('stale');
+    expect(error.details.issue.fields[0]?.value).toBe('Changed by a reviewer');
+    expect(atlassian.requests.some((request) => request.method === 'PUT')).toBe(false);
+  });
+
+  it('previews a save with dryRun and sends nothing', async () => {
+    const c = await connect(options({ allowWrites: true }));
+    const result = jsonOf(
+      await c.callTool({
+        name: 'jira_work_save',
+        arguments: { issue: { fields: { Summary: 'S', 'Acceptance Criteria': '1. Given' } }, dryRun: true },
+      }),
+    ) as { dryRun: boolean; issue: { action: string } };
+    expect(result).toMatchObject({ dryRun: true, issue: { action: 'create' } });
+    expect(atlassian.requests).toHaveLength(0);
+  });
+
+  it('refuses a save under ATLASSIAN_READ_ONLY even with writes allowed', async () => {
+    const c = await connect(options({ allowWrites: true, env: env({ ATLASSIAN_READ_ONLY: '1' }) }));
+    const result = await c.callTool({ name: 'jira_work_save', arguments: { issue: { fields: { Summary: 'S' } } } });
+    expect(result.isError).toBe(true);
+    expect(atlassian.requests).toHaveLength(0);
+  });
+
+  it('tells every client the read-before-write rule in its instructions', async () => {
+    const c = await connect(options());
+    const instructions = c.getInstructions() ?? '';
+    expect(instructions).toContain('jira_work_get first');
+    expect(instructions).toContain('basedOn');
+    expect(instructions).toContain('never');
+  });
+});

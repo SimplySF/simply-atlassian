@@ -32,6 +32,9 @@ Use the smallest relevant topic document rather than loading the whole directory
 - [MCP install](docs/design/0018-mcp-install.md): `atlassian mcp install`, which writes the server
   into MCP clients. The client logic is `simply-atlassian-mcp/src/mcpClients`, kept identical to
   simply-gitlab's copy: change both together.
+- [Project-configured work items](docs/design/0020-project-configured-work-items.md) (draft): the
+  `.simply/atlassian.json` config that defines a project's Jira issue and Confluence page, the
+  `jira work` commands and tools, and the read-before-write `basedOn` rule.
 - [The core library package](docs/design/0012-simply-atlassian-core.md): what lives in
   `@simplysf/simply-atlassian-core` versus the CLI, the no-terminal rule, and the phased plan for
   the MCP server to call it in-process.

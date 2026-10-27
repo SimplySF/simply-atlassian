@@ -25,6 +25,8 @@ export interface IssueFieldInput {
   readonly summary?: string;
   /** Plain text; converted to the shape the deployment expects (ADF on Cloud). */
   readonly description?: string;
+  /** The description as Markdown, with headings, lists and tables kept. Exclusive with `description`. */
+  readonly markdown?: string;
   /** Account id on Cloud, username on Server/DC. */
   readonly assignee?: string;
   readonly priority?: string;
@@ -75,7 +77,11 @@ function assigneeValue(value: string, deployment: Deployment): Record<string, st
 function commonFields(client: JiraClient, input: IssueFieldInput): Record<string, unknown> {
   const fields: Record<string, unknown> = {};
   if (input.summary !== undefined) fields.summary = input.summary;
+  if (input.description !== undefined && input.markdown !== undefined) {
+    throw new ConfigError('Pass the description as plain text or as Markdown, not both.');
+  }
   if (input.description !== undefined) fields.description = client.descriptionValue(input.description);
+  if (input.markdown !== undefined) fields.description = client.richTextValue(input.markdown);
   if (input.assignee !== undefined) fields.assignee = assigneeValue(input.assignee, client.deployment);
   if (input.priority !== undefined) fields.priority = { name: input.priority };
   if (input.labels !== undefined) fields.labels = [...input.labels];

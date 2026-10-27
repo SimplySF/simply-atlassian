@@ -24,8 +24,10 @@ import {
   JiraClient,
   loadEnvFile,
   resolveConfluenceConfig,
+  loadWorkConfig,
   resolveJiraConfig,
   stripControlOneLine,
+  type WorkContext,
   type XrayBackend,
 } from '@simplysf/simply-atlassian-core';
 
@@ -47,6 +49,13 @@ export interface ServerOptions {
    * with the CLI's precedence: a variable already in the environment wins over the file.
    */
   readonly envFile?: string;
+  /**
+   * The work item config (`.simply/atlassian.json`). Without it, `ATLASSIAN_CONFIG`, then the file
+   * found by searching upward from `cwd`. Read on every call, so edits apply without a restart.
+   */
+  readonly config?: string;
+  /** Where the config search starts. Defaults to the server's working directory. */
+  readonly cwd?: string;
   /** The environment to read settings from. Defaults to this process's; tests pass their own. */
   readonly env?: EnvLike;
 }
@@ -67,6 +76,8 @@ export interface ToolContext {
   confluence(): ConfluenceClient;
   /** Xray on the configured Jira, with the instance record in the CLI's default cache directory. */
   xray(): XrayBackend;
+  /** The project's work item config plus the clients it needs; see design 0020. */
+  work(): WorkContext;
 }
 
 /** Builds the context, loading the env file first so every later lookup sees it. */
@@ -82,6 +93,18 @@ export function createContext(options: ServerOptions = {}): ToolContext {
     jira: () => new JiraClient(resolveJiraConfig({}, env)),
     confluenceConfig: () => resolveConfluenceConfig({}, env),
     confluence: () => new ConfluenceClient(resolveConfluenceConfig({}, env)),
+    work: (): WorkContext => {
+      const jiraConfig = resolveJiraConfig({}, env);
+      return {
+        config: loadWorkConfig({ config: options.config, cwd: options.cwd, env }),
+        jira: new JiraClient(jiraConfig),
+        jiraUrl: jiraConfig.url,
+        confluence: (): { client: ConfluenceClient; url: string } => {
+          const confluenceConfig = resolveConfluenceConfig({}, env);
+          return { client: new ConfluenceClient(confluenceConfig), url: confluenceConfig.url };
+        },
+      };
+    },
     xray: () =>
       createXrayBackend(resolveJiraConfig({}, env), {
         cacheDir: defaultXrayCacheDir(env),

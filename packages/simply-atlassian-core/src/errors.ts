@@ -71,3 +71,30 @@ export class HttpError extends CliError {
     this.body = body;
   }
 }
+
+/**
+ * A write refused because it was not built on a read: an update to a work item without the
+ * `basedOn` revision `jira_work_get` returned. A usage error — the fix is to read first — so it
+ * shares `ConfigError`'s exit code. See design 0020.
+ */
+export class ReadRequiredError extends ConfigError {
+  public constructor(message: string) {
+    super(message);
+    this.name = 'ReadRequiredError';
+  }
+}
+
+/**
+ * A write refused because what it was based on is out of date: someone changed the issue or page
+ * after the caller read it. Carries the current state, so the caller can merge the other change
+ * into its own and save again without another round trip.
+ */
+export class StaleError extends CliError {
+  public readonly details: unknown;
+
+  public constructor(message: string, details: unknown) {
+    super(message, 1);
+    this.name = 'StaleError';
+    this.details = details;
+  }
+}

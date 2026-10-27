@@ -26,6 +26,7 @@ import {
   buildTransitionBody,
   buildUpdateIssueBody,
   changelogJson,
+  checkWorkConfig,
   currentAccount,
   buildRemoteLinkBody,
   buildSprintCreateBody,
@@ -35,6 +36,7 @@ import {
   deletePage,
   describeRemoteLink,
   exportXrayTests,
+  getWorkItem,
   getXrayTest,
   listXrayContainers,
   listXrayFolders,
@@ -53,6 +55,7 @@ import {
   prepareSprintUpdate,
   readBackIssue,
   resolveTransitionId,
+  saveWorkItem,
   type JiraSearchResult,
   type RemoteLink,
   updatePage,
@@ -165,6 +168,30 @@ const storageMarkdown = z
       'blockquotes and fenced code blocks are supported; anything else — images, raw HTML, task ' +
       'lists — is refused naming the line, rather than dropped. Confluence macros such as info ' +
       'panels have no Markdown form: use body for those.',
+  );
+
+const jiraMarkdown = (what: string): z.ZodOptional<z.ZodString> =>
+  z
+    .string()
+    .optional()
+    .describe(
+      `${what} as Markdown, converted to ADF on Cloud and wiki markup on Server/DC so headings, lists, ` +
+        'tables and code survive. Unsupported Markdown (images, raw HTML, task lists) is refused naming ' +
+        'the line, rather than dropped.',
+    );
+
+// --- Work item building blocks: docs/design/0020-project-configured-work-items.md ---
+
+const workIssueRef = z
+  .string()
+  .optional()
+  .describe('Issue key of the work item. The Confluence page it links to is returned with it.');
+const workPageRef = z
+  .string()
+  .optional()
+  .describe(
+    "Confluence page id or URL. With issue, chooses which of the issue's linked pages to read; alone, " +
+      'reads just the page, with no issue.',
   );
 
 // --- Xray building blocks, shared by the Xray tools ---
@@ -370,6 +397,7 @@ export const TOOLS: readonly ToolSpec[] = [
       type: z.string().optional().describe('Issue type name, for example Task or Bug.'),
       summary: z.string().optional().describe('Issue summary.'),
       description: z.string().optional().describe('Issue description as plain text.'),
+      markdown: jiraMarkdown('The description'),
       parent: z.string().optional().describe('Parent issue key, making this a subtask of it.'),
       assignee: z.string().optional().describe('Assignee: account id on Cloud, username on Server/Data Center.'),
       priority: z.string().optional().describe('Priority name.'),
@@ -396,6 +424,7 @@ export const TOOLS: readonly ToolSpec[] = [
       issue: issueKey,
       summary: z.string().optional().describe('New summary.'),
       description: z.string().optional().describe('New description as plain text.'),
+      markdown: jiraMarkdown('The new description'),
       assignee: z.string().optional().describe('New assignee: account id on Cloud, username on Server/Data Center.'),
       priority: z.string().optional().describe('New priority name.'),
       labels: labels('set, replacing the existing labels'),
@@ -469,13 +498,14 @@ export const TOOLS: readonly ToolSpec[] = [
     name: 'jira_issue_comment_add',
     title: 'Jira: add a comment',
     description:
-      'Add a comment to an issue. "text" is plain text; "mentions" @-mentions people by account ' +
-      'id, name, or email. Use dryRun to preview.',
+      'Add a comment to an issue. "text" is plain text and "markdown" is formatted text; "mentions" ' +
+      '@-mentions people by account id, name, or email. Use dryRun to preview.',
     command: ['atlassian', 'jira', 'issue', 'comment', 'add'],
     kind: 'write',
     inputSchema: {
       issue: issueKey,
       text: z.string().optional().describe('Comment text.'),
+      markdown: jiraMarkdown('The comment'),
       mentions,
       body,
       ...WRITE_SHAPE,
@@ -496,6 +526,7 @@ export const TOOLS: readonly ToolSpec[] = [
       issue: issueKey,
       comment: commentId,
       text: z.string().optional().describe('Replacement comment text.'),
+      markdown: jiraMarkdown('The replacement comment'),
       mentions,
       body,
       ...WRITE_SHAPE,
@@ -1126,5 +1157,79 @@ export const TOOLS: readonly ToolSpec[] = [
       depth: z.number().int().nonnegative().optional().describe('Levels of subfolders to include.'),
     },
     run: (ctx, input) => listXrayFolders(ctx.xray(), input),
+  }),
+  tool({
+    name: 'jira_work_get',
+    title: 'Work item: read the issue and its page',
+    description:
+      "Read a work item: one Jira issue and its linked Confluence page, shaped by the project's " +
+      'config (.simply/atlassian.json). ALWAYS call this before jira_work_save. Pass the issue key: ' +
+      'the issue is the table of contents, and its page is the linked design page — in the configured ' +
+      'space, with the configured labels (pass page too when it links to several). Other linked pages ' +
+      'come back in links.other: read them for context, never save them. Pass neither, for a new ' +
+      'idea, to get the empty shape. Returns { guidance, issue: { key, status, revision, fields: ' +
+      '[{ name, description, required, allowed, value }] }, page: { id, revision, markdown, when, ' +
+      'sections }, links: { paired, other }, missingRequired }. Follow "guidance" and every field and section ' +
+      '"description": they are the project\'s rules for what goes where. Pass the revisions as basedOn ' +
+      'when saving. A "lossy" list names content Markdown cannot carry, which a save would replace.',
+    command: ['atlassian', 'jira', 'work', 'get'],
+    kind: 'read',
+    inputSchema: { issue: workIssueRef, page: workPageRef },
+    run: (ctx, input) => getWorkItem(ctx.work(), input),
+  }),
+  tool({
+    name: 'jira_work_save',
+    title: 'Work item: create or update the issue and its page',
+    description:
+      'Create or update a work item. issue.fields takes values by the field names jira_work_get ' +
+      'returned; omitted fields keep their values, and fields the config fixes are applied whatever ' +
+      'is sent. page.markdown is the whole page body. To update, pass the key or id with the revision ' +
+      'you read as basedOn — without it the save is refused (read-required), and if someone changed ' +
+      'it since your read it is refused (stale) with the current content, which you merge into your ' +
+      'edit before saving again. Never discard their change. Saving a page with an issue links it ' +
+      'from the issue (a Jira remote link). Create a page only when the page "when" rule says the work needs one. This never ' +
+      'changes issue status. Use dryRun first and show the user the diff.',
+    command: ['atlassian', 'jira', 'work', 'save'],
+    kind: 'write',
+    inputSchema: {
+      issue: z
+        .object({
+          key: z.string().optional().describe('Issue key to update. Omit to create the issue.'),
+          basedOn: z.string().optional().describe('The issue.revision jira_work_get returned. Required to update.'),
+          fields: z
+            .record(z.string(), z.unknown())
+            .optional()
+            .describe('Values by configured field name. null clears a field.'),
+        })
+        .optional()
+        .describe('The issue half.'),
+      page: z
+        .object({
+          id: z.string().optional().describe('Page id or URL to update, or an existing page to link. Omit to create.'),
+          basedOn: z.number().int().optional().describe('The page.revision jira_work_get returned. Required to edit.'),
+          markdown: z.string().optional().describe('The whole page body as Markdown. Omit to only link the page.'),
+          title: z.string().optional().describe("New title. Defaults to the current title, or the config's pattern."),
+        })
+        .optional()
+        .describe('The page half.'),
+      acceptLoss: z
+        .boolean()
+        .optional()
+        .describe('Save over content jira_work_get reported as lossy (macros, mentions…), replacing it.'),
+      ...WRITE_SHAPE,
+    },
+    run: (ctx, input) => saveWorkItem(ctx.work(), input),
+  }),
+  tool({
+    name: 'jira_work_config_check',
+    title: "Work item: check the project's config",
+    description:
+      "Check the project's work item config (.simply/atlassian.json) against the live instance: the " +
+      'project, issue type and every field exist where it says, fixed and allowed values are real ' +
+      'options, and the Confluence space and parent page exist. Returns { ok, errors, warnings }.',
+    command: ['atlassian', 'jira', 'work', 'config-check'],
+    kind: 'read',
+    inputSchema: {},
+    run: (ctx) => checkWorkConfig(ctx.work()),
   }),
 ];

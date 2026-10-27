@@ -351,11 +351,35 @@ With writes allowed:
   `confluence_page_update` takes `append` to add to a page instead of replacing it. "Add a
   Decisions section to this page with these three bullets" becomes `confluence_page_update` with
   `markdown` and `append: true`.
+- **Jira descriptions and comments can be Markdown too.** `jira_issue_create`, `jira_issue_update`,
+  `jira_issue_comment_add` and `jira_issue_comment_edit` take `markdown`. It is converted to ADF on
+  Cloud and to wiki markup on Server/Data Center, so headings, numbered lists and tables keep their
+  shape instead of arriving as flat paragraphs.
 - **A failed write may still have landed.** A write is never retried after a `5xx`, a dropped
   connection, or a timeout, because the instance may already have applied it; the error message
   says `The change may have been applied; check before retrying.` An agent that sees it should
   look for the issue, comment, or page change before calling the tool again, or it may create a
   duplicate. See [Write safety](/guides/write-safety/).
+
+## Work items
+
+`jira_work_get`, `jira_work_save` and `jira_work_config_check` treat one Jira issue and its linked
+Confluence page as a single work item.
+
+- **The project sets the shape.** A config file in the repository decides what goes in each field
+  and which values are fixed, so every agent writes the same kind of story. See
+  [Work items](/guides/work-items/) for the file and the workflow.
+- **Finding the config.** The server looks for `.simply/atlassian.json` by searching upward from
+  the directory it was launched in. Clients launch servers from different directories, so a client
+  that does not use your project directory should be started with `--config /absolute/path` or
+  `ATLASSIAN_CONFIG`.
+- **`jira_work_get` is a read tool.** It is registered without `--allow-writes`.
+- **Saves must build on a read.** `jira_work_save` refuses an update that lacks the revision it is
+  based on, and refuses one whose issue or page changed since that read. Both refusals return an
+  error the agent can act on (see [Results and errors](#results-and-errors)).
+
+The server's instructions tell every client to read first, preview with `dryRun`, merge on `stale`,
+and never change issue status.
 
 ## Tools
 
@@ -375,6 +399,8 @@ With writes allowed:
 | `jira_board_list`              | `confluence_page_update`                                |
 | `jira_sprint_list`             | `confluence_page_delete` (needs `confirm` with `purge`) |
 | `jira_sprint_issues`           | `confluence_page_comment_add`                           |
+| `jira_work_get`                | `jira_work_save`                                        |
+| `jira_work_config_check`       |                                                         |
 | `confluence_open`              |                                                         |
 | `confluence_page_get`          |                                                         |
 | `confluence_page_search`       |                                                         |
@@ -414,6 +440,8 @@ result whose text is a JSON object with a stable `code`:
 | `auth`             | The instance rejected the credentials; carries the HTTP `status`.                    |
 | `error`            | Any other failure, including an API error with its HTTP `status` and sanitised body. |
 | `confirm-required` | A destructive tool was called without `confirm: true`.                               |
+| `read-required`    | `jira_work_save` updated a half without the `basedOn` revision. Read it first.       |
+| `stale`            | The work item changed since that read. `details` holds the current content to merge. |
 
 The first three map one-to-one onto the CLI's exit codes 2, 3, and 1, described in
 [Scripts and agents](/guides/scripting/), and carry the same `name` and `message`, scrubbed of
@@ -462,8 +490,11 @@ above, for tests and hosts that need to drive the server without a transport.
 ## Options
 
 ```
-simply-atlassian-mcp [--allow-writes] [--xray] [--env-file <path>]
+simply-atlassian-mcp [--allow-writes] [--xray] [--env-file <path>] [--config <path>]
 ```
+
+`--config` names the [work item](/guides/work-items/) config. Without it, the server uses
+`ATLASSIAN_CONFIG`, then `.simply/atlassian.json` found by searching upward from its working directory.
 
 `--help` prints the options and the full tool list. Because stdout is the protocol stream, it
 prints to stderr.

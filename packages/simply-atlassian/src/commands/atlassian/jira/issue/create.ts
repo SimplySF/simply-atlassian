@@ -55,6 +55,13 @@ export default class JiraIssueCreate extends JiraCommand<typeof JiraIssueCreate>
     }),
     summary: Flags.string({ summary: 'Issue summary.' }),
     description: Flags.string({ summary: 'Issue description as plain text.' }),
+    markdown: Flags.string({
+      summary: 'The description as Markdown, kept as headings, lists and tables.',
+      description:
+        'Converted to ADF on Cloud and wiki markup on Server/DC. Unsupported Markdown (images, raw HTML, task ' +
+        'lists) is refused naming the line, rather than dropped.',
+      exclusive: ['description'],
+    }),
     assignee: Flags.string({ summary: 'Assignee: account id on Cloud, username on Server/DC.' }),
     priority: Flags.string({ summary: 'Priority name.' }),
     label: Flags.string({ summary: 'Label to apply. Repeatable.', multiple: true }),
@@ -70,6 +77,7 @@ export default class JiraIssueCreate extends JiraCommand<typeof JiraIssueCreate>
       parent: this.flags.parent,
       summary: this.flags.summary,
       description: this.flags.description,
+      markdown: this.flags.markdown,
       assignee: this.flags.assignee,
       priority: this.flags.priority,
       labels: this.flags.label,

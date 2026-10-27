@@ -17,6 +17,8 @@
 import { buildAuthHeaders } from './auth.js';
 import type { AtlassianConfig } from './config.js';
 import { HttpTransport, type JsonCall } from './http.js';
+import { markdownToAdf } from './markdown-adf.js';
+import { markdownToWiki } from './markdown-wiki.js';
 
 export interface JiraSearchOptions {
   readonly jql: string;
@@ -376,6 +378,15 @@ export class JiraClient {
     return { type: 'doc', version: 1, content: adfParagraphs(text) };
   }
 
+  /**
+   * Converts Markdown to the deployment's rich text: ADF on Cloud, wiki markup on Server/DC.
+   * Where `descriptionValue` only knows paragraphs, this carries headings, lists, tables and
+   * code. Unsupported Markdown is refused, never dropped — see `markdown-ast.ts`.
+   */
+  public richTextValue(markdown: string): unknown {
+    return this.deployment === 'cloud' ? markdownToAdf(markdown) : markdownToWiki(markdown);
+  }
+
   public createIssue(body: Record<string, unknown>): Promise<unknown> {
     return this.request('/issue', { method: 'POST', body, mutating: true });
   }
@@ -505,6 +516,34 @@ export class JiraClient {
    */
   public getFromRoot<T>(path: string, query?: JsonCall['query']): Promise<T> {
     return this.request<T>(path, { method: 'GET', query }, '');
+  }
+
+  public getProject(projectKey: string): Promise<unknown> {
+    return this.request(`/project/${encodeURIComponent(projectKey)}`, { method: 'GET' });
+  }
+
+  public getProjectComponents(projectKey: string): Promise<unknown> {
+    return this.request(`/project/${encodeURIComponent(projectKey)}/components`, { method: 'GET' });
+  }
+
+  /**
+   * The issue types a project can create, from the paged create-metadata endpoints. Both
+   * deployments serve these (Server/DC from 8.4); the older `createmeta?expand=` form is gone
+   * from Cloud. Cloud names the list `issueTypes`, Server/DC `values`; callers accept either.
+   */
+  public getCreateIssueTypes(projectKey: string): Promise<unknown> {
+    return this.request(`/issue/createmeta/${encodeURIComponent(projectKey)}/issuetypes`, {
+      method: 'GET',
+      query: { maxResults: 200 },
+    });
+  }
+
+  /** The fields on a project's create screen for one issue type. Cloud: `fields`; Server/DC: `values`. */
+  public getCreateFields(projectKey: string, issueTypeId: string): Promise<unknown> {
+    return this.request(
+      `/issue/createmeta/${encodeURIComponent(projectKey)}/issuetypes/${encodeURIComponent(issueTypeId)}`,
+      { method: 'GET', query: { maxResults: 200 } },
+    );
   }
 
   public getProjectVersions(projectKey: string): Promise<unknown> {

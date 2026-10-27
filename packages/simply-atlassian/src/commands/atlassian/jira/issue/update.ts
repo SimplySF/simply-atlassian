@@ -54,6 +54,13 @@ export default class JiraIssueUpdate extends JiraCommand<typeof JiraIssueUpdate>
     ...writeFlags,
     summary: Flags.string({ summary: 'New summary.' }),
     description: Flags.string({ summary: 'New description as plain text.' }),
+    markdown: Flags.string({
+      summary: 'The new description as Markdown, kept as headings, lists and tables.',
+      description:
+        'Converted to ADF on Cloud and wiki markup on Server/DC. Unsupported Markdown (images, raw HTML, task ' +
+        'lists) is refused naming the line, rather than dropped.',
+      exclusive: ['description'],
+    }),
     assignee: Flags.string({ summary: 'New assignee: account id on Cloud, username on Server/DC.' }),
     priority: Flags.string({ summary: 'New priority name.' }),
     label: Flags.string({ summary: 'Label to set. Repeatable, and replaces the existing labels.', multiple: true }),
@@ -73,6 +80,7 @@ export default class JiraIssueUpdate extends JiraCommand<typeof JiraIssueUpdate>
     const body = buildUpdateIssueBody(client, issue, {
       summary: this.flags.summary,
       description: this.flags.description,
+      markdown: this.flags.markdown,
       assignee: this.flags.assignee,
       priority: this.flags.priority,
       labels: this.flags.label,

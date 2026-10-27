@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://unpkg.com/@simplysf/simply-atlassian-core/schema/work-config.schema.json",
+  "title": "simply-atlassian work item config",
+  "description": "Defines a project's work item: one Jira issue, field by field, and an optional linked Confluence page. Checked into the repository as .simply/atlassian.json. See design 0020. Never put credentials here; they stay in the environment.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["jira"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "guidance": {
+      "type": "string",
+      "description": "Project-wide direction for the agent. Returned by jira_work_get, never sent to Jira or Confluence."
+    },
+    "jira": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project", "issueType", "fields"],
+      "properties": {
+        "project": { "type": "string", "minLength": 1, "description": "Project key new issues are created in." },
+        "issueType": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Issue type for new issues, for example Story."
+        },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Every field a work item has. Fields not listed are neither read nor written. Must include the summary field.",
+          "items": { "$ref": "#/$defs/field" }
+        }
+      }
+    },
+    "confluence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["space"],
+      "properties": {
+        "space": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Space key new pages are created in. A linked page in another space is never the issue's page."
+        },
+        "parent": {
+          "type": ["string", "integer"],
+          "pattern": "^\\d+$",
+          "description": "Page id new pages are created under."
+        },
+        "title": {
+          "type": "string",
+          "description": "Title pattern for new pages. {issue.key} and {issue.<field name>} are substituted."
+        },
+        "labels": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^\\S+$" },
+          "description": "Labels added to every page this tool creates, updates or adopts. A linked page must carry all of them to be the issue's page."
+        },
+        "when": {
+          "type": "string",
+          "description": "The project's rule for when a work item warrants a page. Returned to the agent; the server never decides this."
+        },
+        "sections": {
+          "type": "array",
+          "description": "The page's sections, as guidance. Required headings must exist for a save to succeed.",
+          "items": { "$ref": "#/$defs/section" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "key", "type"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "description": "The label the agent reads and writes against." },
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The Jira field id: summary, description, components, customfield_10045…"
+        },
+        "type": {
+          "enum": [
+            "text",
+            "markdown",
+            "number",
+            "date",
+            "option",
+            "options",
+            "components",
+            "versions",
+            "labels",
+            "user",
+            "issue",
+            "raw"
+          ],
+          "description": "How the value is encoded for each deployment."
+        },
+        "description": { "type": "string", "description": "What belongs in the field, as instructions to the agent." },
+        "required": { "type": "boolean", "description": "A save that leaves this field empty is refused." },
+        "value": { "description": "With always: true, the value the server always applies." },
+        "always": { "type": "boolean", "description": "Always apply value; the agent cannot change or remove it." },
+        "default": {
+          "description": "Applied on create when the agent omits the field. Cannot be combined with always."
+        },
+        "allowed": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "For option, options, components, versions and labels: the only values the agent may use."
+        }
+      }
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["heading"],
+      "properties": {
+        "heading": { "type": "string", "minLength": 1 },
+        "description": {
+          "type": "string",
+          "description": "What belongs in the section, as instructions to the agent."
+        },
+        "required": { "type": "boolean", "description": "A page save without this heading is refused." }
+      }
+    }
+  }
+}

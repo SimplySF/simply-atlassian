@@ -35,6 +35,7 @@ import JiraIssueCreate from '../../../../../src/commands/atlassian/jira/issue/cr
 import JiraIssueDelete from '../../../../../src/commands/atlassian/jira/issue/delete.js';
 import JiraIssueUpdate from '../../../../../src/commands/atlassian/jira/issue/update.js';
 import JiraWhoami from '../../../../../src/commands/atlassian/jira/whoami.js';
+import JiraWorkSave from '../../../../../src/commands/atlassian/jira/work/save.js';
 
 let server: TestServer;
 
@@ -92,6 +93,8 @@ describe('the read-only guard', () => {
         ConfluencePageUpdate.run(confluenceArgv('123', '--text', 'x')),
         ConfluencePageDelete.run(confluenceArgv('123')),
         ConfluencePageCommentAdd.run(confluenceArgv('123', '--text', 'x')),
+        // A work item save spans both products and is refused before its input is even read.
+        JiraWorkSave.run(argv('--file', 'never-read.json')),
       ].map(async (attempt) => attempt.catch((caught: unknown) => caught)),
     )) as Failure[];
 
@@ -260,6 +263,7 @@ describe('write-command coverage', () => {
         'atlassian/jira/issue/transition.ts',
         'atlassian/jira/issue/update.ts',
         'atlassian/jira/sprint/add.ts',
+        'atlassian/jira/work/save.ts',
       ].toSorted(),
     );
   });

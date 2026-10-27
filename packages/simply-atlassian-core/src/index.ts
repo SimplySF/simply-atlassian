@@ -45,7 +45,7 @@ export {
 } from './confluence-client.js';
 export { pageHistoryJson, type PageHistoryJson } from './confluence-history.js';
 export { loadEnvFile, parseEnvFile } from './env-file.js';
-export { AuthError, CliError, ConfigError, HttpError, NetworkError } from './errors.js';
+export { AuthError, CliError, ConfigError, HttpError, NetworkError, ReadRequiredError, StaleError } from './errors.js';
 export { HttpTransport, type JsonCall, type QueryValue, type TransportTarget } from './http.js';
 export {
   JiraClient,
@@ -99,8 +99,12 @@ export {
 } from './jira-discovery.js';
 export { buildSprintCreateBody, prepareSprintUpdate, type Sprint, type SprintInput } from './jira-agile.js';
 export { buildRemoteLinkBody, describeRemoteLink, type RemoteLink, type RemoteLinkInput } from './jira-remote-links.js';
+export { adfToMarkdown, markdownToAdf, type AdfDocument, type AdfNode, type MarkdownReading } from './markdown-adf.js';
 export { markdownToStorage } from './markdown-storage.js';
+export { markdownToWiki, wikiToMarkdown } from './markdown-wiki.js';
 export { storageToMarkdown } from './storage-markdown.js';
+export { storageLoss, storageToMarkdownReading } from './storage-reading.js';
+export { lineDiff } from './text-diff.js';
 
 // --- Operations: what each command does between parsing its input and rendering its result ---
 export { addIssuesToSprint, numericId, sprintChunkSizes, type SprintAddResult } from './jira-agile.js';
@@ -171,6 +175,44 @@ export {
   type PageUpdatePlan,
   type UpdatePageInput,
 } from './confluence-pages.js';
+
+// --- Work items: one Jira issue and one Confluence page, shaped by a project config (design 0020) ---
+export {
+  findWorkConfig,
+  loadWorkConfig,
+  parseWorkConfig,
+  WORK_CONFIG_ENV,
+  WORK_CONFIG_FILE,
+  WORK_CONFIG_KEYS,
+  WORK_FIELD_TYPES,
+  type WorkConfig,
+  type WorkConfigLocation,
+  type WorkConfluenceConfig,
+  type WorkFieldSpec,
+  type WorkFieldType,
+  type WorkJiraConfig,
+  type WorkSectionSpec,
+} from './work-config.js';
+export { decodeWorkField, encodeWorkField, type DecodedField } from './work-fields.js';
+export {
+  getWorkItem,
+  saveWorkItem,
+  WORK_PAGE_RELATIONSHIP,
+  type WorkAdjustment,
+  type WorkContext,
+  type WorkDryRunResult,
+  type WorkFieldView,
+  type WorkIssueInput,
+  type WorkIssueView,
+  type WorkItemRef,
+  type WorkItemView,
+  type WorkLinkedPage,
+  type WorkPageInput,
+  type WorkPageView,
+  type WorkSaveInput,
+  type WorkSaveResult,
+} from './work-item.js';
+export { checkWorkConfig, type WorkConfigCheck } from './work-check.js';
 
 // --- Xray (Server/Data Center, read-only): docs/design/0015-jira-xray.md ---
 export {
