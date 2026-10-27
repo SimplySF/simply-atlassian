@@ -33,7 +33,7 @@ this flow:
   paragraphs and nothing else. Headings, numbered acceptance criteria, lists and tables collapse.
   That is not something an outside reviewer can sign off on.
 - **Nothing ties the issue and the page together.** The agent has to find the other half, link
-  both ways, and keep track of which page belongs to which issue.
+  them, and keep track of which page belongs to which issue.
 - **Every write is last-write-wins.** Product, engineering, business reviewers and several agents
   all edit the same two documents over days. An agent that writes from a stale read silently
   wipes out someone else's edit.
@@ -273,12 +273,19 @@ from "any stale read" to that window, and does not claim to close it.
 
 ### `jira_work_get` / `atlassian jira work get`
 
-| Input     | Meaning                                                                                            |
-| --------- | -------------------------------------------------------------------------------------------------- |
-| `issue`   | An issue key. Its page is found through the remote link that `save` creates.                       |
-| `page`    | A page ID. Its issue is found through the issue link that `save` writes on the page.               |
-| (neither) | A new idea: returns the empty shape with guidance, and no revisions.                               |
-| (both)    | Adopting an unlinked pair. Both are read, and `links.paired` is `false` until a `save` links them. |
+| Input     | Meaning                                                                                 |
+| --------- | --------------------------------------------------------------------------------------- |
+| `issue`   | An issue key. Its page is the Confluence page its remote links point at.                |
+| `page`    | A page ID, read on its own. No issue is looked up from it.                              |
+| (neither) | A new idea: returns the empty shape with guidance, and no revisions.                    |
+| (both)    | Chooses one of several linked pages, or reads an unlinked pair until a `save` links it. |
+
+**The issue is the table of contents.** The pair is whatever the issue's remote links say, which
+is the link Jira already shows and the one a person adds or removes in Jira. Every remote link to a
+page on the configured Confluence counts, whoever made it and whatever its relationship. One link
+is the page; several are refused unless `page` names one, because guessing would mean the next
+save edits the wrong document. `links.paired` is `true` when the issue links to the page that was
+read.
 
 Result:
 
@@ -341,13 +348,14 @@ Input:
   current values, except that `always` values are re-applied and `default`s are applied on create.
   The page Markdown is the whole page body.
 
-**Linking.** After any successful save that touches a pair, the server makes sure both links
-exist:
+**Linking.** After any successful save that touches a pair, the server makes sure the issue has a
+remote link to the page, with Jira's own relationship for a Confluence page (`Wiki Page`). It is
+idempotent, because Jira keys the link by URL. Adopting an existing page or issue is a matter of
+passing its `id` or `key`; adopting a page only adds the link and never rewrites the page.
 
-- a remote link on the issue to the page;
-- an issue link block at the top of the page.
-
-Both are idempotent. Adopting an existing page or issue is a matter of passing its `id` or `key`.
+When the server writes a page's body, it puts a line naming the issue at the top, for people
+reading the page. It is a convenience only: nothing reads it to pair the halves, and a page saved
+on its own keeps the line it has.
 
 **Validation.** `save` validates everything before sending anything, and reports every failure
 at once rather than one per attempt. It checks:
@@ -517,8 +525,9 @@ Each step is a separate PR:
 - **Fake-server tests** (`@simplysf/simply-atlassian-core/testing`), on Cloud and Server/DC:
   - Create the pair from nothing (issue first, title from its key).
   - Adopt an existing issue and add a page.
-  - Adopt an existing page and create the issue.
-  - `get` from either half finds the other.
+  - Adopt an existing page and create the issue, without rewriting the page.
+  - `get` from the issue follows its remote links, including one added in Jira; `get` from a page
+    alone reads only the page; several linked pages are refused unless one is named.
   - Partial failure reports which steps landed.
   - `config-check` catches an unknown `customfield`, a missing component, and an `allowed` value
     that isn't one of the field's options.
@@ -544,8 +553,8 @@ Each step is a separate PR:
   - `get` names what a field or page holds that Markdown cannot carry, in `lossy`.
   - `save` refuses to replace such a field or page unless `acceptLoss` is passed.
   - Fields the save does not touch are never re-sent, so they are never at risk.
-  - Linking an existing page without `markdown` prepends the issue line to its storage untouched,
-    so a hand-made page keeps its macros.
+  - Linking an existing page without `markdown` writes nothing to the page, so a hand-made page
+    keeps its macros.
 - **The stale diff runs from current to proposed.** Neither product serves the content at an old
   revision cheaply (Jira not at all), so the diff shows what the refused save would have changed,
   which is the agent's own edit plus the other person's change it would undo.
@@ -569,6 +578,13 @@ Each step is a separate PR:
   formatting, so `AC-1` stays readable in Jira's text editor. A literal backslash cannot be
   escaped in wiki markup (`\\` is a line break), so one directly before a markup character does
   not round-trip.
+- **The pair lives in Jira only.** The first build linked both ways: a remote link with a custom
+  `Confluence page` relationship that won over other links, plus the issue line on the page, which
+  `get` parsed to find the issue from the page and `save` used to refuse a page owned by another
+  issue. Review pointed out that Jira already links issues to Confluence pages, and that keeping
+  the connection anywhere else splits it. Now the issue's remote links are the only record, so a
+  link a person adds or removes in Jira is the pairing; the issue line is for readers; and adopting
+  a page no longer rewrites it to add that line.
 - **The `--xray` and 0007 doc counts** were not updated; that remains a follow-up.
 
 ## Open questions

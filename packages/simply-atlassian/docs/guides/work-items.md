@@ -19,7 +19,7 @@ the same structure whichever model wrote it.
    the empty shape (`jira_work_get` with nothing), drafts the fields by following each field's
    `description`, previews the result with `dryRun`, and saves.
    - If the work is complex enough to meet the config's `when` rule, the agent also writes the
-     page, and the two are linked both ways.
+     page, and the issue links to it.
    - The issue or the page may already exist. Pass its key or id and the agent picks up from it.
 2. **The issue moves through your process.** Reviews, sign-off by business users outside any agent
    tool, and prioritisation all happen as they do today. These tools never change an issue's
@@ -182,8 +182,14 @@ of an agent's save.
 ```sh
 simply atlassian jira work get                  # the empty shape, for a new idea
 simply atlassian jira work get PAY-412          # the issue and its page
-simply atlassian jira work get --page 987654    # the same pair, found from the page
+simply atlassian jira work get PAY-412 --page 987654  # when the issue links to several pages
+simply atlassian jira work get --page 987654    # the page on its own
 ```
+
+The issue is the table of contents. Its page is the Confluence page it links to, using the same
+remote link Jira shows on the issue, so a page someone links in Jira counts too. To change which
+page belongs to an issue, change the link in Jira. The line naming the issue at the top of a page
+is there for readers; it is not used to find anything.
 
 A save takes JSON, in the same shape the MCP tool takes:
 
@@ -210,9 +216,9 @@ How a save behaves:
 - **Fields you omit keep their current values.** Fixed values are applied every time, and defaults
   are filled in on create. The result's `adjusted` list says what the config changed, so you can
   pass that on.
-- **To link an existing page without rewriting it,** pass its `id` with no `markdown`. Only a line
-  naming the issue is added at the top. The page's own content, macros included, is left exactly
-  as it was.
+- **To link an existing page without rewriting it,** pass its `id` with no `markdown`. Only the
+  issue changes: it gains a link to the page. The page itself, macros included, is left exactly as
+  it was.
 - **Everything is checked before anything is sent,** and every problem is reported at once.
 - **Writes happen in order: issue, then page, then links.** If a later step fails, the error says
   exactly what was already saved. Nothing is rolled back; read the work item again and save the

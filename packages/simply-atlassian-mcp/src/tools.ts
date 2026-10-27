@@ -185,11 +185,14 @@ const jiraMarkdown = (what: string): z.ZodOptional<z.ZodString> =>
 const workIssueRef = z
   .string()
   .optional()
-  .describe('Issue key of the work item. Its linked page is found and returned with it.');
+  .describe('Issue key of the work item. The Confluence page it links to is returned with it.');
 const workPageRef = z
   .string()
   .optional()
-  .describe('Confluence page id or URL of the work item. Its issue is found from the page and returned with it.');
+  .describe(
+    "Confluence page id or URL. With issue, chooses which of the issue's linked pages to read; alone, " +
+      'reads just the page, with no issue.',
+  );
 
 // --- Xray building blocks, shared by the Xray tools ---
 
@@ -1160,9 +1163,9 @@ export const TOOLS: readonly ToolSpec[] = [
     title: 'Work item: read the issue and its page',
     description:
       "Read a work item: one Jira issue and its linked Confluence page, shaped by the project's " +
-      'config (.simply/atlassian.json). ALWAYS call this before jira_work_save. Pass the issue key or ' +
-      'the page id — the other half is found through the link between them — or neither, for a new ' +
-      'idea, to get the empty shape. Returns { guidance, issue: { key, status, revision, fields: ' +
+      'config (.simply/atlassian.json). ALWAYS call this before jira_work_save. Pass the issue key: ' +
+      'the issue is the table of contents, and its page is the Confluence page it links to (pass page ' +
+      'too when it links to several). Pass neither, for a new idea, to get the empty shape. Returns { guidance, issue: { key, status, revision, fields: ' +
       '[{ name, description, required, allowed, value }] }, page: { id, revision, markdown, when, ' +
       'sections }, links, missingRequired }. Follow "guidance" and every field and section ' +
       '"description": they are the project\'s rules for what goes where. Pass the revisions as basedOn ' +
@@ -1181,8 +1184,8 @@ export const TOOLS: readonly ToolSpec[] = [
       'is sent. page.markdown is the whole page body. To update, pass the key or id with the revision ' +
       'you read as basedOn — without it the save is refused (read-required), and if someone changed ' +
       'it since your read it is refused (stale) with the current content, which you merge into your ' +
-      'edit before saving again. Never discard their change. Creating a page links it to the issue ' +
-      'both ways. Create a page only when the page "when" rule says the work needs one. This never ' +
+      'edit before saving again. Never discard their change. Saving a page with an issue links it ' +
+      'from the issue (a Jira remote link). Create a page only when the page "when" rule says the work needs one. This never ' +
       'changes issue status. Use dryRun first and show the user the diff.',
     command: ['atlassian', 'jira', 'work', 'save'],
     kind: 'write',

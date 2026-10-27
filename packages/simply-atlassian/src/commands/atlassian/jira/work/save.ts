@@ -38,7 +38,8 @@ export default class JiraWorkSave extends WorkCommand<typeof JiraWorkSave> {
     "checked against the project's config before anything is sent, and fields the config fixes are " +
     'applied whatever is passed. An update needs the revision "work get" printed as basedOn; if the ' +
     'issue or page changed since, nothing is saved and the current content is shown, to merge and ' +
-    'retry. A new page is linked to its issue both ways. Issue status is never changed.';
+    'retry. A page is linked from its issue with a Jira remote link, which is how it is found again. ' +
+    'Issue status is never changed.';
 
   public static override readonly examples = [
     '<%= config.bin %> <%= command.id %> --file story.json --dry-run',

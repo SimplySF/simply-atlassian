@@ -133,6 +133,11 @@ class FakeAtlassian {
     });
   }
 
+  /** The page's browser URL, as a remote link to it carries. */
+  public pageUrl(id: string): string {
+    return `${this.server.baseUrl}${this.wiki}/pages/viewpage.action?pageId=${id}`;
+  }
+
   /** Someone else edits the page in the browser. */
   public editPage(id: string, storage: string): void {
     const page = this.pages.get(id);
@@ -201,7 +206,7 @@ describe.each(['cloud', 'server'] as const)('work items on %s', (deployment) => 
     expect(server.requests).toHaveLength(0);
   });
 
-  it('creates the pair from nothing: issue first, page titled with its key, linked both ways', async () => {
+  it('creates the pair from nothing: issue first, page titled with its key, linked from the issue', async () => {
     const { ctx, fake } = context(deployment);
     const result = (await saveWorkItem(ctx, { issue: { fields: STORY }, page: { markdown: PAGE } })) as WorkSaveResult;
 
@@ -223,7 +228,7 @@ describe.each(['cloud', 'server'] as const)('work items on %s', (deployment) => 
     );
     expect(page?.labels).toEqual(['tech-design']);
     expect(fake.remoteLinks.get('PAY-1')).toMatchObject([
-      { relationship: 'Confluence page', object: { title: page?.title } },
+      { relationship: 'Wiki Page', object: { title: page?.title } },
     ]);
 
     expect(result.item.links.paired).toBe(true);
@@ -231,18 +236,51 @@ describe.each(['cloud', 'server'] as const)('work items on %s', (deployment) => 
     expect(result.item.missingRequired).toEqual([]);
   });
 
-  it('finds the pair from either half', async () => {
+  it('finds the page through the issue, and never the issue through the page', async () => {
     const { ctx } = context(deployment);
     await saveWorkItem(ctx, { issue: { fields: STORY }, page: { markdown: PAGE } });
 
     const fromIssue = await getWorkItem(ctx, { issue: 'PAY-1' });
     const fromPage = await getWorkItem(ctx, { page: '900' });
     expect(fromIssue.page?.id).toBe('900');
-    expect(fromPage.issue.key).toBe('PAY-1');
-    expect(fromPage.issue.revision).toBe(fromIssue.issue.revision);
+    expect(fromIssue.links.paired).toBe(true);
     expect(fromIssue.issue.fields.find((field) => field.name === 'Acceptance Criteria')?.value).toBe(
       STORY['Acceptance Criteria'],
     );
+    // The issue line on the page is for readers; it does not pair anything.
+    expect(fromPage.page?.markdown).toBe(PAGE);
+    expect(fromPage.issue.key).toBeUndefined();
+    expect(fromPage.links.paired).toBe(false);
+  });
+
+  it('follows a Confluence link added in Jira, whoever made it', async () => {
+    const { ctx, fake } = context(deployment);
+    fake.addPage('77', 'Hand-made design', '<h1>Problem</h1><p>Written by hand.</p>');
+    await saveWorkItem(ctx, { issue: { fields: STORY } });
+    fake.remoteLinks.set('PAY-1', [
+      { id: 1, relationship: 'mentioned in', object: { url: fake.pageUrl('77'), title: 'Hand-made design' } },
+      { id: 2, object: { url: 'https://example.com/elsewhere', title: 'Not Confluence' } },
+    ]);
+
+    const read = await getWorkItem(ctx, { issue: 'PAY-1' });
+    expect(read.page?.id).toBe('77');
+    expect(read.links.paired).toBe(true);
+  });
+
+  it('asks which page when the issue links to several', async () => {
+    const { ctx, fake } = context(deployment);
+    fake.addPage('77', 'Design', '<p>a</p>');
+    fake.addPage('78', 'Requirements', '<p>b</p>');
+    await saveWorkItem(ctx, { issue: { fields: STORY } });
+    fake.remoteLinks.set('PAY-1', [
+      { id: 1, object: { url: fake.pageUrl('77') } },
+      { id: 2, object: { url: fake.pageUrl('78') } },
+    ]);
+
+    await expect(getWorkItem(ctx, { issue: 'PAY-1' })).rejects.toThrow(/more than one Confluence page \(77, 78\)/);
+    const chosen = await getWorkItem(ctx, { issue: 'PAY-1', page: '78' });
+    expect(chosen.page?.title).toBe('Requirements');
+    expect(chosen.links.paired).toBe(true);
   });
 
   it('refuses an update that was not built on a read', async () => {
@@ -342,7 +380,8 @@ describe.each(['cloud', 'server'] as const)('work items on %s', (deployment) => 
     })) as WorkSaveResult;
     expect(saved.saved.page).toBe('update');
     expect(saved.item.page?.markdown).toBe(merged);
-    expect(saved.item.links.paired).toBe(true);
+    // Saved on its own, the page keeps its issue line.
+    expect(fake.pages.get('900')?.storage).toMatch(/^<p><strong>Jira:<\/strong> .*PAY-1<\/a><\/p>/);
   });
 
   it('will not create a second page for an issue that already has one', async () => {
@@ -369,17 +408,16 @@ describe.each(['cloud', 'server'] as const)('work items on %s', (deployment) => 
     expect(fake.pages.get('900')?.title).toBe('PAY-50: Existing story');
   });
 
-  it('adopts an existing page, links it without rewriting it, and creates its issue', async () => {
+  it('adopts an existing page by linking it from a new issue, without touching the page', async () => {
     const { ctx, fake } = context(deployment);
     const original = '<p>Written by hand.</p><ac:structured-macro ac:name="toc" />';
     fake.addPage('77', 'Hand-made design', original);
 
     const result = (await saveWorkItem(ctx, { issue: { fields: STORY }, page: { id: '77' } })) as WorkSaveResult;
-    expect(result.saved).toEqual({ issue: 'create', page: 'link', linked: true });
-    // The page's own body, macro included, is kept exactly; only the issue line is added above it.
-    expect(fake.pages.get('77')?.storage).toMatch(
-      /^<p><strong>Jira:<\/strong> .*PAY-1<\/a><\/p><p>Written by hand\.<\/p><ac:structured-macro/,
-    );
+    expect(result.saved).toEqual({ issue: 'create', page: 'none', linked: true });
+    expect(fake.pages.get('77')?.storage).toBe(original);
+    expect(fake.remoteLinks.get('PAY-1')).toMatchObject([{ object: { url: fake.pageUrl('77') } }]);
+    expect(result.item.links.paired).toBe(true);
     expect(result.item.page?.lossy).toEqual(['a "toc" macro']);
   });
 
@@ -442,7 +480,7 @@ describe.each(['cloud', 'server'] as const)('work items on %s', (deployment) => 
       space: { key: 'ENG' },
     });
     expect(preview.issue?.diff).toContain('+Offline sync for field technicians');
-    expect(preview.links).toHaveLength(2);
+    expect(preview.links).toEqual([`remote link from the new issue to the page (relationship "Wiki Page")`]);
     expect(server.requests.filter((request) => request.method !== 'GET')).toHaveLength(0);
   });
 

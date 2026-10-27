@@ -22,9 +22,9 @@ export default class JiraWorkGet extends WorkCommand<typeof JiraWorkGet> {
   public static override readonly summary = 'Read a work item: a Jira issue and its linked Confluence page.';
   public static override readonly description =
     "A work item is shaped by the project's config (.simply/atlassian.json): which fields the issue " +
-    'has and what belongs in each, and what its page holds. Pass the issue key, or --page for the ' +
-    'page — the other half is found through the link between them — or neither, to see the empty ' +
-    'shape for a new idea. The revisions printed are what "work save" needs as basedOn, so every ' +
+    'has and what belongs in each, and what its page holds. Pass the issue key: its page is the ' +
+    'Confluence page the issue links to, and --page chooses one when it links to several. --page ' +
+    'alone reads just the page. Pass neither to see the empty shape for a new idea. The revisions printed are what "work save" needs as basedOn, so every ' +
     'save builds on a read.';
 
   public static override readonly examples = [
@@ -38,7 +38,9 @@ export default class JiraWorkGet extends WorkCommand<typeof JiraWorkGet> {
   };
 
   public static override readonly flags = {
-    page: Flags.string({ summary: 'Page id or URL of the work item, instead of the issue key.' }),
+    page: Flags.string({
+      summary: "Page id or URL: which of the issue's linked pages to read, or a page to read on its own.",
+    }),
   };
 
   public async run(): Promise<WorkItemView> {

@@ -2461,7 +2461,7 @@ ARGUMENTS
   [ISSUE]  Issue key of the work item, for example PAY-412.
 
 FLAGS
-  --page=<value>  Page id or URL of the work item, instead of the issue key.
+  --page=<value>  Page id or URL: which of the issue's linked pages to read, or a page to read on its own.
 
 CONNECTION FLAGS
   -e, --env-file=<value>                   Path to a .env file holding connection settings.
@@ -2483,9 +2483,9 @@ DESCRIPTION
   Read a work item: a Jira issue and its linked Confluence page.
 
   A work item is shaped by the project's config (.simply/atlassian.json): which fields the issue has and what belongs in
-  each, and what its page holds. Pass the issue key, or --page for the page — the other half is found through the link
-  between them — or neither, to see the empty shape for a new idea. The revisions printed are what "work save" needs as
-  basedOn, so every save builds on a read.
+  each, and what its page holds. Pass the issue key: its page is the Confluence page the issue links to, and --page
+  chooses one when it links to several. --page alone reads just the page. Pass neither to see the empty shape for a new
+  idea. The revisions printed are what "work save" needs as basedOn, so every save builds on a read.
 
 EXAMPLES
   $ simply atlassian jira work get
@@ -2547,7 +2547,8 @@ DESCRIPTION
   "markdown", "title" } }, with field names from "work get". Every value is checked against the project's config before
   anything is sent, and fields the config fixes are applied whatever is passed. An update needs the revision "work get"
   printed as basedOn; if the issue or page changed since, nothing is saved and the current content is shown, to merge
-  and retry. A new page is linked to its issue both ways. Issue status is never changed.
+  and retry. A page is linked from its issue with a Jira remote link, which is how it is found again. Issue status is
+  never changed.
 
 EXAMPLES
   $ simply atlassian jira work save --file story.json --dry-run

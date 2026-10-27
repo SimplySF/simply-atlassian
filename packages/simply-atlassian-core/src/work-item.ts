@@ -33,7 +33,10 @@ import { decodeWorkField, encodeWorkField, isEmptyValue, resolveWorkUser, type D
  * A work item is a pair: one Jira issue, and at most one Confluence page linked to it. These are
  * the operations `jira work get` / `save` and the `jira_work_*` tools run. See design 0020.
  *
- * Three rules hold everywhere in this file:
+ * Four rules hold everywhere in this file:
+ *
+ * **The issue is the table of contents.** Its page is the one its remote links point at, the same
+ * link Jira shows and a person can add or remove in Jira. Nothing is ever paired from the page side.
  *
  * **The project config is the whole contract.** Only configured fields are read or written, and
  * every value is checked against its spec before anything is sent.
@@ -45,8 +48,12 @@ import { decodeWorkField, encodeWorkField, isEmptyValue, resolveWorkUser, type D
  * **Status is never touched.** It belongs to the team's own process, which runs outside agents.
  */
 
-/** The relationship remote links from an issue to its page carry; how the page is found again. */
-export const WORK_PAGE_RELATIONSHIP = 'Confluence page';
+/**
+ * The relationship on the remote link `saveWorkItem` adds from an issue to its page: the label Jira
+ * itself gives a link to a Confluence page. Only a label; the page is found by following any of the
+ * issue's remote links to the configured Confluence, whoever made them.
+ */
+export const WORK_PAGE_RELATIONSHIP = 'Wiki Page';
 
 export interface WorkContext {
   readonly config: WorkConfig;
@@ -141,7 +148,7 @@ export interface WorkAdjustment {
 type SaveAction = 'create' | 'update' | 'none';
 
 export interface WorkSaveResult {
-  readonly saved: { readonly issue?: SaveAction; readonly page?: SaveAction | 'link'; readonly linked: boolean };
+  readonly saved: { readonly issue?: SaveAction; readonly page?: SaveAction; readonly linked: boolean };
   readonly adjusted: readonly WorkAdjustment[];
   /** The pair as it now stands, with the revisions to base the next save on. */
   readonly item: WorkItemView;
@@ -150,7 +157,7 @@ export interface WorkSaveResult {
 export interface WorkDryRunResult {
   readonly dryRun: true;
   readonly issue?: { readonly action: SaveAction; readonly request?: unknown; readonly diff: string };
-  readonly page?: { readonly action: SaveAction | 'link'; readonly request?: unknown; readonly diff: string };
+  readonly page?: { readonly action: SaveAction; readonly request?: unknown; readonly diff: string };
   readonly links: readonly string[];
   readonly adjusted: readonly WorkAdjustment[];
 }
@@ -174,29 +181,27 @@ interface PageState {
   readonly body: string;
   readonly markdown: string;
   readonly lossy: readonly string[];
-  /** The issue the page's header names, when it has one. */
+  /** The issue the page's header line names, kept when the page is rewritten. Never used to pair. */
   readonly headerKey?: string;
 }
 
-/** Reads a work item from either half, finding the other through the links `saveWorkItem` makes. */
+/**
+ * Reads a work item. Given an issue, its page is the one its remote links point at, or `ref.page`
+ * when it links to several. A page given alone is read alone: no issue is looked up from it.
+ */
 export async function getWorkItem(ctx: WorkContext, ref: WorkItemRef = {}): Promise<WorkItemView> {
   if (ref.page !== undefined && ctx.config.confluence === undefined) {
     throw new ConfigError(
       `This project's config (${ctx.config.source}) has no confluence section, so there is no page to read.`,
     );
   }
-  let issue = ref.issue === undefined ? undefined : await readIssue(ctx, assertIssueKey(ref.issue.trim()));
+  const issue = ref.issue === undefined ? undefined : await readIssue(ctx, assertIssueKey(ref.issue.trim()));
   let linked: readonly string[] = [];
   if (issue !== undefined && ctx.config.confluence !== undefined) linked = await linkedPageIds(ctx, issue.key);
 
   let pageId = ref.page === undefined ? undefined : pageIdForInstance(ref.page, ctx.confluence().url);
   if (pageId === undefined && issue !== undefined) pageId = choosePage(issue.key, linked);
   const page = pageId === undefined ? undefined : await readPage(ctx, pageId);
-
-  if (issue === undefined && page?.headerKey !== undefined) {
-    issue = await readIssue(ctx, page.headerKey);
-    linked = await linkedPageIds(ctx, issue.key);
-  }
   return itemView(ctx, issue, page, linked);
 }
 
@@ -267,38 +272,34 @@ function pageUrlFallback(baseUrl: string, pageId: string): string {
   return `${baseUrl.replace(/\/+$/, '')}/pages/viewpage.action?pageId=${encodeURIComponent(pageId)}`;
 }
 
-/** The pages an issue's remote links point at on the configured Confluence, this tool's first. */
+/**
+ * The pages an issue's remote links point at on the configured Confluence, whoever added them:
+ * a link made in Jira counts the same as one `saveWorkItem` made.
+ */
 async function linkedPageIds(ctx: WorkContext, issueKey: string): Promise<string[]> {
   const links = (await ctx.jira.getRemoteLinks(issueKey)) as RemoteLink[];
   const confluenceUrl = ctx.confluence().url;
-  const ours: string[] = [];
-  const others: string[] = [];
+  const ids: string[] = [];
   for (const link of Array.isArray(links) ? links : []) {
     const target = link.object?.url;
     if (target === undefined) continue;
-    let id: string;
     try {
-      id = pageIdForInstance(target, confluenceUrl);
+      ids.push(pageIdForInstance(target, confluenceUrl));
     } catch {
       continue;
     }
-    (link.relationship === WORK_PAGE_RELATIONSHIP ? ours : others).push(id);
   }
-  return [...new Set([...ours, ...others])].map((id) => (ours.includes(id) ? id : `?${id}`));
+  return [...new Set(ids)];
 }
 
 /**
- * Picks the issue's page. A link this tool made wins; otherwise a single Confluence link is the
- * page. Several candidates with nothing to tell them apart is refused rather than guessed, since
+ * Picks the issue's page: its only Confluence link. Several is refused rather than guessed, since
  * a guess means the next save edits the wrong document.
  */
 function choosePage(issueKey: string, linked: readonly string[]): string | undefined {
-  const ours = linked.filter((id) => !id.startsWith('?'));
-  const others = linked.filter((id) => id.startsWith('?')).map((id) => id.slice(1));
-  const candidates = ours.length > 0 ? ours : others;
-  if (candidates.length <= 1) return candidates[0];
+  if (linked.length <= 1) return linked[0];
   throw new ConfigError(
-    `${issueKey} links to more than one Confluence page (${candidates.join(', ')}). Pass the page id to choose one.`,
+    `${issueKey} links to more than one Confluence page (${linked.join(', ')}). Pass the page id to choose one.`,
   );
 }
 
@@ -309,7 +310,10 @@ function isLinked(linked: readonly string[], pageId: string): boolean {
 const HEADER =
   /^\s*<p>\s*<strong>\s*Jira:\s*<\/strong>\s*<a\s[^>]*href="[^"]*\/browse\/([A-Za-z][A-Za-z0-9_]*-\d+)"[^>]*>[^<]*<\/a>\s*<\/p>/;
 
-/** Separates the issue line `saveWorkItem` puts at the top of a page from the page's own content. */
+/**
+ * Separates the issue line `saveWorkItem` puts at the top of a page from the page's own content.
+ * The line is for people reading the page; the pair is decided by the issue's links alone.
+ */
 function splitHeader(storage: string): { key?: string; body: string } {
   const match = HEADER.exec(storage);
   if (match === null) return { body: storage };
@@ -368,7 +372,7 @@ function itemView(
     },
     ...(pageView === undefined ? {} : { page: pageView }),
     links: {
-      paired: issue !== undefined && page?.headerKey === issue.key && isLinked(linked, page.id),
+      paired: issue !== undefined && page !== undefined && isLinked(linked, page.id),
     },
     missingRequired: missing,
   };
@@ -426,10 +430,10 @@ interface IssuePlan {
 }
 
 interface PagePlan {
-  readonly action: SaveAction | 'link';
+  readonly action: SaveAction;
   readonly current?: PageState;
   readonly title: (issueKey: string | undefined) => string;
-  /** The body below the header: converted Markdown, or the current storage when only linking. */
+  /** The body below the header: converted Markdown, or the current storage when it is unchanged. */
   readonly body: string;
   readonly diff: string;
 }
@@ -466,7 +470,7 @@ export async function saveWorkItem(ctx: WorkContext, input: WorkSaveInput): Prom
     throw new ConfigError(`Nothing was saved:\n${problems.map((problem) => `  - ${problem}`).join('\n')}`);
   }
 
-  if (input.dryRun === true) return dryRunResult(ctx, issuePlan, pagePlan, adjusted);
+  if (input.dryRun === true) return dryRunResult(ctx, issuePlan, pagePlan, adjusted, linked);
   return executeSave(ctx, issuePlan, pagePlan, adjusted, linked);
 }
 
@@ -687,7 +691,7 @@ async function planPage(
 ): Promise<PagePlan> {
   const pageInput = input.page ?? {};
   const issueKey = issuePlan?.current?.key;
-  const current = await currentPage(ctx, pageInput, issueKey, linked, problems);
+  const current = await currentPage(ctx, pageInput, issueKey, linked);
   const before = current?.markdown ?? '';
   const markdown = pageInput.markdown;
   const body = markdown === undefined ? (current?.body ?? '') : pageBody(ctx, input, current, problems);
@@ -698,26 +702,20 @@ async function planPage(
   const values = issuePlan?.finalValues ?? new Map<string, unknown>();
   const fixed = pageInput.title ?? current?.title;
   const title = (key: string | undefined): string => fixed ?? pageTitle(ctx.config, key, values);
-  const linking = issueKey !== undefined || issuePlan?.action === 'create';
-  return { action: pageAction(current, pageInput, linking), current, title, body, diff };
+  return { action: pageAction(current, pageInput), current, title, body, diff };
 }
 
-/** Reads the page being edited, refusing an edit not built on a read and a page owned by another issue. */
+/** Reads the page being edited, refusing an edit not built on a read. */
 async function currentPage(
   ctx: WorkContext,
   pageInput: WorkPageInput,
   issueKey: string | undefined,
   linked: readonly string[],
-  problems: string[],
 ): Promise<PageState | undefined> {
   const pageId = targetPage(ctx, pageInput, issueKey, linked);
   if (pageId === undefined) return undefined;
   const current = await readPage(ctx, pageId);
   if (pageInput.markdown !== undefined || pageInput.title !== undefined) assertPageRead(current, pageInput);
-  const owner = current.headerKey;
-  if (owner !== undefined && issueKey !== undefined && owner !== issueKey) {
-    problems.push(`page: ${pageId} belongs to ${owner}, not ${issueKey}`);
-  }
   return current;
 }
 
@@ -780,12 +778,12 @@ function pageBody(ctx: WorkContext, input: WorkSaveInput, current: PageState | u
   return storage;
 }
 
-function pageAction(current: PageState | undefined, input: WorkPageInput, linking: boolean): SaveAction | 'link' {
+/** Linking alone never rewrites a page: the link lives on the issue. */
+function pageAction(current: PageState | undefined, input: WorkPageInput): SaveAction {
   if (current === undefined) return 'create';
   const bodyChanged = input.markdown !== undefined && input.markdown !== current.markdown;
   const titleChanged = input.title !== undefined && input.title !== current.title;
-  if (bodyChanged || titleChanged) return 'update';
-  return current.headerKey === undefined && linking ? 'link' : 'none';
+  return bodyChanged || titleChanged ? 'update' : 'none';
 }
 
 /** `{issue.key}` and `{issue.<field name>}` substituted into the configured title pattern. */
@@ -801,6 +799,7 @@ function pageTitle(config: WorkConfig, key: string | undefined, values: Readonly
   return title.trim() === '' ? (key ?? 'Untitled work item') : title.trim();
 }
 
+/** The body under an issue line naming `issueKey`, for readers of the page; none without a key. */
 function pageStorage(issueKey: string | undefined, ctx: WorkContext, body: string): string {
   return issueKey === undefined ? body : header(issueKey, issueUrl(ctx.jiraUrl, issueKey)) + body;
 }
@@ -810,12 +809,13 @@ function dryRunResult(
   issuePlan: IssuePlan | undefined,
   pagePlan: PagePlan | undefined,
   adjusted: readonly WorkAdjustment[],
+  linked: readonly string[],
 ): WorkDryRunResult {
   const key = issuePlan?.current?.key;
   const links: string[] = [];
-  if (pagePlan !== undefined && (key !== undefined || issuePlan?.action === 'create')) {
+  const pairing = pagePlan !== undefined && (key !== undefined || issuePlan?.action === 'create');
+  if (pairing && (pagePlan.current === undefined || !isLinked(linked, pagePlan.current.id))) {
     links.push(`remote link from ${key ?? 'the new issue'} to the page (relationship "${WORK_PAGE_RELATIONSHIP}")`);
-    links.push(`issue line at the top of the page naming ${key ?? 'the new issue'}`);
   }
   const confluence = ctx.config.confluence;
   return {
@@ -847,7 +847,10 @@ function dryRunResult(
                         }
                       : { version: { number: pagePlan.current.version + 1 } }),
                     body: {
-                      storage: { value: pageStorage(key ?? 'NEW-1', ctx, pagePlan.body), representation: 'storage' },
+                      storage: {
+                        value: pageStorage(previewLineKey(issuePlan, pagePlan), ctx, pagePlan.body),
+                        representation: 'storage',
+                      },
                     },
                   },
                 }),
@@ -859,6 +862,12 @@ function dryRunResult(
   };
 }
 
+/** The key the preview's issue line names: a placeholder for an issue not created yet. */
+function previewLineKey(issuePlan: IssuePlan | undefined, pagePlan: PagePlan): string | undefined {
+  if (issuePlan?.action === 'create') return 'NEW-1';
+  return issuePlan?.current?.key ?? pagePlan.current?.headerKey;
+}
+
 async function executeSave(
   ctx: WorkContext,
   issuePlan: IssuePlan | undefined,
@@ -867,8 +876,7 @@ async function executeSave(
   linkedBefore: readonly string[],
 ): Promise<WorkSaveResult> {
   const landed: string[] = [];
-  // A page given only by id, with no issue in this call, is still paired with the issue it names.
-  const key = (await saveIssue(ctx, issuePlan, landed)) ?? pagePlan?.current?.headerKey;
+  const key = await saveIssue(ctx, issuePlan, landed);
 
   let pageId = pagePlan?.current?.id;
   let linked = false;
@@ -921,7 +929,9 @@ async function savePage(
 ): Promise<string | undefined> {
   const { client } = ctx.confluence();
   const confluence = ctx.config.confluence;
-  const storage = { storage: { value: pageStorage(key, ctx, plan.body), representation: 'storage' } };
+  // Saving a page on its own keeps the issue line it already has.
+  const lineKey = key ?? plan.current?.headerKey;
+  const storage = { storage: { value: pageStorage(lineKey, ctx, plan.body), representation: 'storage' } };
 
   let pageId = plan.current?.id;
   if (plan.action === 'create') {
@@ -935,7 +945,7 @@ async function savePage(
     if (created.id === undefined) throw new CliError('Confluence created the page but did not report its id.');
     pageId = created.id;
     landed.push(`page ${pageId} created`);
-  } else if ((plan.action === 'update' || plan.action === 'link') && plan.current !== undefined) {
+  } else if (plan.action === 'update' && plan.current !== undefined) {
     try {
       await client.updateContent(plan.current.id, {
         type: 'page',
@@ -953,7 +963,7 @@ async function savePage(
       }
       throw error;
     }
-    landed.push(`page ${plan.current.id} ${plan.action === 'link' ? 'linked' : 'updated'}`);
+    landed.push(`page ${plan.current.id} updated`);
   }
 
   const labels = confluence?.labels ?? [];
