@@ -86,6 +86,12 @@ export default class AtlassianMcp extends Command {
         'Use an absolute path. MCP clients launch a server from a working directory of their own, ' +
         'so ~ and relative paths may not resolve.',
     }),
+    config: Flags.string({
+      summary: 'Path to the work item config, instead of .simply/atlassian.json found from the working directory.',
+      description:
+        'Read by the jira_work_* tools on every call. Use an absolute path: MCP clients launch a server from a ' +
+        'working directory of their own. ATLASSIAN_CONFIG in the environment does the same.',
+    }),
     list: Flags.boolean({
       summary: 'Print the tools that would be registered, then exit without serving.',
       description: 'Printed to stderr, because stdout belongs to the protocol.',
@@ -112,6 +118,11 @@ export default class AtlassianMcp extends Command {
 
     // Resolves once the transport is connected; the process then stays alive until the client
     // closes the stream, which is why this command never returns in normal use.
-    await startServer({ allowWrites: flags['allow-writes'], xray: flags.xray, envFile: flags['env-file'] });
+    await startServer({
+      allowWrites: flags['allow-writes'],
+      xray: flags.xray,
+      envFile: flags['env-file'],
+      config: flags.config,
+    });
   }
 }

@@ -28,6 +28,7 @@ import {
   HttpError,
   JiraClient,
   loadEnvFile,
+  loadWorkConfig,
   resolveConfluenceConfig,
   assertWritesAllowed,
   collectSecrets,
@@ -35,7 +36,9 @@ import {
   resolveJiraConfig,
   sanitiseDeep,
   SECRET_ENV,
+  StaleError,
   stripControl,
+  type WorkContext,
   type XrayBackend,
   type XrayFilters,
   type XrayScope,
@@ -207,7 +210,24 @@ const confluenceFlags = {
   }),
 };
 
+/**
+ * A work item spans both products, so its commands take both sets of connection flags, plus the
+ * project config that shapes it (design 0020).
+ */
+const workFlags = {
+  ...jiraFlags,
+  ...confluenceFlags,
+  config: Flags.string({
+    summary: 'Path to the work item config.',
+    description:
+      'Defaults to ATLASSIAN_CONFIG, then .simply/atlassian.json found by searching upward from the ' +
+      'current directory. The file is read fresh on every run.',
+    helpGroup: 'CONNECTION',
+  }),
+};
+
 export type JiraFlags<T extends typeof Command> = Interfaces.InferredFlags<typeof jiraFlags & T['flags']>;
+export type WorkFlags<T extends typeof Command> = Interfaces.InferredFlags<typeof workFlags & T['flags']>;
 export type ConfluenceFlags<T extends typeof Command> = Interfaces.InferredFlags<typeof confluenceFlags & T['flags']>;
 export type CommandArgs<T extends typeof Command> = Interfaces.InferredArgs<T['args']>;
 
@@ -294,6 +314,8 @@ export abstract class AtlassianCommand<T extends typeof Command> extends Command
             exitCode,
             ...(error instanceof HttpError ? { status: error.status, body: sanitiseDeep(error.body, redact) } : {}),
             ...(error instanceof AuthError ? { status: error.status } : {}),
+            // The current content a stale save was refused against, so a caller can merge and retry.
+            ...(error instanceof StaleError ? { details: sanitiseDeep(error.details, redact) } : {}),
           },
         })}\n`,
       );
@@ -376,6 +398,39 @@ export abstract class ConfluenceCommand<T extends typeof Command> extends Atlass
       personalToken: this.flagValue('confluence-personal-token'),
     };
     return resolveConfluenceConfig(overrides);
+  }
+}
+
+/** Base for work item commands: both products' connection flags, and the project config. */
+export abstract class WorkCommand<T extends typeof Command> extends AtlassianCommand<T> {
+  public static override baseFlags = workFlags;
+
+  protected get flags(): WorkFlags<T> {
+    return this.rawFlags as WorkFlags<T>;
+  }
+
+  /** The config and clients the core work item operations take. Confluence is built only if needed. */
+  protected workContext(): WorkContext {
+    const jiraConfig = resolveJiraConfig({
+      url: this.flagValue('jira-url'),
+      username: this.flagValue('jira-username'),
+      apiToken: this.flagValue('jira-api-token'),
+      personalToken: this.flagValue('jira-personal-token'),
+    });
+    return {
+      config: loadWorkConfig({ config: this.flagValue('config') }),
+      jira: new JiraClient(jiraConfig),
+      jiraUrl: jiraConfig.url,
+      confluence: (): { client: ConfluenceClient; url: string } => {
+        const confluenceConfig = resolveConfluenceConfig({
+          url: this.flagValue('confluence-url'),
+          username: this.flagValue('confluence-username'),
+          apiToken: this.flagValue('confluence-api-token'),
+          personalToken: this.flagValue('confluence-personal-token'),
+        });
+        return { client: new ConfluenceClient(confluenceConfig), url: confluenceConfig.url };
+      },
+    };
   }
 }
 

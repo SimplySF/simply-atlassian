@@ -8,6 +8,7 @@ const { values } = parseArgs({
   options: {
     'allow-writes': { type: 'boolean', default: false },
     'env-file': { type: 'string' },
+    config: { type: 'string' },
     xray: { type: 'boolean', default: false },
     help: { type: 'boolean', short: 'h', default: false },
   },
@@ -20,7 +21,7 @@ if (values.help) {
   const list = (tools) => tools.map((tool) => `  ${tool.name.padEnd(30)} ${tool.title}`).join('\n');
   process.stderr.write(
     [
-      'Usage: simply-atlassian-mcp [--allow-writes] [--xray] [--env-file <path>]',
+      'Usage: simply-atlassian-mcp [--allow-writes] [--xray] [--env-file <path>] [--config <path>]',
       '',
       'Serves Jira and Confluence as MCP tools over stdio, one tool per simply-atlassian CLI',
       'command, calling the same library in-process. Connection settings come from the',
@@ -30,6 +31,8 @@ if (values.help) {
       '                    ATLASSIAN_READ_ONLY in the environment still refuses every write.',
       '  --xray            Also register the Xray tools (Jira Server/Data Center, read-only).',
       '  --env-file <path> A .env file holding connection settings the environment does not.',
+      '  --config <path>   The work item config for the jira_work_* tools, instead of',
+      '                    .simply/atlassian.json found from the working directory.',
       '',
       'Read tools (always registered):',
       list(selectTools(false)),
@@ -46,7 +49,12 @@ if (values.help) {
 }
 
 try {
-  await startServer({ allowWrites: values['allow-writes'], xray: values.xray, envFile: values['env-file'] });
+  await startServer({
+    allowWrites: values['allow-writes'],
+    xray: values.xray,
+    envFile: values['env-file'],
+    config: values.config,
+  });
 } catch (error) {
   // A missing or unreadable --env-file is the one failure that can happen before the transport
   // is up; everything else is reported per tool call.

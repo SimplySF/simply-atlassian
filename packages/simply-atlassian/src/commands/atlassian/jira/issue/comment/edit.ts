@@ -47,6 +47,13 @@ export default class JiraIssueCommentEdit extends JiraCommand<typeof JiraIssueCo
   public static override readonly flags = {
     ...writeFlags,
     text: Flags.string({ summary: 'Replacement comment text.' }),
+    markdown: Flags.string({
+      summary: 'The replacement comment as Markdown, kept as headings, lists and tables.',
+      description:
+        'Converted to ADF on Cloud and wiki markup on Server/DC. Unsupported Markdown (images, raw HTML, task ' +
+        'lists) is refused naming the line, rather than dropped.',
+      exclusive: ['text'],
+    }),
     mention: Flags.string({
       summary: 'Account id, or a name or email to resolve. Repeatable.',
       description: 'A term matching more than one user is an error listing the candidates, rather than a guess.',
@@ -63,6 +70,7 @@ export default class JiraIssueCommentEdit extends JiraCommand<typeof JiraIssueCo
     const body = await buildCommentEditBody(client, comment, {
       body: parseBodyInput(this.flags.body, this.flags['body-file']),
       text: this.flags.text,
+      markdown: this.flags.markdown,
       mentions: this.flags.mention,
     });
 

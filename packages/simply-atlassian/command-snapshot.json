@@ -268,6 +268,7 @@
       "jira-url",
       "jira-username",
       "json",
+      "markdown",
       "mention",
       "text"
     ],
@@ -305,6 +306,7 @@
       "jira-url",
       "jira-username",
       "json",
+      "markdown",
       "mention",
       "text"
     ],
@@ -336,6 +338,7 @@
       "jira-username",
       "json",
       "label",
+      "markdown",
       "parent",
       "priority",
       "project",
@@ -520,6 +523,7 @@
       "jira-username",
       "json",
       "label",
+      "markdown",
       "priority",
       "summary",
       "verify"
@@ -673,6 +677,70 @@
     "flagAliases": [],
     "flagChars": ["e"],
     "flags": ["env-file", "jira-api-token", "jira-personal-token", "jira-url", "jira-username", "json"],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:work:config-check",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "config",
+      "confluence-api-token",
+      "confluence-personal-token",
+      "confluence-url",
+      "confluence-username",
+      "env-file",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "json"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:work:get",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "config",
+      "confluence-api-token",
+      "confluence-personal-token",
+      "confluence-url",
+      "confluence-username",
+      "env-file",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "json",
+      "page"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:work:save",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "accept-loss",
+      "config",
+      "confluence-api-token",
+      "confluence-personal-token",
+      "confluence-url",
+      "confluence-username",
+      "dry-run",
+      "env-file",
+      "file",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "json"
+    ],
     "plugin": "@simplysf/simply-atlassian"
   },
   {

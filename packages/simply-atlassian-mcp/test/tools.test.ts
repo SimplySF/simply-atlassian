@@ -69,6 +69,18 @@ describe('TOOLS catalogue', () => {
     }
   });
 
+  it('exposes Markdown on the Jira issue and comment writes', () => {
+    for (const name of [
+      'jira_issue_create',
+      'jira_issue_update',
+      'jira_issue_comment_add',
+      'jira_issue_comment_edit',
+    ]) {
+      const tool = TOOLS.find((t) => t.name === name);
+      expect(Object.keys(tool?.inputSchema ?? {}), name).toContain('markdown');
+    }
+  });
+
   it('exposes append on page update, so an agent can add to a page without rewriting it', () => {
     const update = TOOLS.find((t) => t.name === 'confluence_page_update');
 

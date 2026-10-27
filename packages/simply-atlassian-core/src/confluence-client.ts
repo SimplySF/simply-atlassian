@@ -122,6 +122,10 @@ export class ConfluenceClient {
     });
   }
 
+  public getSpace(spaceKey: string): Promise<unknown> {
+    return this.request(`/space/${encodeURIComponent(spaceKey)}`, { method: 'GET' });
+  }
+
   public createContent(body: Record<string, unknown>): Promise<unknown> {
     return this.request('/content', { method: 'POST', body, mutating: true });
   }

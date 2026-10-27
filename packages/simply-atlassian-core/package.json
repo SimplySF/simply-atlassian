@@ -14,7 +14,8 @@
     "node": ">=22.0.0"
   },
   "files": [
-    "/lib"
+    "/lib",
+    "/schema"
   ],
   "keywords": [
     "atlassian",

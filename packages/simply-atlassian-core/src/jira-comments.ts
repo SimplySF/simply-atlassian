@@ -21,6 +21,8 @@ import { appendMentions, resolveMentions } from './mentions.js';
 export interface CommentInput {
   /** Plain text; converted to the shape the deployment expects (ADF on Cloud). */
   readonly text?: string;
+  /** Markdown, converted to ADF on Cloud and wiki markup on Server/DC. Exclusive with `text`. */
+  readonly markdown?: string;
   /** Account ids, or names or emails to resolve, to @-mention. */
   readonly mentions?: readonly string[];
   /** A raw request body, for anything the text cannot express such as visibility restrictions. */
@@ -38,6 +40,15 @@ export type DeleteCommentResult =
   | { readonly issue: string; readonly comment: string; readonly dryRun: true }
   | { readonly issue: string; readonly comment: string; readonly deleted: true };
 
+/** The comment text in the deployment's shape, from plain text or Markdown but never both. */
+function commentText(client: JiraClient, input: CommentInput): unknown {
+  if (input.text !== undefined && input.markdown !== undefined) {
+    throw new ConfigError('Pass the comment as plain text or as Markdown, not both.');
+  }
+  if (input.markdown !== undefined) return client.richTextValue(input.markdown);
+  return input.text === undefined ? undefined : client.descriptionValue(input.text);
+}
+
 /** Assembles a new comment: text, then mentions appended to it, over any raw body. */
 export async function buildCommentBody(
   client: JiraClient,
@@ -45,12 +56,13 @@ export async function buildCommentBody(
   input: CommentInput,
 ): Promise<Record<string, unknown>> {
   let body: Record<string, unknown> = { ...input.body };
-  if (input.text !== undefined) body.body = client.descriptionValue(input.text);
+  const text = commentText(client, input);
+  if (text !== undefined) body.body = text;
   if (input.mentions !== undefined) {
     body = appendMentions(client, body, await resolveMentions(client, input.mentions));
   }
   if (body.body === undefined) {
-    throw new ConfigError(`Nothing to comment on ${issue}. Pass --text, or a body containing one.`);
+    throw new ConfigError(`Nothing to comment on ${issue}. Pass --text or --markdown, or a body containing one.`);
   }
   return body;
 }
@@ -66,7 +78,8 @@ export async function buildCommentEditBody(
   input: CommentInput,
 ): Promise<Record<string, unknown>> {
   let body: Record<string, unknown> = { ...input.body };
-  if (input.text !== undefined) body.body = client.descriptionValue(input.text);
+  const text = commentText(client, input);
+  if (text !== undefined) body.body = text;
   if (body.body === undefined) {
     throw new ConfigError(
       input.mentions === undefined

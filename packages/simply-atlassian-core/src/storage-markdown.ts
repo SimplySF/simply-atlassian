@@ -29,13 +29,17 @@
  * `--json` always carries the untouched original.
  */
 
-interface Node {
+/** A parsed storage element. Exported for `storage-reading.ts`, which reads the same tree. */
+export interface StorageNode {
   readonly tag: string;
   readonly attrs: Record<string, string>;
   readonly children: Child[];
 }
 
-type Child = Node | string;
+export type StorageChild = StorageNode | string;
+
+type Node = StorageNode;
+type Child = StorageChild;
 
 /**
  * Tags whose content is discarded outright. The `ac:` entries hold Atlassian's own bookkeeping
@@ -43,7 +47,7 @@ type Child = Node | string;
  * as stray text in the middle of a page. The renderers that need those values read them
  * directly rather than through the generic traversal.
  */
-const DROPPED = new Set(['script', 'style', 'ac:task-status', 'ac:task-id', 'ac:adf-attribute', 'ac:adf-mark']);
+export const DROPPED = new Set(['script', 'style', 'ac:task-status', 'ac:task-id', 'ac:adf-attribute', 'ac:adf-mark']);
 
 /** Void elements, which never have a closing tag. */
 const VOID = new Set(['br', 'hr', 'img', 'meta', 'link', 'ri:attachment', 'ri:url', 'ri:user', 'ri:page']);
@@ -105,7 +109,7 @@ function parseAttrs(raw: string): Record<string, string> {
  * as fatal — a page body is data from a server, and refusing to render an imperfect one would
  * be worse than rendering it approximately.
  */
-function parse(markup: string): Child[] {
+export function parseStorage(markup: string): Child[] {
   const root: Node = { tag: '#root', attrs: {}, children: [] };
   const stack: Node[] = [root];
   let cursor = 0;
@@ -499,7 +503,7 @@ function renderBlocks(children: readonly Child[]): string {
 /** Converts a storage-format body to Markdown. Never throws on malformed markup. */
 export function storageToMarkdown(storage: string): string {
   if (storage.trim() === '') return '';
-  return renderBlocks(parse(storage))
+  return renderBlocks(parseStorage(storage))
     .replaceAll(/\n{3,}/g, '\n\n')
     .trim();
 }
