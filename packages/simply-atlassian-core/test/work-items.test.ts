@@ -40,7 +40,10 @@ import { EXAMPLE_CONFIG } from './work-config.test.js';
 class FakeAtlassian {
   public readonly issues = new Map<string, { fields: Record<string, unknown> }>();
   public readonly remoteLinks = new Map<string, Array<Record<string, unknown>>>();
-  public readonly pages = new Map<string, { title: string; version: number; storage: string; labels: string[] }>();
+  public readonly pages = new Map<
+    string,
+    { title: string; version: number; storage: string; space: string; labels: string[] }
+  >();
   public nextIssue = 1;
   public nextPage = 900;
   public failPageCreate = false;
@@ -60,9 +63,13 @@ class FakeAtlassian {
         respondJson(response, 400, { message: 'A page with this title already exists' });
         return;
       }
-      const payload = JSON.parse(body) as { title: string; body: { storage: { value: string } } };
+      const payload = JSON.parse(body) as {
+        title: string;
+        space: { key: string };
+        body: { storage: { value: string } };
+      };
       const id = String(this.nextPage++);
-      this.addPage(id, payload.title, payload.body.storage.value);
+      this.addPage(id, payload.title, payload.body.storage.value, { space: payload.space.key });
       respondJson(response, 200, this.pagePayload(id));
     });
   }
@@ -102,8 +109,13 @@ class FakeAtlassian {
     });
   }
 
-  public addPage(id: string, title: string, storage: string): void {
-    this.pages.set(id, { title, version: 1, storage, labels: [] });
+  public addPage(
+    id: string,
+    title: string,
+    storage: string,
+    { space = 'ENG', labels = [] }: { space?: string; labels?: string[] } = {},
+  ): void {
+    this.pages.set(id, { title, version: 1, storage, space, labels: [...labels] });
     this.server.route(`${this.wiki}/rest/api/content/${id}`, (request, response, body) => {
       const page = this.pages.get(id);
       if (page === undefined) return respondJson(response, 404, {});
@@ -150,6 +162,8 @@ class FakeAtlassian {
       id,
       type: 'page',
       title: page?.title,
+      space: { key: page?.space },
+      metadata: { labels: { results: (page?.labels ?? []).map((name) => ({ prefix: 'global', name })) } },
       version: { number: page?.version },
       body: { storage: { value: page?.storage, representation: 'storage' } },
       _links: { base: `${this.server.baseUrl}${this.wiki}`, webui: `/pages/viewpage.action?pageId=${id}` },
@@ -255,7 +269,7 @@ describe.each(['cloud', 'server'] as const)('work items on %s', (deployment) => 
 
   it('follows a Confluence link added in Jira, whoever made it', async () => {
     const { ctx, fake } = context(deployment);
-    fake.addPage('77', 'Hand-made design', '<h1>Problem</h1><p>Written by hand.</p>');
+    fake.addPage('77', 'Hand-made design', '<h1>Problem</h1><p>Written by hand.</p>', { labels: ['tech-design'] });
     await saveWorkItem(ctx, { issue: { fields: STORY } });
     fake.remoteLinks.set('PAY-1', [
       { id: 1, relationship: 'mentioned in', object: { url: fake.pageUrl('77'), title: 'Hand-made design' } },
@@ -264,20 +278,57 @@ describe.each(['cloud', 'server'] as const)('work items on %s', (deployment) => 
 
     const read = await getWorkItem(ctx, { issue: 'PAY-1' });
     expect(read.page?.id).toBe('77');
-    expect(read.links.paired).toBe(true);
+    expect(read.links).toEqual({ paired: true, other: [] });
+  });
+
+  it('keeps linked pages the config does not describe as context, never as the page', async () => {
+    const { ctx, fake } = context(deployment);
+    fake.addPage('70', 'Requirements', '<p>Unlabelled, in the right space.</p>');
+    fake.addPage('71', 'Other team design', '<p>Labelled, elsewhere.</p>', { space: 'OPS', labels: ['tech-design'] });
+    await saveWorkItem(ctx, { issue: { fields: STORY } });
+    fake.remoteLinks.set('PAY-1', [
+      { id: 1, object: { url: fake.pageUrl('70'), title: 'Reqs' } },
+      { id: 2, object: { url: fake.pageUrl('71'), title: 'Theirs' } },
+    ]);
+
+    const read = await getWorkItem(ctx, { issue: 'PAY-1' });
+    expect(read.page?.id).toBeUndefined();
+    expect(read.links.other).toEqual([
+      { id: '70', title: 'Requirements', url: fake.pageUrl('70') },
+      { id: '71', title: 'Other team design', url: fake.pageUrl('71') },
+    ]);
+
+    // With no design page linked, a new one can be created beside them.
+    const saved = (await saveWorkItem(ctx, {
+      issue: { key: 'PAY-1', basedOn: read.issue.revision },
+      page: { markdown: PAGE },
+    })) as WorkSaveResult;
+    expect(saved.saved.page).toBe('create');
+    expect(saved.item.page?.id).toBe('900');
+    expect(saved.item.links.other.map((page) => page.id)).toEqual(['70', '71']);
+    expect(fake.pages.get('70')?.storage).toBe('<p>Unlabelled, in the right space.</p>');
+  });
+
+  it('refuses to adopt a page from another space', async () => {
+    const { ctx, fake } = context(deployment);
+    fake.addPage('71', 'Other team design', '<p>x</p>', { space: 'OPS' });
+    await expect(saveWorkItem(ctx, { issue: { fields: STORY }, page: { id: '71' } })).rejects.toThrow(
+      /71 is in space OPS, but this project's pages are in ENG/,
+    );
+    expect(fake.issues.size).toBe(0);
   });
 
   it('asks which page when the issue links to several', async () => {
     const { ctx, fake } = context(deployment);
-    fake.addPage('77', 'Design', '<p>a</p>');
-    fake.addPage('78', 'Requirements', '<p>b</p>');
+    fake.addPage('77', 'Design', '<p>a</p>', { labels: ['tech-design'] });
+    fake.addPage('78', 'Requirements', '<p>b</p>', { labels: ['tech-design'] });
     await saveWorkItem(ctx, { issue: { fields: STORY } });
     fake.remoteLinks.set('PAY-1', [
       { id: 1, object: { url: fake.pageUrl('77') } },
       { id: 2, object: { url: fake.pageUrl('78') } },
     ]);
 
-    await expect(getWorkItem(ctx, { issue: 'PAY-1' })).rejects.toThrow(/more than one Confluence page \(77, 78\)/);
+    await expect(getWorkItem(ctx, { issue: 'PAY-1' })).rejects.toThrow(/more than one design page \(77, 78\)/);
     const chosen = await getWorkItem(ctx, { issue: 'PAY-1', page: '78' });
     expect(chosen.page?.title).toBe('Requirements');
     expect(chosen.links.paired).toBe(true);
@@ -416,6 +467,9 @@ describe.each(['cloud', 'server'] as const)('work items on %s', (deployment) => 
     const result = (await saveWorkItem(ctx, { issue: { fields: STORY }, page: { id: '77' } })) as WorkSaveResult;
     expect(result.saved).toEqual({ issue: 'create', page: 'none', linked: true });
     expect(fake.pages.get('77')?.storage).toBe(original);
+    // Labelled so the next read finds it as the design page.
+    expect(fake.pages.get('77')?.labels).toEqual(['tech-design']);
+    expect((await getWorkItem(ctx, { issue: 'PAY-1' })).page?.id).toBe('77');
     expect(fake.remoteLinks.get('PAY-1')).toMatchObject([{ object: { url: fake.pageUrl('77') } }]);
     expect(result.item.links.paired).toBe(true);
     expect(result.item.page?.lossy).toEqual(['a "toc" macro']);
@@ -480,7 +534,10 @@ describe.each(['cloud', 'server'] as const)('work items on %s', (deployment) => 
       space: { key: 'ENG' },
     });
     expect(preview.issue?.diff).toContain('+Offline sync for field technicians');
-    expect(preview.links).toEqual([`remote link from the new issue to the page (relationship "Wiki Page")`]);
+    expect(preview.links).toEqual([
+      'remote link from the new issue to the page (relationship "Wiki Page")',
+      'label tech-design on the page',
+    ]);
     expect(server.requests.filter((request) => request.method !== 'GET')).toHaveLength(0);
   });
 

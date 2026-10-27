@@ -206,6 +206,7 @@ export {
   type WorkIssueView,
   type WorkItemRef,
   type WorkItemView,
+  type WorkLinkedPage,
   type WorkPageInput,
   type WorkPageView,
   type WorkSaveInput,

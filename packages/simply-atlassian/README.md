@@ -2483,9 +2483,10 @@ DESCRIPTION
   Read a work item: a Jira issue and its linked Confluence page.
 
   A work item is shaped by the project's config (.simply/atlassian.json): which fields the issue has and what belongs in
-  each, and what its page holds. Pass the issue key: its page is the Confluence page the issue links to, and --page
-  chooses one when it links to several. --page alone reads just the page. Pass neither to see the empty shape for a new
-  idea. The revisions printed are what "work save" needs as basedOn, so every save builds on a read.
+  each, and what its page holds. Pass the issue key: its page is the linked Confluence page in the configured space with
+  the configured labels, and --page chooses one when it links to several. Other linked pages are listed as context.
+  --page alone reads just the page. Pass neither to see the empty shape for a new idea. The revisions printed are what
+  "work save" needs as basedOn, so every save builds on a read.
 
 EXAMPLES
   $ simply atlassian jira work get

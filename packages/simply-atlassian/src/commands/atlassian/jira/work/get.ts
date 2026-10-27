@@ -23,9 +23,10 @@ export default class JiraWorkGet extends WorkCommand<typeof JiraWorkGet> {
   public static override readonly description =
     "A work item is shaped by the project's config (.simply/atlassian.json): which fields the issue " +
     'has and what belongs in each, and what its page holds. Pass the issue key: its page is the ' +
-    'Confluence page the issue links to, and --page chooses one when it links to several. --page ' +
-    'alone reads just the page. Pass neither to see the empty shape for a new idea. The revisions printed are what "work save" needs as basedOn, so every ' +
-    'save builds on a read.';
+    'linked Confluence page in the configured space with the configured labels, and --page chooses ' +
+    'one when it links to several. Other linked pages are listed as context. --page alone reads ' +
+    'just the page. Pass neither to see the empty shape for a new idea. The revisions printed are ' +
+    'what "work save" needs as basedOn, so every save builds on a read.';
 
   public static override readonly examples = [
     '<%= config.bin %> <%= command.id %>',
@@ -68,6 +69,14 @@ export function renderItem(item: WorkItemView): string {
     lines.push(formatValue(field.value, field.display));
     if (field.lossy !== undefined) lines.push(`(holds ${field.lossy.join(', ')}, which Markdown cannot carry)`);
   }
+  lines.push(...renderPage(item));
+  if (item.missingRequired.length > 0) lines.push('', `Missing: ${item.missingRequired.join('; ')}`);
+  return lines.join('\n');
+}
+
+/** The page, then the issue's other Confluence links. */
+function renderPage(item: WorkItemView): string[] {
+  const lines: string[] = [];
   if (item.page !== undefined) {
     lines.push('', '---', '');
     if (item.page.id === undefined) {
@@ -82,8 +91,12 @@ export function renderItem(item: WorkItemView): string {
       lines.push('', item.page.markdown ?? '');
     }
   }
-  if (item.missingRequired.length > 0) lines.push('', `Missing: ${item.missingRequired.join('; ')}`);
-  return lines.join('\n');
+  if (item.links.other.length > 0) {
+    lines.push('', 'Also linked (context, not the design page):');
+    for (const other of item.links.other)
+      lines.push(`- ${other.id}: ${other.title ?? ''} ${other.url ?? ''}`.trimEnd());
+  }
+  return lines;
 }
 
 function formatValue(value: unknown, display: string | undefined): string {

@@ -231,10 +231,10 @@ but `required`, and `config-check` warns that it exists.
 
 | Property   | Required | Meaning                                                                                                                                                                                                                                                 |
 | ---------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `space`    | yes      | The space key that new pages are created in.                                                                                                                                                                                                            |
+| `space`    | yes      | The space key that new pages are created in. A linked page in another space is never the issue's page.                                                                                                                                                  |
 | `parent`   | no       | The page ID that new pages are created under.                                                                                                                                                                                                           |
 | `title`    | no       | The pattern for new page titles. `{issue.key}` and `{issue.<field name>}` are substituted. The default is `{issue.key}: {issue.Summary}`, or the first configured `text` field if there is no `Summary`.                                                |
-| `labels`   | no       | Labels the server adds to every page it creates or updates. They are kept even if the agent's Markdown would drop them.                                                                                                                                 |
+| `labels`   | no       | Labels the server adds to every page it creates, updates or adopts. A linked page must carry all of them to be the issue's page, so they mark the design page among the issue's other Confluence links.                                                 |
 | `when`     | no       | The project's rule for when a page is warranted. Returned by `get` for the agent to apply. The server never decides this.                                                                                                                               |
 | `sections` | no       | An ordered list of `{ heading, description?, required? }`. Every `required` heading must exist (as an `#` or `##` heading, case-insensitive) in the page Markdown, or `save` refuses. Other headings are allowed. Order is guidance only, not enforced. |
 
@@ -275,17 +275,28 @@ from "any stale read" to that window, and does not claim to close it.
 
 | Input     | Meaning                                                                                 |
 | --------- | --------------------------------------------------------------------------------------- |
-| `issue`   | An issue key. Its page is the Confluence page its remote links point at.                |
+| `issue`   | An issue key. Its page is the design page its remote links point at.                    |
 | `page`    | A page ID, read on its own. No issue is looked up from it.                              |
 | (neither) | A new idea: returns the empty shape with guidance, and no revisions.                    |
-| (both)    | Chooses one of several linked pages, or reads an unlinked pair until a `save` links it. |
+| (both)    | Chooses one of several design pages, or reads an unlinked pair until a `save` links it. |
 
 **The issue is the table of contents.** The pair is whatever the issue's remote links say, which
 is the link Jira already shows and the one a person adds or removes in Jira. Every remote link to a
-page on the configured Confluence counts, whoever made it and whatever its relationship. One link
-is the page; several are refused unless `page` names one, because guessing would mean the next
-save edits the wrong document. `links.paired` is `true` when the issue links to the page that was
-read.
+page on the configured Confluence is considered, whoever made it and whatever its relationship.
+
+Not every linked page is the design page: an issue may also link a requirements page, another
+team's design, or meeting notes. The config already describes what a design page is, so a linked
+page is the design page only when it is in `confluence.space` and carries every label in
+`confluence.labels`. The server adds those labels to every page it creates, updates or adopts, and
+a person makes a hand-made page the design page by adding the label in Confluence. Linked pages
+that don't match are returned in `links.other`, as context the agent may read but never edits
+through this tool, and they don't stop a new design page being created. `parent` is not checked,
+because people move pages.
+
+One design page is the page; several are refused unless `page` names one, because guessing would
+mean the next save edits the wrong document. `links.paired` is `true` when the issue links to the
+page that was read. Classifying costs one light page read (space and labels) per linked Confluence
+page.
 
 Result:
 
@@ -319,7 +330,11 @@ Result:
     "when": "Create a page when …",
     "sections": [{ "heading": "Design", "required": true, "description": "…" }],
   },
-  "links": { "paired": true },
+  "links": {
+    "paired": true,
+    // the issue's other Confluence links: context, never edited
+    "other": [{ "id": "445566", "title": "Billing requirements", "url": "…" }],
+  },
   "missingRequired": ["page: Test strategy"],
 }
 ```
@@ -349,9 +364,11 @@ Input:
   The page Markdown is the whole page body.
 
 **Linking.** After any successful save that touches a pair, the server makes sure the issue has a
-remote link to the page, with Jira's own relationship for a Confluence page (`Wiki Page`). It is
-idempotent, because Jira keys the link by URL. Adopting an existing page or issue is a matter of
-passing its `id` or `key`; adopting a page only adds the link and never rewrites the page.
+remote link to the page, with Jira's own relationship for a Confluence page (`Wiki Page`), and
+that the page carries the configured labels. Both are idempotent: Jira keys the link by URL.
+Adopting an existing page or issue is a matter of passing its `id` or `key`; adopting a page adds
+the link and labels and never rewrites its body. A page outside `confluence.space` is refused,
+since it could never be found again as the issue's page.
 
 When the server writes a page's body, it puts a line naming the issue at the top, for people
 reading the page. It is a convenience only: nothing reads it to pair the halves, and a page saved
@@ -527,7 +544,9 @@ Each step is a separate PR:
   - Adopt an existing issue and add a page.
   - Adopt an existing page and create the issue, without rewriting the page.
   - `get` from the issue follows its remote links, including one added in Jira; `get` from a page
-    alone reads only the page; several linked pages are refused unless one is named.
+    alone reads only the page; several design pages are refused unless one is named.
+  - A linked page without the labels, or in another space, is returned in `links.other` and does
+    not block creating the design page; adopting a page from another space is refused.
   - Partial failure reports which steps landed.
   - `config-check` catches an unknown `customfield`, a missing component, and an `allowed` value
     that isn't one of the field's options.
@@ -584,7 +603,8 @@ Each step is a separate PR:
   issue. Review pointed out that Jira already links issues to Confluence pages, and that keeping
   the connection anywhere else splits it. Now the issue's remote links are the only record, so a
   link a person adds or removes in Jira is the pairing; the issue line is for readers; and adopting
-  a page no longer rewrites it to add that line.
+  a page no longer rewrites it to add that line. Because an issue may link pages that are not its
+  design, the configured space and labels decide which linked page is the design page.
 - **The `--xray` and 0007 doc counts** were not updated; that remains a follow-up.
 
 ## Open questions

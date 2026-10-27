@@ -1164,10 +1164,12 @@ export const TOOLS: readonly ToolSpec[] = [
     description:
       "Read a work item: one Jira issue and its linked Confluence page, shaped by the project's " +
       'config (.simply/atlassian.json). ALWAYS call this before jira_work_save. Pass the issue key: ' +
-      'the issue is the table of contents, and its page is the Confluence page it links to (pass page ' +
-      'too when it links to several). Pass neither, for a new idea, to get the empty shape. Returns { guidance, issue: { key, status, revision, fields: ' +
+      'the issue is the table of contents, and its page is the linked design page — in the configured ' +
+      'space, with the configured labels (pass page too when it links to several). Other linked pages ' +
+      'come back in links.other: read them for context, never save them. Pass neither, for a new ' +
+      'idea, to get the empty shape. Returns { guidance, issue: { key, status, revision, fields: ' +
       '[{ name, description, required, allowed, value }] }, page: { id, revision, markdown, when, ' +
-      'sections }, links, missingRequired }. Follow "guidance" and every field and section ' +
+      'sections }, links: { paired, other }, missingRequired }. Follow "guidance" and every field and section ' +
       '"description": they are the project\'s rules for what goes where. Pass the revisions as basedOn ' +
       'when saving. A "lossy" list names content Markdown cannot carry, which a save would replace.',
     command: ['atlassian', 'jira', 'work', 'get'],

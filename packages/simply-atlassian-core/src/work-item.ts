@@ -36,7 +36,9 @@ import { decodeWorkField, encodeWorkField, isEmptyValue, resolveWorkUser, type D
  * Four rules hold everywhere in this file:
  *
  * **The issue is the table of contents.** Its page is the one its remote links point at, the same
- * link Jira shows and a person can add or remove in Jira. Nothing is ever paired from the page side.
+ * link Jira shows and a person can add or remove in Jira. Of those links, only a page in the
+ * configured space carrying the configured labels is the design page; the others are context.
+ * Nothing is ever paired from the page side.
  *
  * **The project config is the whole contract.** Only configured fields are read or written, and
  * every value is checked against its spec before anything is sent.
@@ -103,6 +105,13 @@ export interface WorkPageView {
   readonly sections: readonly WorkSectionSpec[];
 }
 
+/** A Confluence page the issue links to that is not its design page: context, never edited. */
+export interface WorkLinkedPage {
+  readonly id: string;
+  readonly title?: string;
+  readonly url?: string;
+}
+
 export interface WorkItemView {
   /** The config file the shape came from. */
   readonly config: string;
@@ -110,7 +119,11 @@ export interface WorkItemView {
   readonly issue: WorkIssueView;
   /** Absent when the project config has no Confluence half. */
   readonly page?: WorkPageView;
-  readonly links: { readonly paired: boolean };
+  readonly links: {
+    readonly paired: boolean;
+    /** The issue's other Confluence links: pages outside the configured space or without its labels. */
+    readonly other: readonly WorkLinkedPage[];
+  };
   /** Required fields that are empty and required page headings that are missing. */
   readonly missingRequired: readonly string[];
 }
@@ -183,11 +196,25 @@ interface PageState {
   readonly lossy: readonly string[];
   /** The issue the page's header line names, kept when the page is rewritten. Never used to pair. */
   readonly headerKey?: string;
+  /** Absent when the instance did not report it. */
+  readonly space?: string;
+  readonly labels: readonly string[];
 }
 
+/** The issue's Confluence links, sorted by whether the config says each is the design page. */
+interface LinkedPages {
+  /** Every page the issue links to on the configured Confluence. */
+  readonly ids: readonly string[];
+  /** Those in the configured space carrying every configured label: candidates for the page. */
+  readonly design: readonly string[];
+  readonly other: readonly WorkLinkedPage[];
+}
+
+const NO_LINKS: LinkedPages = { ids: [], design: [], other: [] };
+
 /**
- * Reads a work item. Given an issue, its page is the one its remote links point at, or `ref.page`
- * when it links to several. A page given alone is read alone: no issue is looked up from it.
+ * Reads a work item. Given an issue, its page is the design page its remote links point at, or
+ * `ref.page` when it links to several. A page given alone is read alone: no issue is looked up from it.
  */
 export async function getWorkItem(ctx: WorkContext, ref: WorkItemRef = {}): Promise<WorkItemView> {
   if (ref.page !== undefined && ctx.config.confluence === undefined) {
@@ -196,8 +223,8 @@ export async function getWorkItem(ctx: WorkContext, ref: WorkItemRef = {}): Prom
     );
   }
   const issue = ref.issue === undefined ? undefined : await readIssue(ctx, assertIssueKey(ref.issue.trim()));
-  let linked: readonly string[] = [];
-  if (issue !== undefined && ctx.config.confluence !== undefined) linked = await linkedPageIds(ctx, issue.key);
+  let linked = NO_LINKS;
+  if (issue !== undefined && ctx.config.confluence !== undefined) linked = await linkedPages(ctx, issue.key);
 
   let pageId = ref.page === undefined ? undefined : pageIdForInstance(ref.page, ctx.confluence().url);
   if (pageId === undefined && issue !== undefined) pageId = choosePage(issue.key, linked);
@@ -246,7 +273,9 @@ function issueRevision(config: WorkConfig, valueOf: (name: string) => unknown): 
 
 async function readPage(ctx: WorkContext, pageId: string): Promise<PageState> {
   const { client, url } = ctx.confluence();
-  const raw = (await client.getPage(pageId, { expand: ['body.storage', 'version', 'space'] })) as ConfluencePageSummary;
+  const raw = (await client.getPage(pageId, {
+    expand: ['body.storage', 'version', 'space', 'metadata.labels'],
+  })) as ConfluencePageSummary & PageMeta;
   if (raw.type !== undefined && raw.type !== 'page') {
     throw new ConfigError(`${pageId} is a ${raw.type}, not a page.`);
   }
@@ -265,7 +294,33 @@ async function readPage(ctx: WorkContext, pageId: string): Promise<PageState> {
     markdown: reading.markdown,
     lossy: reading.lossy,
     headerKey: key,
+    ...pageMeta(raw),
   };
+}
+
+/** The parts of a page response that say whether it is a design page. */
+interface PageMeta {
+  readonly space?: { readonly key?: string };
+  readonly metadata?: { readonly labels?: { readonly results?: ReadonlyArray<{ readonly name?: string }> } };
+}
+
+function pageMeta(raw: PageMeta): { space?: string; labels: string[] } {
+  const labels = (raw.metadata?.labels?.results ?? []).flatMap((label) =>
+    typeof label.name === 'string' ? [label.name] : [],
+  );
+  return { ...(raw.space?.key === undefined ? {} : { space: raw.space.key }), labels };
+}
+
+/** A page the config's space and labels describe. An unreported space is not held against it. */
+function isDesignPage(ctx: WorkContext, meta: { space?: string; labels: readonly string[] }): boolean {
+  const confluence = ctx.config.confluence;
+  if (confluence === undefined) return false;
+  if (meta.space !== undefined && meta.space.toLowerCase() !== confluence.space.toLowerCase()) return false;
+  return missingLabels(ctx, meta.labels).length === 0;
+}
+
+function missingLabels(ctx: WorkContext, labels: readonly string[]): string[] {
+  return (ctx.config.confluence?.labels ?? []).filter((label) => !labels.includes(label));
 }
 
 function pageUrlFallback(baseUrl: string, pageId: string): string {
@@ -273,38 +328,59 @@ function pageUrlFallback(baseUrl: string, pageId: string): string {
 }
 
 /**
- * The pages an issue's remote links point at on the configured Confluence, whoever added them:
- * a link made in Jira counts the same as one `saveWorkItem` made.
+ * The pages an issue's remote links point at on the configured Confluence, whoever added them —
+ * a link made in Jira counts the same as one `saveWorkItem` made — sorted into design pages and
+ * the rest. A linked page that cannot be read is never the design page.
  */
-async function linkedPageIds(ctx: WorkContext, issueKey: string): Promise<string[]> {
+async function linkedPages(ctx: WorkContext, issueKey: string): Promise<LinkedPages> {
   const links = (await ctx.jira.getRemoteLinks(issueKey)) as RemoteLink[];
-  const confluenceUrl = ctx.confluence().url;
-  const ids: string[] = [];
+  const { client, url: confluenceUrl } = ctx.confluence();
+  const targets = new Map<string, WorkLinkedPage>();
   for (const link of Array.isArray(links) ? links : []) {
     const target = link.object?.url;
     if (target === undefined) continue;
     try {
-      ids.push(pageIdForInstance(target, confluenceUrl));
+      const id = pageIdForInstance(target, confluenceUrl);
+      if (!targets.has(id)) targets.set(id, { id, title: link.object?.title, url: target });
     } catch {
       continue;
     }
   }
-  return [...new Set(ids)];
+
+  const sorted = await Promise.all(
+    [...targets.values()].map(async (target) => {
+      try {
+        const raw = (await client.getPage(target.id, { expand: ['space', 'metadata.labels'] })) as PageMeta & {
+          type?: string;
+          title?: string;
+        };
+        const design = (raw.type === undefined || raw.type === 'page') && isDesignPage(ctx, pageMeta(raw));
+        return { design, page: { ...target, ...(raw.title === undefined ? {} : { title: raw.title }) } };
+      } catch {
+        return { design: false, page: target };
+      }
+    }),
+  );
+  return {
+    ids: [...targets.keys()],
+    design: sorted.filter((entry) => entry.design).map((entry) => entry.page.id),
+    other: sorted.filter((entry) => !entry.design).map((entry) => entry.page),
+  };
 }
 
 /**
- * Picks the issue's page: its only Confluence link. Several is refused rather than guessed, since
- * a guess means the next save edits the wrong document.
+ * Picks the issue's page: its only linked design page. Several is refused rather than guessed,
+ * since a guess means the next save edits the wrong document.
  */
-function choosePage(issueKey: string, linked: readonly string[]): string | undefined {
-  if (linked.length <= 1) return linked[0];
+function choosePage(issueKey: string, linked: LinkedPages): string | undefined {
+  if (linked.design.length <= 1) return linked.design[0];
   throw new ConfigError(
-    `${issueKey} links to more than one Confluence page (${linked.join(', ')}). Pass the page id to choose one.`,
+    `${issueKey} links to more than one design page (${linked.design.join(', ')}). Pass the page id to choose one.`,
   );
 }
 
-function isLinked(linked: readonly string[], pageId: string): boolean {
-  return linked.includes(pageId);
+function isLinked(linked: LinkedPages, pageId: string): boolean {
+  return linked.ids.includes(pageId);
 }
 
 const HEADER =
@@ -328,7 +404,7 @@ function itemView(
   ctx: WorkContext,
   issue: IssueState | undefined,
   page: PageState | undefined,
-  linked: readonly string[],
+  linked: LinkedPages,
 ): WorkItemView {
   const { config } = ctx;
   const missing: string[] = [];
@@ -373,6 +449,7 @@ function itemView(
     ...(pageView === undefined ? {} : { page: pageView }),
     links: {
       paired: issue !== undefined && page !== undefined && isLinked(linked, page.id),
+      other: linked.other.filter((other) => other.id !== page?.id),
     },
     missingRequired: missing,
   };
@@ -462,8 +539,8 @@ export async function saveWorkItem(ctx: WorkContext, input: WorkSaveInput): Prom
 
   // An issue that already has a page cannot be given a second one by omission of the id.
   const issueKey = issuePlan?.current?.key;
-  let linked: readonly string[] = [];
-  if (issueKey !== undefined && ctx.config.confluence !== undefined) linked = await linkedPageIds(ctx, issueKey);
+  let linked = NO_LINKS;
+  if (issueKey !== undefined && ctx.config.confluence !== undefined) linked = await linkedPages(ctx, issueKey);
   const pagePlan = input.page === undefined ? undefined : await planPage(ctx, input, issuePlan, linked, problems);
 
   if (problems.length > 0) {
@@ -496,7 +573,7 @@ async function planIssue(
     throw new StaleError(
       `${current.key} changed after the read this save is based on. Nothing was saved. Merge the current ` +
         'fields (in details.issue) into your edit and save again with its revision as basedOn.',
-      { issue: itemView(ctx, current, undefined, []).issue, diff },
+      { issue: itemView(ctx, current, undefined, NO_LINKS).issue, diff },
     );
   }
 
@@ -686,12 +763,12 @@ async function planPage(
   ctx: WorkContext,
   input: WorkSaveInput,
   issuePlan: IssuePlan | undefined,
-  linked: readonly string[],
+  linked: LinkedPages,
   problems: string[],
 ): Promise<PagePlan> {
   const pageInput = input.page ?? {};
   const issueKey = issuePlan?.current?.key;
-  const current = await currentPage(ctx, pageInput, issueKey, linked);
+  const current = await currentPage(ctx, pageInput, issueKey, linked, problems);
   const before = current?.markdown ?? '';
   const markdown = pageInput.markdown;
   const body = markdown === undefined ? (current?.body ?? '') : pageBody(ctx, input, current, problems);
@@ -705,17 +782,25 @@ async function planPage(
   return { action: pageAction(current, pageInput), current, title, body, diff };
 }
 
-/** Reads the page being edited, refusing an edit not built on a read. */
+/**
+ * Reads the page being edited, refusing an edit not built on a read, and a page outside the
+ * configured space: it could never be found again as the issue's page.
+ */
 async function currentPage(
   ctx: WorkContext,
   pageInput: WorkPageInput,
   issueKey: string | undefined,
-  linked: readonly string[],
+  linked: LinkedPages,
+  problems: string[],
 ): Promise<PageState | undefined> {
   const pageId = targetPage(ctx, pageInput, issueKey, linked);
   if (pageId === undefined) return undefined;
   const current = await readPage(ctx, pageId);
   if (pageInput.markdown !== undefined || pageInput.title !== undefined) assertPageRead(current, pageInput);
+  const space = ctx.config.confluence?.space ?? '';
+  if (current.space !== undefined && current.space.toLowerCase() !== space.toLowerCase()) {
+    problems.push(`page: ${pageId} is in space ${current.space}, but this project's pages are in ${space}`);
+  }
   return current;
 }
 
@@ -742,7 +827,7 @@ function targetPage(
   ctx: WorkContext,
   pageInput: WorkPageInput,
   issueKey: string | undefined,
-  linked: readonly string[],
+  linked: LinkedPages,
 ): string | undefined {
   if (pageInput.id !== undefined) return pageIdForInstance(pageInput.id, ctx.confluence().url);
   const existing = issueKey === undefined ? undefined : choosePage(issueKey, linked);
@@ -809,14 +894,10 @@ function dryRunResult(
   issuePlan: IssuePlan | undefined,
   pagePlan: PagePlan | undefined,
   adjusted: readonly WorkAdjustment[],
-  linked: readonly string[],
+  linked: LinkedPages,
 ): WorkDryRunResult {
   const key = issuePlan?.current?.key;
-  const links: string[] = [];
-  const pairing = pagePlan !== undefined && (key !== undefined || issuePlan?.action === 'create');
-  if (pairing && (pagePlan.current === undefined || !isLinked(linked, pagePlan.current.id))) {
-    links.push(`remote link from ${key ?? 'the new issue'} to the page (relationship "${WORK_PAGE_RELATIONSHIP}")`);
-  }
+  const links = pairingSteps(ctx, issuePlan, pagePlan, linked);
   const confluence = ctx.config.confluence;
   return {
     dryRun: true,
@@ -862,6 +943,25 @@ function dryRunResult(
   };
 }
 
+/** What a save would add to pair the halves: the issue's link, and the labels that mark the page. */
+function pairingSteps(
+  ctx: WorkContext,
+  issuePlan: IssuePlan | undefined,
+  pagePlan: PagePlan | undefined,
+  linked: LinkedPages,
+): string[] {
+  if (pagePlan === undefined) return [];
+  const key = issuePlan?.current?.key;
+  const steps: string[] = [];
+  const pairing = key !== undefined || issuePlan?.action === 'create';
+  if (pairing && (pagePlan.current === undefined || !isLinked(linked, pagePlan.current.id))) {
+    steps.push(`remote link from ${key ?? 'the new issue'} to the page (relationship "${WORK_PAGE_RELATIONSHIP}")`);
+  }
+  const labels = missingLabels(ctx, pagePlan.current?.labels ?? []);
+  if (labels.length > 0) steps.push(`label${labels.length === 1 ? '' : 's'} ${labels.join(', ')} on the page`);
+  return steps;
+}
+
 /** The key the preview's issue line names: a placeholder for an issue not created yet. */
 function previewLineKey(issuePlan: IssuePlan | undefined, pagePlan: PagePlan): string | undefined {
   if (issuePlan?.action === 'create') return 'NEW-1';
@@ -873,7 +973,7 @@ async function executeSave(
   issuePlan: IssuePlan | undefined,
   pagePlan: PagePlan | undefined,
   adjusted: readonly WorkAdjustment[],
-  linkedBefore: readonly string[],
+  linkedBefore: LinkedPages,
 ): Promise<WorkSaveResult> {
   const landed: string[] = [];
   const key = await saveIssue(ctx, issuePlan, landed);
@@ -966,8 +1066,9 @@ async function savePage(
     landed.push(`page ${plan.current.id} updated`);
   }
 
-  const labels = confluence?.labels ?? [];
-  if (pageId !== undefined && labels.length > 0 && plan.action !== 'none') {
+  // The labels mark the page as the design page, so an adopted page gets them too.
+  const labels = missingLabels(ctx, plan.current?.labels ?? []);
+  if (pageId !== undefined && labels.length > 0) {
     await client.addLabels(
       pageId,
       labels.map((name) => ({ prefix: 'global', name })),
@@ -981,7 +1082,7 @@ async function linkPair(
   ctx: WorkContext,
   key: string,
   pageId: string,
-  linkedBefore: readonly string[],
+  linkedBefore: LinkedPages,
   landed: string[],
 ): Promise<boolean> {
   if (isLinked(linkedBefore, pageId)) return true;

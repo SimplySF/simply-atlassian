@@ -36,7 +36,11 @@
       "additionalProperties": false,
       "required": ["space"],
       "properties": {
-        "space": { "type": "string", "minLength": 1, "description": "Space key new pages are created in." },
+        "space": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Space key new pages are created in. A linked page in another space is never the issue's page."
+        },
         "parent": {
           "type": ["string", "integer"],
           "pattern": "^\\d+$",
@@ -49,7 +53,7 @@
         "labels": {
           "type": "array",
           "items": { "type": "string", "pattern": "^\\S+$" },
-          "description": "Labels added to every page this tool creates or updates."
+          "description": "Labels added to every page this tool creates, updates or adopts. A linked page must carry all of them to be the issue's page."
         },
         "when": {
           "type": "string",

@@ -148,10 +148,10 @@ Only the fields listed are read or written. Any other field on the issue is left
 
 | Property   | Meaning                                                                                         |
 | ---------- | ----------------------------------------------------------------------------------------------- |
-| `space`    | The space new pages are created in.                                                             |
+| `space`    | The space new pages are created in. Only a page in this space can be an issue's page.           |
 | `parent`   | The page id new pages are created under.                                                        |
 | `title`    | The title pattern for new pages. `{issue.key}` and `{issue.<field name>}` are filled in.        |
-| `labels`   | Labels added to every page this tool creates or updates.                                        |
+| `labels`   | Labels added to every page this tool creates, updates or adopts. They mark the design page.     |
 | `when`     | Your rule for when a work item deserves a page. The agent applies it; the server does not.      |
 | `sections` | `{ heading, description, required }`. A required heading must exist for a page save to succeed. |
 
@@ -190,6 +190,12 @@ The issue is the table of contents. Its page is the Confluence page it links to,
 remote link Jira shows on the issue, so a page someone links in Jira counts too. To change which
 page belongs to an issue, change the link in Jira. The line naming the issue at the top of a page
 is there for readers; it is not used to find anything.
+
+An issue can link other pages too, such as requirements or another team's design. Only a linked
+page in the configured `space` that carries every configured `label` is the design page. The rest
+come back in `links.other` for the agent to read as context, and are never edited. To make a page
+you wrote by hand the design page, add the label in Confluence or adopt it with a save, which adds
+the label for you.
 
 A save takes JSON, in the same shape the MCP tool takes:
 
