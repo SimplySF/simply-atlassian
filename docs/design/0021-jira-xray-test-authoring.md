@@ -1,6 +1,6 @@
 # 0021 — Xray test authoring (Server/Data Center)
 
-**Status:** In progress
+**Status:** Implemented (PRs #77, #78, #79, #80); not yet verified against a live instance
 **Package:** `packages/simply-atlassian-core` (behaviour); `packages/simply-atlassian` and
 `packages/simply-atlassian-mcp` (surfaces)
 **Date:** 2026-10-31
