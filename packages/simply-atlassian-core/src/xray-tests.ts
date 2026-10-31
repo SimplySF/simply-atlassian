@@ -26,6 +26,8 @@ import { searchScopedTests, type XrayFilters, type XrayScope } from './xray-scop
 /** One manual test step. */
 export interface XrayActionStep {
   readonly index: string;
+  /** Xray's id for the step, which the step commands take; null if Xray did not send one. */
+  readonly id: string | null;
   readonly action: string;
   readonly data: string;
   readonly result: string;
@@ -457,6 +459,7 @@ function assertIsTest(issue: unknown, key: string, instance: XrayInstance): void
 // --- Parsing Xray's field values ---
 
 interface ParsedStep {
+  readonly id: string | null;
   readonly action: string;
   readonly data: string;
   readonly result: string;
@@ -502,12 +505,18 @@ function parseStep(raw: Record<string, unknown>): ParsedStep {
   if (Object.keys(columnsLeft).length > 0) extra.fields = columnsLeft;
 
   return {
+    id: stepId(raw.id),
     action: text(columns.action === undefined ? undefined : fields[columns.action]),
     data: text(columns.data === undefined ? undefined : fields[columns.data]),
     result: text(columns.result === undefined ? undefined : fields[columns.result]),
     attachments: attachmentNames(raw.attachments),
     ...(Object.keys(extra).length > 0 ? { extra } : {}),
   };
+}
+
+function stepId(value: unknown): string | null {
+  if (typeof value === 'number') return String(value);
+  return typeof value === 'string' && value !== '' ? value : null;
 }
 
 /** The first of `names` that `fields` has, matched case-insensitively. */

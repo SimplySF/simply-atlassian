@@ -316,7 +316,7 @@ Takes an issue key. An issue whose type is not the discovered Test type is refus
 `ConfigError` naming both types. The output covers:
 
 - **Header:** type (Manual / Cucumber / Generic), status, summary, repository path.
-- **Steps (Manual):** a table with `#`, action, data and expected result. Attachments are listed by
+- **Steps (Manual):** a table with `#`, id, action, data and expected result. Attachments are listed by
   name only. Step data this version does not interpret is kept (see below).
 - **Definition:** the Gherkin scenario or generic definition (Cucumber / Generic).
 - **Preconditions:** key and summary of each.
@@ -333,7 +333,7 @@ Nothing is guessed at and nothing is dropped:
 - Every property and step column the parser does not read is kept under the step's optional
   `extra`, exactly as Xray sent it. Step columns beyond the three it reads go under
   `extra.fields`. `testVersionId`, which every step carries (Xray's internal id for the test version
-  the steps belong to), is known and left out, like `id`; `--raw` and `--fields steps` still show it.
+  the steps belong to), is known and left out; `--raw` and `--fields steps` still show it.
 - Each such name is noted once per command (`Steps carry "testCallBean", which this version does
 not interpret…`), on stderr and in the export's `notes`.
 - A step whose action is empty but which has `extra` shows `(not interpreted: testCallBean)` in the
@@ -361,8 +361,8 @@ per test:
   "path": "/O&M/Accounts",
   "preconditions": [{ "key": "PROJ-3", "summary": "Admin account exists" }],
   "steps": [
-    { "index": "1", "action": "Open Users", "data": "", "result": "List shown", "attachments": [] },
-    { "index": "2", "action": "Pick a user", "data": "bob", "result": "Details shown", "attachments": [] }
+    { "index": "1", "id": "311", "action": "Open Users", "data": "", "result": "List shown", "attachments": [] },
+    { "index": "2", "id": "312", "action": "Pick a user", "data": "bob", "result": "Details shown", "attachments": [] }
   ],
   "definition": null,
   "links": [
@@ -520,8 +520,8 @@ chosen. The earlier draft of this doc (PR #40, first commit) has the full Cloud 
 
 ### Writes
 
-The first draft's writes (`execution import`, `execution add`, `plan add`, `run update`) and their
-reasoning are deferred together. Two points from that draft should carry forward when they are
+Test authoring is [0021](0021-jira-xray-test-authoring.md). The rest of the first draft's writes (`execution import`, `execution add`, `plan add`, `run update`) and their
+reasoning stay deferred together. Two points from that draft should carry forward when they are
 picked up:
 
 - Xray credentials have no read-only scope, so 0004's one real security boundary does not exist

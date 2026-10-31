@@ -88,6 +88,7 @@ export default class JiraXrayTestGet extends XrayCommand<typeof JiraXrayTestGet>
       this.log(
         formatTable(steps, [
           { header: '#', value: (step: XrayActionStep): string => step.index },
+          { header: 'ID', value: (step: XrayActionStep): string | null => step.id },
           { header: 'ACTION', value: (step: XrayActionStep): string => step.action },
           { header: 'DATA', value: (step: XrayActionStep): string => step.data },
           { header: 'EXPECTED RESULT', value: (step: XrayActionStep): string => step.result },

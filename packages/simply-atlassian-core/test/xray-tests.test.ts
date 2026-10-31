@@ -113,8 +113,8 @@ describe('test get', () => {
       path: '/O&M/Accounts',
       preconditions: [{ key: 'OM-3', summary: 'Admin account exists' }],
       steps: [
-        { index: '1', action: 'Open Users', data: '', result: 'List shown', attachments: [] },
-        { index: '2', action: 'Pick a user', data: 'bob', result: 'Details shown', attachments: [] },
+        { index: '1', id: '1', action: 'Open Users', data: '', result: 'List shown', attachments: [] },
+        { index: '2', id: '2', action: 'Pick a user', data: 'bob', result: 'Details shown', attachments: [] },
       ],
       definition: null,
       links: [
@@ -189,6 +189,7 @@ describe('step data this version does not interpret', () => {
     expect(record.steps[0]).not.toHaveProperty('extra');
     expect(record.steps[1]).toEqual({
       index: '2',
+      id: '2',
       action: '',
       data: '',
       result: '',
@@ -247,12 +248,27 @@ describe('step data this version does not interpret', () => {
 
     expect(record.steps[0]).toEqual({
       index: '1',
+      id: '1',
       action: 'Open',
       data: 'x',
       result: 'Shown',
       attachments: [],
       extra: { rank: 7 },
     });
+  });
+
+  it('keeps a numeric step id as a string, and null when Xray sent none', async () => {
+    add('OM-12', {
+      steps: [
+        { id: 311, index: 1, fields: { Action: 'Open' } },
+        { index: 2, fields: { Action: 'Close' } },
+      ],
+    });
+
+    const { record } = await getXrayTest(backend(), 'OM-12');
+
+    expect(record.steps.map((step) => step.id)).toEqual(['311', null]);
+    expect(renderXrayMarkdown(record)).not.toContain('311');
   });
 
   it('fetches only preconditions besides the page itself: one search per page', async () => {
