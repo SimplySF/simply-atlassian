@@ -78,10 +78,13 @@
         "description": "List sprints, sprint issues, and add issues to sprints."
       },
       "atlassian:jira:xray": {
-        "description": "Read Xray tests, plans, sets, and repository paths (Server/Data Center)."
+        "description": "Read Xray tests, plans, sets, and repository paths, and write tests (Server/Data Center)."
       },
       "atlassian:jira:xray:test": {
-        "description": "Read, list, and export Xray tests."
+        "description": "Read, list, export, and write Xray tests."
+      },
+      "atlassian:jira:xray:test:step": {
+        "description": "Add, edit, and delete a manual Xray test's steps."
       },
       "atlassian:jira:xray:plan": {
         "description": "List Xray test plans."

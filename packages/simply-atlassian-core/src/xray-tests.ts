@@ -458,7 +458,7 @@ function assertIsTest(issue: unknown, key: string, instance: XrayInstance): void
 
 // --- Parsing Xray's field values ---
 
-interface ParsedStep {
+export interface ParsedStep {
   readonly id: string | null;
   readonly action: string;
   readonly data: string;
@@ -472,7 +472,7 @@ interface ParsedStep {
  * "Expected Result" } }] }`; older versions return the list itself with `step`/`data`/`result`,
  * sometimes as `{ raw, rendered }`. Step field names are configurable, so they are matched loosely.
  */
-function parseSteps(value: unknown): ParsedStep[] {
+export function parseSteps(value: unknown): ParsedStep[] {
   const list = Array.isArray(value) ? value : isRecord(value) && Array.isArray(value.steps) ? value.steps : [];
   return list
     .filter(isRecord)

@@ -32,6 +32,11 @@ export interface JsonCall {
    * wrong here is worse than not guessing — see the 403 handling below.
    */
   readonly mutating?: boolean;
+  /**
+   * The endpoint answers success in plain text, so a 2xx body that is not JSON is still success.
+   * Without this a write that landed would be reported as failed, inviting a retry.
+   */
+  readonly acceptsText?: boolean;
 }
 
 /** Where and how a transport talks: fixed per client instance. */
@@ -189,6 +194,7 @@ export class HttpTransport {
         try {
           return { done: true, value: JSON.parse(text) as T };
         } catch {
+          if (call.acceptsText === true) return { done: true, value: {} as T };
           throw new HttpError(`${call.method} ${call.path} returned malformed JSON.`, response.status, text);
         }
       }

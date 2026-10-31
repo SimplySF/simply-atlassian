@@ -45,7 +45,7 @@ export {
 } from './confluence-client.js';
 export { pageHistoryJson, type PageHistoryJson } from './confluence-history.js';
 export { loadEnvFile, parseEnvFile } from './env-file.js';
-export { AuthError, CliError, ConfigError, HttpError, NetworkError } from './errors.js';
+export { AuthError, CliError, ConfigError, HttpError, NetworkError, XrayPartialWriteError } from './errors.js';
 export { HttpTransport, type JsonCall, type QueryValue, type TransportTarget } from './http.js';
 export {
   JiraClient,
@@ -172,7 +172,24 @@ export {
   type UpdatePageInput,
 } from './confluence-pages.js';
 
-// --- Xray (Server/Data Center, read-only): docs/design/0015-jira-xray.md ---
+// --- Xray (Server/Data Center): docs/design/0015-jira-xray.md, 0021-jira-xray-test-authoring.md ---
+export {
+  addXrayStep,
+  deleteXrayStep,
+  describeStepOperation,
+  planStepChanges,
+  updateXrayStep,
+  type XrayStepAddInput,
+  type XrayStepDeleteInput,
+  type XrayStepDryRun,
+  type XrayStepInput,
+  type XrayStepOperation,
+  type XrayStepPlan,
+  type XrayStepText,
+  type XrayStepUpdateInput,
+  type XrayStepWriteResult,
+  type XrayWriteResult,
+} from './xray-authoring.js';
 export {
   createXrayBackend,
   jqlString,
