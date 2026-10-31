@@ -29,7 +29,7 @@ export default class JiraXrayTestCreate extends XrayCommand<typeof JiraXrayTestC
 
   public static override readonly summary = 'Create an Xray test, with its steps or definition.';
   public static override readonly description =
-    'Takes a record from "test export", flags, or both, with flags winning. The type is inferred from the ' +
+    'Takes a record from "test get --json", flags, or both, with flags winning. The type is inferred from the ' +
     'steps, Gherkin or definition unless --type says. Steps go in the same request as the issue, so a test ' +
     'is created with them or not at all. --verifies links the requirement it tests.\n\n' +
     'Keys of a record this does not write, such as links and preconditions, are named in a note. A step that ' +
@@ -49,7 +49,9 @@ export default class JiraXrayTestCreate extends XrayCommand<typeof JiraXrayTestC
       summary: 'A requirement this test verifies, which gets a link. Repeatable.',
       multiple: true,
     }),
-    file: Flags.string({ summary: 'Path to one test record, as "test export --format json" writes it.' }),
+    file: Flags.string({
+      summary: 'Path to one test record, as "test get --json" prints it, or one line of "test export --format jsonl".',
+    }),
     summary: Flags.string({ summary: 'The summary.' }),
     type: Flags.string({ summary: 'manual, cucumber, generic, or another type the field allows.' }),
     step: Flags.string({

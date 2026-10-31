@@ -427,7 +427,7 @@ Each command's output feeds the next one: `plan list` → `test list --plan`, `p
 
 ### Write safety
 
-All seven commands are reads. None declares `isWrite`, and all of them work under
+All seven commands in this document are reads ([0021](0021-jira-xray-test-authoring.md) adds writes). None declares `isWrite`, and all of them work under
 `ATLASSIAN_READ_ONLY`. The one thing they write is the local instance record, which is a cache, not
 a change to Atlassian data, so the read-only guard does not apply to it.
 

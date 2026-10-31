@@ -90,7 +90,7 @@ Input flags on `create` and `update`:
 
 | Flag                            | Meaning                                                                                                                                                                 |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--file`                        | One export record, as `test export --format json` writes one test                                                                                                       |
+| `--file`                        | One export record, as `test get --json` prints it or one line of `test export --format jsonl`                                                                           |
 | `--summary`                     | The summary                                                                                                                                                             |
 | `--type`                        | `manual`, `cucumber`, `generic`, or another value the type field allows; matched against the field's allowed values, and an unknown one is a `ConfigError` listing them |
 | `--step 'action\|data\|result'` | Repeatable. `\|` in the text is written `\\                                                                                                                             | `   |
@@ -98,6 +98,9 @@ Input flags on `create` and `update`:
 | `--definition`                  | The generic definition                                                                                                                                                  |
 | `--field role=value`            | Repeatable. A role or field name, never needing a `customfield_…` id                                                                                                    |
 | `--body`, `--body-file`         | Raw `{ "fields": … }`, merged underneath, as on `issue create`                                                                                                          |
+
+The allowed values come from Jira's create metadata. If it will not say, a known type is sent with
+its documented spelling, one note says it was not checked, and Jira's own 400 reports a mistake.
 
 `create` also takes `--project` and `--verifies`. Flags override the record, and the record overrides
 `--body`. With no type given, `create` infers it: steps mean Manual, Gherkin means Cucumber, and a
@@ -118,7 +121,8 @@ caller.
 
 ### Record round trip
 
-`--file` takes one record. Given an array, `create` and `update` refuse and point at a loop.
+`--file` takes one record, so `test export --format json`, which writes an array, is refused with a
+pointer to a loop over `--format jsonl`.
 
 - **Applied:** `summary`, `type`, `steps`, `definition`, and `fields`, whose keys resolve as `--fields`
   does.
