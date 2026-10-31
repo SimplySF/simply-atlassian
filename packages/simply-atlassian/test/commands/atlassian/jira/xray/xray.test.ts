@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
@@ -41,6 +41,8 @@ import JiraXraySetList from '../../../../../src/commands/atlassian/jira/xray/set
 import JiraXrayTestExport from '../../../../../src/commands/atlassian/jira/xray/test/export.js';
 import JiraXrayTestGet from '../../../../../src/commands/atlassian/jira/xray/test/get.js';
 import JiraXrayTestList from '../../../../../src/commands/atlassian/jira/xray/test/list.js';
+import JiraXrayTestCreate from '../../../../../src/commands/atlassian/jira/xray/test/create.js';
+import JiraXrayTestUpdate from '../../../../../src/commands/atlassian/jira/xray/test/update.js';
 import JiraXrayTestStepAdd from '../../../../../src/commands/atlassian/jira/xray/test/step/add.js';
 import JiraXrayTestStepDelete from '../../../../../src/commands/atlassian/jira/xray/test/step/delete.js';
 import JiraXrayTestStepUpdate from '../../../../../src/commands/atlassian/jira/xray/test/step/update.js';
@@ -492,5 +494,346 @@ describe('jira xray test step', () => {
     const failed = await failure(JiraXrayTestStepUpdate.run(argv('OM-12', '311', '--result', 'New')));
     expect(failed.message).toContain('may have been applied');
     expect(writes().filter((request) => request.url === `${STEP_PATH}/311`)).toHaveLength(1);
+  });
+});
+
+describe('jira xray test create', () => {
+  const ALLOWED = {
+    values: [
+      {
+        fieldId: XRAY_FIXTURE_IDS.testType,
+        allowedValues: [{ value: 'Manual' }, { value: 'Cucumber' }, { value: 'Generic' }],
+      },
+    ],
+  };
+  let created: Record<string, unknown> | undefined;
+
+  beforeEach(() => {
+    created = undefined;
+    server.route('/rest/api/2/issue/createmeta/OM/issuetypes', (_req, res) =>
+      respondJson(res, 200, { values: [{ id: '10100', name: 'Prüfung' }] }),
+    );
+    server.route('/rest/api/2/issue/createmeta/OM/issuetypes/10100', (_req, res) => respondJson(res, 200, ALLOWED));
+    server.route('/rest/api/2/issue', (_req, res, body) => {
+      created = (JSON.parse(body) as { fields: Record<string, unknown> }).fields;
+      respondJson(res, 201, { id: '10500', key: 'OM-50', self: `${server.baseUrl}/rest/api/2/issue/10500` });
+    });
+    server.route('/rest/api/2/issue/OM-50', (_req, res) => respondJson(res, 200, xrayFixtureIssue('OM-50')));
+    server.route('/rest/api/2/issueLinkType', (_req, res) =>
+      respondJson(res, 200, { issueLinkTypes: [{ id: '7', name: 'Tests', inward: 'is tested by', outward: 'tests' }] }),
+    );
+  });
+
+  const writes = (): Array<{ method: string; url: string; body: string }> =>
+    server.requests.filter((request) => request.method !== 'GET');
+  const failure = async (run: Promise<unknown>): Promise<{ message: string; oclif?: { exit?: number } }> =>
+    (await run.catch((caught: unknown) => caught)) as { message: string; oclif?: { exit?: number } };
+  const base = (...extra: string[]): string[] => argv('--project', 'OM', '--summary', 'S', ...extra);
+
+  it('creates a Manual test in one request, with the documented step shape and non-default ids', async () => {
+    const result = (await JiraXrayTestCreate.run(base('--step', 'Open|x|Shown', '--step', 'Save', '--json'))) as {
+      record: XrayTestRecord;
+    };
+
+    expect(created).toEqual({
+      project: { key: 'OM' },
+      issuetype: { name: 'Prüfung' },
+      summary: 'S',
+      [XRAY_FIXTURE_IDS.testType]: { value: 'Manual' },
+      [XRAY_FIXTURE_IDS.steps]: {
+        steps: [
+          { index: 1, fields: { action: 'Open', data: 'x', 'expected result': 'Shown' } },
+          { index: 2, fields: { action: 'Save', data: '', 'expected result': '' } },
+        ],
+      },
+    });
+    expect(writes()).toHaveLength(1);
+    expect(result.record.key).toBe('OM-50');
+  });
+
+  it('creates a Cucumber test with a plain-string scenario, and no Cucumber type on current Xray', async () => {
+    await JiraXrayTestCreate.run(base('--gherkin', 'Given a user', '--json'));
+
+    expect(created).toMatchObject({
+      [XRAY_FIXTURE_IDS.testType]: { value: 'Cucumber' },
+      [XRAY_FIXTURE_IDS.cucumberScenario]: 'Given a user',
+    });
+    expect(created).not.toHaveProperty(XRAY_FIXTURE_IDS.cucumberType);
+  });
+
+  it('creates a Generic test with a plain-string definition', async () => {
+    await JiraXrayTestCreate.run(base('--type', 'generic', '--definition', 'sum.sh', '--json'));
+
+    expect(created).toMatchObject({
+      [XRAY_FIXTURE_IDS.testType]: { value: 'Generic' },
+      [XRAY_FIXTURE_IDS.genericDefinition]: 'sum.sh',
+    });
+  });
+
+  it('lists the allowed values for an unknown --type', async () => {
+    const error = await failure(JiraXrayTestCreate.run(base('--type', 'exploratory')));
+
+    expect(error.message).toContain('Manual, Cucumber, Generic');
+    expect(error.oclif?.exit).toBe(2);
+    expect(writes()).toEqual([]);
+  });
+
+  it('still creates when the instance will not list the types, and says so', async () => {
+    server.route('/rest/api/2/issue/createmeta/OM/issuetypes', (_req, res) => respondJson(res, 404, {}));
+    server.route('/rest/api/2/issue/createmeta', (_req, res) => respondJson(res, 404, {}));
+    const result = (await JiraXrayTestCreate.run(base('--type', 'manual', '--json'))) as { notes: string[] };
+
+    expect(created).toMatchObject({ [XRAY_FIXTURE_IDS.testType]: { value: 'Manual' } });
+    expect(result.notes.join()).toContain('could not be read');
+  });
+
+  it('refuses to guess a Cucumber type on an Xray older than 7.3.0, and takes the flag', async () => {
+    routeXrayDiscovery(server, { version: '7.2.0' });
+    const error = await failure(JiraXrayTestCreate.run(base('--gherkin', 'Given')));
+    expect(error.message).toContain('cucumberType=Scenario');
+    expect(writes()).toEqual([]);
+
+    await JiraXrayTestCreate.run(base('--gherkin', 'Given', '--field', 'cucumberType=Scenario', '--json'));
+    expect(created).toMatchObject({ [XRAY_FIXTURE_IDS.cucumberType]: { value: 'Scenario' } });
+  });
+
+  it('applies a record, overriding it with flags and naming the keys it ignored', async () => {
+    const file = path.join(cacheHome, 'record.json');
+    writeFileSync(
+      file,
+      JSON.stringify({
+        key: 'OM-1',
+        id: '1',
+        summary: 'From the record',
+        status: 'Ready',
+        type: 'Manual',
+        path: '/x',
+        preconditions: [],
+        steps: [{ index: '1', id: '9', action: 'Open', data: '', result: '', attachments: [] }],
+        definition: null,
+        links: [],
+        plans: [],
+        sets: [],
+        fields: { components: ['Accounts'], 'Story Points': 3 },
+      }),
+    );
+    const result = (await JiraXrayTestCreate.run(
+      argv('--project', 'OM', '--file', file, '--summary', 'Flag wins', '--json'),
+    )) as { notes: string[] };
+
+    expect(created).toMatchObject({
+      summary: 'Flag wins',
+      components: [{ name: 'Accounts' }],
+      // eslint-disable-next-line camelcase -- a real Jira custom field is named exactly this
+      customfield_40016: 3,
+    });
+    expect(result.notes[0]).toBe(
+      'Ignored from the record, as this command does not write them: key, id, status, path, preconditions, links, plans, sets.',
+    );
+  });
+
+  it('refuses a list of records, and a call step, before sending anything', async () => {
+    const list = path.join(cacheHome, 'list.json');
+    writeFileSync(list, '[{}]');
+    expect((await failure(JiraXrayTestCreate.run(argv('--project', 'OM', '--file', list)))).message).toContain(
+      '--format jsonl',
+    );
+
+    const call = path.join(cacheHome, 'call.json');
+    writeFileSync(call, JSON.stringify({ summary: 'S', steps: [{ action: '', extra: { testCallBean: {} } }] }));
+    expect((await failure(JiraXrayTestCreate.run(argv('--project', 'OM', '--file', call)))).message).toContain(
+      'calls another test',
+    );
+    expect(writes()).toEqual([]);
+  });
+
+  it('links --verifies with the test as the subject of "tests"', async () => {
+    server.route('/rest/api/2/issueLink', (_req, res) => respondJson(res, 201, {}));
+    await JiraXrayTestCreate.run(base('--step', 'Open', '--verifies', 'OM-40', '--json'));
+
+    const link = writes().find((request) => request.url === '/rest/api/2/issueLink');
+    expect(JSON.parse(link?.body ?? '{}')).toEqual({
+      type: { id: '7' },
+      inwardIssue: { key: 'OM-50' },
+      outwardIssue: { key: 'OM-40' },
+    });
+  });
+
+  it('creates nothing when no link type matches', async () => {
+    server.route('/rest/api/2/issueLinkType', (_req, res) => respondJson(res, 200, { issueLinkTypes: [] }));
+    const error = await failure(JiraXrayTestCreate.run(base('--step', 'Open', '--verifies', 'OM-40')));
+
+    expect(error.oclif?.exit).toBe(2);
+    expect(writes()).toEqual([]);
+  });
+
+  it('reports the created key when a link fails, and does not delete the test', async () => {
+    server.route('/rest/api/2/issueLink', (_req, res) => respondJson(res, 400, { errorMessages: ['nope'] }));
+    const error = await failure(JiraXrayTestCreate.run(base('--step', 'Open', '--verifies', 'OM-40')));
+
+    expect(error.message).toContain('OM-50 was created');
+    expect(error.message).toContain('link to OM-40');
+    expect(error.message).toContain('jira issue link create OM-50 tests OM-40');
+    expect(writes().some((request) => request.method === 'DELETE')).toBe(false);
+  });
+
+  it('sends no write on a dry run, and prints the request', async () => {
+    await JiraXrayTestCreate.run(base('--step', 'Open', '--verifies', 'OM-40', '--dry-run'));
+
+    expect(writes()).toEqual([]);
+    expect(stdout.join('')).toContain('Would link to OM-40');
+    expect(stdout.join('')).toContain(XRAY_FIXTURE_IDS.steps);
+  });
+});
+
+describe('jira xray test update', () => {
+  const STEP_PATH = '/rest/raven/1.0/api/test/OM-12/step';
+  let fake: FakeXraySteps;
+  let summary: string;
+
+  beforeEach(() => {
+    summary = 'Original';
+    fake = routeXraySteps(server, 'OM-12', [
+      { id: 311, action: 'Open', result: 'Shown' },
+      { id: 312, action: 'Save', attachments: [{ id: 1, fileName: 'shot.png' }] },
+    ]);
+    server.route('/rest/api/2/issue/OM-12', (request, res, body) => {
+      if (request.method === 'PUT') {
+        summary = (JSON.parse(body) as { fields: { summary?: string } }).fields.summary ?? summary;
+        res.writeHead(204);
+        res.end();
+        return;
+      }
+      respondJson(res, 200, xrayFixtureIssue('OM-12', { summary, steps: fake.fieldSteps() }));
+    });
+  });
+
+  const writes = (): Array<{ method: string; url: string; body: string }> =>
+    server.requests.filter((request) => request.method !== 'GET');
+  const failure = async (run: Promise<unknown>): Promise<{ message: string; oclif?: { exit?: number } }> =>
+    (await run.catch((caught: unknown) => caught)) as { message: string; oclif?: { exit?: number } };
+  const exported = async (): Promise<XrayTestRecord> =>
+    (await JiraXrayTestGet.run(argv('OM-12', '--json'))) as XrayTestRecord;
+  const fileWith = (record: unknown): string => {
+    const file = path.join(cacheHome, 'record.json');
+    writeFileSync(file, JSON.stringify(record));
+    return file;
+  };
+
+  it('sends no write at all for an unchanged export → update round trip', async () => {
+    const file = fileWith(await exported());
+    const result = (await JiraXrayTestUpdate.run(argv('OM-12', '--file', file, '--json'))) as {
+      record: XrayTestRecord;
+    };
+
+    expect(writes()).toEqual([]);
+    expect(result.record.key).toBe('OM-12');
+  });
+
+  it('applies an edited export: fields, then each step, and returns the test read back', async () => {
+    const record = await exported();
+    const file = fileWith({
+      ...record,
+      summary: 'Edited',
+      steps: [{ ...record.steps[0], result: 'Sorted' }, record.steps[1], { action: 'New', data: '', result: '' }],
+    });
+    const result = (await JiraXrayTestUpdate.run(argv('OM-12', '--file', file, '--json'))) as {
+      record: XrayTestRecord;
+    };
+
+    expect(writes()).toEqual([
+      { method: 'PUT', url: '/rest/api/2/issue/OM-12', body: JSON.stringify({ fields: { summary: 'Edited' } }) },
+      { method: 'POST', url: `${STEP_PATH}/311`, body: JSON.stringify({ result: 'Sorted' }) },
+      { method: 'PUT', url: STEP_PATH, body: JSON.stringify({ step: 'New', data: '', result: '' }) },
+    ]);
+    expect(result.record.summary).toBe('Edited');
+    expect(result.record.steps.map((step) => step.action)).toEqual(['Open', 'Save', 'New']);
+  });
+
+  it('refuses a shrinking replace without --confirm, and sends nothing', async () => {
+    const record = await exported();
+    const file = fileWith({ ...record, steps: [record.steps[0]] });
+    const error = await failure(JiraXrayTestUpdate.run(argv('OM-12', '--file', file)));
+
+    expect(error.message).toContain('delete step 312');
+    expect(error.oclif?.exit).toBe(2);
+    expect(writes()).toEqual([]);
+
+    await JiraXrayTestUpdate.run(argv('OM-12', '--file', file, '--confirm', '--json'));
+    expect(writes()).toEqual([{ method: 'DELETE', url: `${STEP_PATH}/312`, body: '' }]);
+  });
+
+  it('prints the plan on a dry run and writes nothing, even when it would delete', async () => {
+    const record = await exported();
+    const file = fileWith({ ...record, steps: [{ ...record.steps[0], action: 'Opened' }] });
+    await JiraXrayTestUpdate.run(argv('OM-12', '--file', file, '--dry-run'));
+
+    expect(writes()).toEqual([]);
+    expect(stdout.join('')).toContain('update step 311: action');
+    expect(stdout.join('')).toContain('delete step 312: Save');
+  });
+
+  it('refuses a stale id and a reordered list before anything is sent', async () => {
+    const record = await exported();
+    const stale = await failure(
+      JiraXrayTestUpdate.run(
+        argv('OM-12', '--file', fileWith({ ...record, summary: 'X', steps: [{ ...record.steps[0], id: '999' }] })),
+      ),
+    );
+    expect(stale.message).toContain('Step 999 is not on OM-12');
+
+    const reordered = await failure(
+      JiraXrayTestUpdate.run(
+        argv('OM-12', '--file', fileWith({ ...record, steps: [record.steps[1], record.steps[0]] })),
+      ),
+    );
+    expect(reordered.message).toContain('delete and re-add');
+    expect(writes()).toEqual([]);
+  });
+
+  it('matches hand-written steps by position, and warns about attachments', async () => {
+    const result = (await JiraXrayTestUpdate.run(
+      argv('OM-12', '--step', 'Open||Shown', '--step', 'Saved', '--json'),
+    )) as { notes: string[] };
+
+    expect(writes()).toEqual([{ method: 'POST', url: `${STEP_PATH}/312`, body: JSON.stringify({ step: 'Saved' }) }]);
+    expect(result.notes.join()).toContain('shot.png');
+  });
+
+  it('notes custom columns, and does not send them', async () => {
+    fake.steps[0].extra = { fields: { Comment: 'keep' } };
+    const record = await exported();
+    const file = fileWith({ ...record, steps: [{ ...record.steps[0], result: 'New' }, record.steps[1]] });
+    const result = (await JiraXrayTestUpdate.run(argv('OM-12', '--file', file, '--json'))) as { notes: string[] };
+
+    expect(result.notes.join()).toContain('Comment');
+    expect(writes()[0]?.body).toBe(JSON.stringify({ result: 'New' }));
+  });
+
+  it('refuses to change the type of a test that has steps', async () => {
+    const error = await failure(JiraXrayTestUpdate.run(argv('OM-12', '--type', 'generic')));
+
+    expect(error.message).toContain('Delete the steps first');
+    expect(writes()).toEqual([]);
+  });
+
+  it('reports what landed when a later step fails', async () => {
+    server.route(`${STEP_PATH}/312`, (_req, res) => respondJson(res, 400, { error: 'nope' }));
+    const error = await failure(
+      JiraXrayTestUpdate.run(argv('OM-12', '--summary', 'Edited', '--step', 'Open||Shown', '--step', 'Saved')),
+    );
+
+    expect(error.message).toContain('only partly updated');
+    expect(error.message).toContain('Applied: the issue fields');
+    expect(error.message).toContain('Not applied: update step 312');
+  });
+
+  it('refuses nothing-to-do and a bad key, and the read-only guard holds', async () => {
+    expect((await failure(JiraXrayTestUpdate.run(argv('OM-12')))).message).toContain('Nothing to update');
+    expect((await failure(JiraXrayTestUpdate.run(argv('nope', '--summary', 'S')))).oclif?.exit).toBe(2);
+
+    process.env.ATLASSIAN_READ_ONLY = '1';
+    expect((await failure(JiraXrayTestUpdate.run(argv('OM-12', '--summary', 'S')))).oclif?.exit).toBe(2);
+    expect(writes()).toEqual([]);
   });
 });

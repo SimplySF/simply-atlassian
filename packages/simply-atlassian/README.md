@@ -163,12 +163,14 @@ error that says the credential cannot make changes, rather than looking like a p
 - [`simply atlassian jira xray path list`](#simply-atlassian-jira-xray-path-list)
 - [`simply atlassian jira xray plan list`](#simply-atlassian-jira-xray-plan-list)
 - [`simply atlassian jira xray set list`](#simply-atlassian-jira-xray-set-list)
+- [`simply atlassian jira xray test create`](#simply-atlassian-jira-xray-test-create)
 - [`simply atlassian jira xray test export`](#simply-atlassian-jira-xray-test-export)
 - [`simply atlassian jira xray test get TEST`](#simply-atlassian-jira-xray-test-get-test)
 - [`simply atlassian jira xray test list`](#simply-atlassian-jira-xray-test-list)
 - [`simply atlassian jira xray test step add TEST`](#simply-atlassian-jira-xray-test-step-add-test)
 - [`simply atlassian jira xray test step delete TEST STEP`](#simply-atlassian-jira-xray-test-step-delete-test-step)
 - [`simply atlassian jira xray test step update TEST STEP`](#simply-atlassian-jira-xray-test-step-update-test-step)
+- [`simply atlassian jira xray test update TEST`](#simply-atlassian-jira-xray-test-update-test)
 
 ## `simply atlassian confluence open PAGE`
 
@@ -2578,6 +2580,73 @@ FLAG DESCRIPTIONS
 
 _See code: [lib/commands/atlassian/jira/xray/set/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.14.2/packages/simply-atlassian/lib/commands/atlassian/jira/xray/set/list.js)_
 
+## `simply atlassian jira xray test create`
+
+Create an Xray test, with its steps or definition.
+
+```
+USAGE
+  $ simply atlassian jira xray test create [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>] [--jira-api-token
+    <value>] [--jira-personal-token <value>] [--dry-run] [--project <value>] [--verifies <value>...] [--file <value>]
+    [--summary <value>] [--type <value>] [--step <value>...] [--gherkin <value> | --gherkin-file <value>] [--definition
+    <value>] [--field <value>...] [--body <value> | --body-file <value>]
+
+FLAGS
+  --body=<value>          Raw JSON request body, merged underneath.
+  --body-file=<value>     Path to a file holding the raw JSON request body.
+  --definition=<value>    The generic test definition.
+  --dry-run               Print the request that would be sent and exit without sending it.
+  --field=<value>...      Another field, as role=value. Repeatable.
+  --file=<value>          Path to one test record, as "test export --format json" writes it.
+  --gherkin=<value>       The Cucumber scenario.
+  --gherkin-file=<value>  Path to a file holding the Cucumber scenario.
+  --project=<value>       Project key the test belongs to.
+  --step=<value>...       A step, as 'action|data|result'. Repeatable; a literal pipe is written \|.
+  --summary=<value>       The summary.
+  --type=<value>          manual, cucumber, generic, or another type the field allows.
+  --verifies=<value>...   A requirement this test verifies, which gets a link. Repeatable.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Create an Xray test, with its steps or definition.
+
+  Takes a record from "test export", flags, or both, with flags winning. The type is inferred from the steps, Gherkin or
+  definition unless --type says. Steps go in the same request as the issue, so a test is created with them or not at
+  all. --verifies links the requirement it tests.
+
+  Keys of a record this does not write, such as links and preconditions, are named in a note. A step that calls another
+  test is refused. Returns the test read back. Xray credentials have no read-only scope, so ATLASSIAN_READ_ONLY is the
+  only guard against an unintended write.
+
+EXAMPLES
+  $ simply atlassian jira xray test create --project OM --summary "Reset a password" --step "Open Users||List shown" --verifies OM-40
+
+  $ simply atlassian jira xray test create --project OM --summary "Log in" --gherkin-file ./login.feature
+
+  $ simply atlassian jira xray test create --project OM --file ./test.json --summary "A copy" --dry-run
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+
+  --field=<value>...  Another field, as role=value. Repeatable.
+
+    A role or field name, as --fields takes on "test get"; no customfield_ id is needed.
+```
+
+_See code: [lib/commands/atlassian/jira/xray/test/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.14.2/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/create.js)_
+
 ## `simply atlassian jira xray test export`
 
 Export full test records for a project, plan, set, or folder.
@@ -2935,6 +3004,79 @@ FLAG DESCRIPTIONS
 ```
 
 _See code: [lib/commands/atlassian/jira/xray/test/step/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.14.2/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/step/update.js)_
+
+## `simply atlassian jira xray test update TEST`
+
+Apply a record or flags to an Xray test, replacing its steps if given.
+
+```
+USAGE
+  $ simply atlassian jira xray test update TEST [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+    [--jira-api-token <value>] [--jira-personal-token <value>] [--dry-run] [--confirm] [--file <value>] [--summary
+    <value>] [--type <value>] [--step <value>...] [--gherkin <value> | --gherkin-file <value>] [--definition <value>]
+    [--field <value>...] [--body <value> | --body-file <value>]
+
+ARGUMENTS
+  TEST  Test issue key, for example OM-12.
+
+FLAGS
+  --body=<value>          Raw JSON request body, merged underneath.
+  --body-file=<value>     Path to a file holding the raw JSON request body.
+  --confirm               Required to proceed with an irreversible change.
+  --definition=<value>    The generic test definition.
+  --dry-run               Print the request that would be sent and exit without sending it.
+  --field=<value>...      Another field, as role=value. Repeatable.
+  --file=<value>          Path to one test record, as "test export --format json" writes it.
+  --gherkin=<value>       The Cucumber scenario.
+  --gherkin-file=<value>  Path to a file holding the Cucumber scenario.
+  --step=<value>...       A step, as 'action|data|result'. Repeatable; a literal pipe is written \|.
+  --summary=<value>       The summary.
+  --type=<value>          manual, cucumber, generic, or another type the field allows.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Apply a record or flags to an Xray test, replacing its steps if given.
+
+  Only what differs is sent, so an unchanged "test export" record writes nothing. Steps given in a record or with --step
+  replace the test's list: matched by id when the input has ids, by position when it has none. A step missing from the
+  input is deleted, which needs --confirm.
+
+  Xray's API documents no way to reorder steps or to add one at a position, so a reordered list is refused; new steps go
+  after the existing ones. Custom step columns and attachments are left as they are. Use --dry-run to see the plan.
+
+EXAMPLES
+  $ simply atlassian jira xray test update OM-12 --file ./test.json --dry-run
+
+  $ simply atlassian jira xray test update OM-12 --file ./test.json --confirm
+
+  $ simply atlassian jira xray test update OM-12 --summary "Reset a locked password"
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+
+  --confirm  Required to proceed with an irreversible change.
+
+    There is deliberately no short form: a single letter is too easy to add by habit. It also takes no value — pass it
+    bare, never --confirm=true or --confirm=false.
+
+  --field=<value>...  Another field, as role=value. Repeatable.
+
+    A role or field name, as --fields takes on "test get"; no customfield_ id is needed.
+```
+
+_See code: [lib/commands/atlassian/jira/xray/test/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.14.2/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/update.js)_
 <!-- commandsstop -->
 
 ## License
