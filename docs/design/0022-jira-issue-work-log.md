@@ -73,6 +73,18 @@ Work log (simply-atlassian)
 2026-11-02 17:40 UTC | pr | PR #58 opened, CI green
 ```
 
+A `note` records what the diff cannot show, such as a change in requirements. The person running the
+agent says what happened, and the agent writes it up:
+
+```text
+2026-11-03 14:20 UTC | note | Requirements changed after talking with John on Nov 2
+- Discount limit now applies per region, not globally
+- OpportunityDiscountService (updating): adding the regional limit check
+```
+
+The agent reads no conversations for this, so what reaches the ticket is what the person chose to
+tell it.
+
 Times are UTC, so a team across time zones reads one clock. Entries are plain text, so they read the
 same on both deployments.
 
@@ -164,7 +176,8 @@ When the tool is registered, the server instructions gain:
 > or PR that changes behavior, and when you are done, add a detail for each class, trigger, or other
 > component you created or changed: its name, whether it is new or updated, what changed, and why.
 > Take these from the diff, in plain English. The done entry lists everything changed on the issue.
-> Include no code, customer data, or credentials. Not every small commit is a checkpoint. If the
+> When the user mentions a conversation or a change in requirements, add a note entry saying what
+> changed and which components it affects; record the decision, not a quote. Include no code, customer data, or credentials. Not every small commit is a checkpoint. If the
 > call fails, carry on with the work and do not repeat it.
 
 They are not added otherwise, so an agent that cannot log is not told to.
@@ -214,33 +227,6 @@ They are not added otherwise, so an agent that cannot log is not told to.
   `ATLASSIAN_READ_ONLY` still refuses it.
 - Live, on a Cloud site and a Server/DC instance: the full flow, whether watchers are notified by
   each edit, and where an edited comment sits among newer ones.
-
-## Future idea: Teams conversations in the log
-
-Not part of the first version. Decisions about a ticket often happen in Teams, so the log could carry
-them too: the entry would say what was decided, who the conversation was with, and link back to it.
-
-```text
-2026-11-02 16:05 UTC | discussion | Agreed to apply discount approval to bulk edits too
-- From a thread in Sales Ops/General on Nov 2, link: https://teams.microsoft.com/l/message/...
-```
-
-The parts exist. An agent running both servers can find a conversation with `simply-teams` search
-and `teams_message_context`, for example by the issue key, then write the entry with
-`jira_issue_log`. That needs no dependency between the repos, only a `discussion` kind here and a
-line in the agent instructions.
-
-What needs deciding first:
-
-- **A summary and a link, never a transcript.** The entry records the decision. People who may read
-  the conversation can follow the link, and Teams still enforces who that is.
-- **The audience changes.** A private chat or a restricted channel may be read by far fewer people
-  than the ticket. Default to nothing being logged unless a person points the agent at a
-  conversation, and to channels only, not private chats, until the team has agreed otherwise.
-- **Naming people.** Someone quoted in a ticket did not agree to be, so the entry should prefer "the
-  team agreed" over attributing words to a named person.
-- **Cleaning.** The fuller guard in the open questions below becomes necessary, not optional, for
-  text that started in Teams.
 
 ## Open questions
 
