@@ -9,7 +9,8 @@
 
 An agent working a Jira issue only reports back on it when someone asks. The person running it
 types "comment on the ticket" at each checkpoint, or forgets to, and everyone else reads a ticket
-that says nothing until the work is done.
+that says nothing until the work is done. When a comment does appear it rarely says what changed: a
+reviewer learns that work happened, not which class was added or why a trigger was touched.
 
 Every primitive exists: `jira_issue_comment_add`, `jira_issue_comment_edit`, and
 `jira_issue_comment_list`. What is missing is everything that makes them usable as a habit:
@@ -20,15 +21,18 @@ Every primitive exists: `jira_issue_comment_add`, `jira_issue_comment_edit`, and
   expects.
 - **Nothing tells the agent when.** The MCP server only acts when it is called, so "automatically"
   has to come from the agent's instructions or from the client.
+- **Nothing tells the agent how much to say.** Without a shape, one update names every file and the
+  next says "made progress".
 - **The whole write surface is too much to grant for this.** Today the only way to let an agent
   comment is `--allow-writes`, which also hands it transitions and page updates.
 
 ## Decision
 
-Add `jira issue log` and a matching `jira_issue_log` tool. Each call appends one timestamped line to
-a single running comment per author per issue, creating the comment if there is none. Server
-instructions tell the agent which checkpoints to log. A new server flag, `--allow-log`, registers
-this one write tool without the rest.
+Add `jira issue log` and a matching `jira_issue_log` tool. Each call appends one timestamped entry
+to a running comment per author per issue: a summary line, plus a bullet for each component created
+or changed, saying what changed and why. Server instructions tell the agent which checkpoints to
+log and what to name. A new server flag, `--allow-log`, registers this one write tool without the
+rest.
 
 Hooks that log mechanical events from the client are a later, separate change. The first version
 is the command, the tool, the flag, and the instructions.
@@ -38,54 +42,67 @@ is the command, the tool, the flag, and the instructions.
 ### The command
 
 ```text
-simply atlassian jira issue log [ISSUE] --kind <kind> --text <text> [--from-branch] [--dry-run]
+simply atlassian jira issue log [ISSUE] --kind <kind> --text <text> [--detail <text>]...
+  [--from-branch] [--dry-run]
 ```
 
-| Input           | Rule                                                                               |
-| --------------- | ---------------------------------------------------------------------------------- |
-| `ISSUE`         | Issue key. Required unless `--from-branch` is given; giving both is an error.      |
-| `--kind`        | One of `started`, `commit`, `pr`, `ci`, `blocked`, `done`, `note`.                 |
-| `--text`        | Plain text, one line, at most 500 characters. Longer text is an error, not a trim. |
-| `--from-branch` | Takes the key from the current git branch (below). CLI only.                       |
-| `--dry-run`     | Prints the line and whether it would create or edit a comment. Sends nothing.      |
+| Input           | Rule                                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------------------- |
+| `ISSUE`         | Issue key. Required unless `--from-branch` is given; giving both is an error.                           |
+| `--kind`        | One of `started`, `commit`, `pr`, `ci`, `blocked`, `done`, `note`.                                      |
+| `--text`        | The entry's summary. Plain text, one line, at most 500 characters. Longer text is an error, not a trim. |
+| `--detail`      | One bullet. Repeatable, at most 15. Plain text, one line, at most 500 characters each.                  |
+| `--from-branch` | Takes the key from the current git branch (below). CLI only.                                            |
+| `--dry-run`     | Prints the entry and whether it would create or edit a comment. Sends nothing.                          |
 
-The MCP tool takes `issue`, `kind`, `text`, and `dryRun`. `issue` is required there: the server's
+The MCP tool takes `issue`, `kind`, `text`, `details` (an array), and `dryRun`. `issue` is required there: the server's
 working directory is not reliably the repository, so the agent reads its own branch.
 
-The body is plain text on purpose. There is no `--mention` and no raw `--body`, so a log line cannot
+The body is plain text on purpose. There is no `--mention` and no raw `--body`, so a log entry cannot
 @-mention anyone or carry a visibility restriction. Those remain `comment add`'s job.
 
 ### The comment
 
 ```text
 Work log (simply-atlassian)
-2026-11-02 14:10 UTC | started | Branch feat/PROJ-123-retry-writes
-2026-11-02 15:02 UTC | commit | a1b2c3d retry rule in place, tests passing
+2026-11-02 14:10 UTC | started | Branch feat/PROJ-123-discount-approval
+2026-11-02 15:02 UTC | commit | a1b2c3d Added discount approval on opportunities
+- OpportunityDiscountService (new class): checks each discount against the approval limit
+- OpportunityTrigger (updated): calls the service before update, so bulk edits are checked too
+- OpportunityDiscountServiceTest (new test class): covers single and bulk updates
 2026-11-02 17:40 UTC | pr | PR #58 opened, CI green
 ```
 
-Times are UTC, so a team across time zones reads one clock.
+Times are UTC, so a team across time zones reads one clock. Entries are plain text, so they read the
+same on both deployments.
 
 ### Finding the comment
 
 The log is the newest comment whose first line is exactly `Work log (simply-atlassian)` **and**
 whose author is the current account (`/myself`). Comment pages are read newest first and stop at
-the first match, so a long ticket costs little.
+the first match, so a long ticket costs little. The scan also notes whether it passed a comment by
+someone else on the way.
 
 The author check means the command never edits another person's comment, even one that copies the
 heading. Two people on one issue each get their own log.
 
 ### Appending
 
-| Situation                                   | Result                                                    |
-| ------------------------------------------- | --------------------------------------------------------- |
-| No log yet                                  | Creates the comment.                                      |
-| A log exists                                | Adds one line and edits the comment.                      |
-| Same `kind` and `text` as the last line     | Does nothing and says so, so a repeated call is harmless. |
-| The log's text would pass 16,000 characters | Creates a new log comment; the old one stays as it is.    |
+| Situation                                          | Result                                                    |
+| -------------------------------------------------- | --------------------------------------------------------- |
+| No log yet                                         | Creates the comment.                                      |
+| The log is the latest activity                     | Adds the entry and edits the comment.                     |
+| Someone else has commented since the log           | Creates a new log comment; the old one stays as it is.    |
+| Same `kind`, `text`, and details as the last entry | Does nothing and says so, so a repeated call is harmless. |
+| The log's text would pass 16,000 characters        | Creates a new log comment; the old one stays as it is.    |
 
-The new line is added to the comment body as Jira returned it: one more paragraph node on Cloud,
-one more line of the string on Server/DC. The body is never rebuilt from text, so anything a person
+A log keeps its place in the thread when it is edited, so once people reply beneath it, later
+entries would land above the discussion, where anyone reading the newest comments misses them.
+Starting a new log at that point keeps updates at the bottom, and a ticket nobody is discussing
+still has one comment. The agent's own other comments do not count.
+
+The new entry is added to the comment body as Jira returned it: more paragraph nodes on Cloud, more
+lines of the string on Server/DC. The body is never rebuilt from text, so anything a person
 edited in the comment survives. A log that cannot be parsed in that shape is left alone, and a new
 log comment is started.
 
@@ -115,11 +132,11 @@ log call. Exit codes and MCP codes are otherwise the usual ones.
 
 The edit is a `mutating` call, so 0017 applies: a `5xx` or a dropped connection is not retried and
 reports that the change may have been applied. The agent is told not to repeat it, and the
-same-as-last-line rule makes one repeat harmless if it does.
+same-as-last-entry rule makes one repeat harmless if it does.
 
 ### Secrets
 
-The text goes through `redactSecrets` with the values from `collectSecrets` before it is sent, so a
+The summary and every detail go through `redactSecrets` with the values from `collectSecrets` before it is sent, so a
 configured token cannot reach the ticket. This catches known credentials only. It does not catch a
 customer's name, an email address, or a credential the CLI was never given; see open questions.
 
@@ -143,9 +160,12 @@ When the tool is registered, the server instructions gain:
 
 > When you are working on a Jira issue, call `jira_issue_log` at each checkpoint without being
 > asked: when you start, after a meaningful commit, when a PR opens, when CI finishes, when you are
-> blocked, and when you are done. Write one line a teammate would find useful, with no code,
-> customer data, or credentials. Not every small commit is a checkpoint. If the call fails, carry
-> on with the work and do not repeat it.
+> blocked, and when you are done. Write a one-line summary a teammate would find useful. At a commit
+> or PR that changes behavior, and when you are done, add a detail for each class, trigger, or other
+> component you created or changed: its name, whether it is new or updated, what changed, and why.
+> Take these from the diff, in plain English. The done entry lists everything changed on the issue.
+> Include no code, customer data, or credentials. Not every small commit is a checkpoint. If the
+> call fails, carry on with the work and do not repeat it.
 
 They are not added otherwise, so an agent that cannot log is not told to.
 
@@ -159,8 +179,13 @@ They are not added otherwise, so an agent that cannot log is not told to.
   extra calls and a second code path. Worth revisiting only if edited headings prove common.
 - **A worklog entry or a custom field.** Jira worklogs record time, not progress, and a field needs
   admin setup per project. A comment works on every issue with no configuration.
-- **Hooks alone.** Reliable, but they only see mechanical events, so they cannot say what was done
-  or that the agent is blocked. They also differ per client. They are a good second layer.
+- **One line per checkpoint.** Shorter, and it was the first draft of this record. Rejected: it
+  says that work happened, not which class or trigger changed or why, which is what a reviewer wants
+  from the ticket.
+- **One comment for the life of the issue.** Tidier, but entries end up above any replies. See
+  Appending.
+- **Hooks alone.** Reliable, but they only see mechanical events, so they can list changed files
+  but cannot say why, or that the agent is blocked. They also differ per client. They are a good second layer.
 - **Instructions alone, using the existing comment tools.** No code, but each session redoes the
   find-and-append by hand, and it still requires `--allow-writes`.
 - **Reusing `.simply/atlassian.json` from 0020.** That is a sensible home for per-project log
@@ -168,7 +193,7 @@ They are not added otherwise, so an agent that cannot log is not told to.
 
 ## Implementation plan
 
-1. `simply-atlassian-core`: `appendWorkLog()` and the find, append, and rollover logic in a new
+1. `simply-atlassian-core`: `appendWorkLog()` and the find, append, new-log, and rollover logic in a new
    `jira-work-log.ts`; export it from `index.ts`.
 2. `simply-atlassian`: `commands/atlassian/jira/issue/log.ts`, with `--from-branch`.
 3. `simply-atlassian-mcp`: a `jira_issue_log` tool in `tools.ts`, a `log` tool kind so `selectTools`
@@ -178,16 +203,44 @@ They are not added otherwise, so an agent that cannot log is not told to.
 
 ## Testing
 
-- Core: creates a log; appends to one on Cloud (ADF) and Server/DC (string); preserves a person's
-  edit; skips a repeated line; rolls over at the limit; ignores another author's log with the same
-  heading; finds the newest log across pages; refuses text that is too long; redacts a configured
-  secret.
+- Core: creates a log; appends an entry with details on Cloud (ADF) and Server/DC (string); preserves
+  a person's edit; skips a repeated entry; starts a new log after someone else's comment but not
+  after the author's own; rolls over at the limit; ignores another author's log with the same
+  heading; finds the newest log across pages; refuses text that is too long and too many details;
+  redacts a configured secret in the summary and in a detail.
 - CLI: key extraction for each row of the branch table, including exit `0` with no key; `--dry-run`
   sends nothing.
 - MCP: `selectTools` for each row of the access table; the instructions appear only with the tool;
   `ATLASSIAN_READ_ONLY` still refuses it.
-- Live, on a Cloud site and a Server/DC instance: the full flow, and whether watchers are notified
-  by each edit.
+- Live, on a Cloud site and a Server/DC instance: the full flow, whether watchers are notified by
+  each edit, and where an edited comment sits among newer ones.
+
+## Future idea: Teams conversations in the log
+
+Not part of the first version. Decisions about a ticket often happen in Teams, so the log could carry
+them too: the entry would say what was decided, who the conversation was with, and link back to it.
+
+```text
+2026-11-02 16:05 UTC | discussion | Agreed to apply discount approval to bulk edits too
+- From a thread in Sales Ops/General on Nov 2, link: https://teams.microsoft.com/l/message/...
+```
+
+The parts exist. An agent running both servers can find a conversation with `simply-teams` search
+and `teams_message_context`, for example by the issue key, then write the entry with
+`jira_issue_log`. That needs no dependency between the repos, only a `discussion` kind here and a
+line in the agent instructions.
+
+What needs deciding first:
+
+- **A summary and a link, never a transcript.** The entry records the decision. People who may read
+  the conversation can follow the link, and Teams still enforces who that is.
+- **The audience changes.** A private chat or a restricted channel may be read by far fewer people
+  than the ticket. Default to nothing being logged unless a person points the agent at a
+  conversation, and to channels only, not private chats, until the team has agreed otherwise.
+- **Naming people.** Someone quoted in a ticket did not agree to be, so the entry should prefer "the
+  team agreed" over attributing words to a named person.
+- **Cleaning.** The fuller guard in the open questions below becomes necessary, not optional, for
+  text that started in Teams.
 
 ## Open questions
 
