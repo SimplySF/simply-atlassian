@@ -204,6 +204,22 @@ They are not added otherwise, so an agent that cannot log is not told to.
 - **Reusing `.simply/atlassian.json` from 0020.** That is a sensible home for per-project log
   settings, but it is unmerged, and the first version has no settings.
 
+## Related work
+
+Searched on 2026-11-02 across the SimplySF repositories, open PRs, and issues. Nothing writes
+progress back to a Jira issue.
+
+- **`simply cicd notify` (`simply-plugins`, 0046).** Posts Teams cards from the pipeline about
+  builds and deployments, listing the issue keys found in commits. It announces results to Teams
+  and never writes to Jira. This record writes to the issue during the work, so the two complement
+  each other.
+- **`AlmProvider` (`simply-cicd-core`).** Recognises issue keys in commit messages. See the open
+  question on `--from-branch`.
+- **`simply gemini skills`.** Installs shared skills for Gemini CLI. See the open question on server
+  instructions.
+- **`jira work` (0020, #72, unmerged).** Shapes the issue before the work starts. This record covers
+  what happens during it.
+
 ## Implementation plan
 
 1. `simply-atlassian-core`: `appendWorkLog()` and the find, append, new-log, and rollover logic in a new
@@ -241,6 +257,11 @@ They are not added otherwise, so an agent that cannot log is not told to.
   card numbers. Porting that here would catch more than `redactSecrets`, at the cost of a sizeable
   dependency for one command. Clay to decide.
 - **Do clients read server instructions?** Support varies by client and is untested for Gemini CLI
-  on Windows, the team's target. If they are ignored, a line in the project's `AGENTS.md` or
-  `GEMINI.md` does the same job, and the guide should give it.
+  on Windows, the team's target. If they are ignored, a shared skill installed with
+  `simply gemini skills install` can carry the same rules, and a line in the project's `AGENTS.md`
+  or `GEMINI.md` is the simpler fallback. The guide should give whichever works.
+- **Should `--from-branch` match configured project keys?** `JiraProvider` in `simply-cicd-core`
+  matches keys only against configured projects, which rules out false matches such as `sha-256`.
+  This design has no configuration, so it accepts any key-shaped token and lets Jira answer `404`.
+  Revisit if false matches prove common, or when per-project settings arrive.
 - **Parity with `simply-gitlab`.** A merge request log could use the same design. Not in scope here.
