@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.10.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-mcp%400.9.5...%40simplysf%2Fsimply-atlassian-mcp%400.10.0) (2026-11-03)
+
+### Features
+
+- add jira xray test step add, update and delete ([#78](https://github.com/SimplySF/simply-atlassian/issues/78)) ([9138e81](https://github.com/SimplySF/simply-atlassian/commit/9138e8124f066b452fb0c6be877a4b842978a988))
+
 ## [0.9.5](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-mcp%400.9.4...%40simplysf%2Fsimply-atlassian-mcp%400.9.5) (2026-11-03)
 
 **Note:** Version bump only for package @simplysf/simply-atlassian-mcp
