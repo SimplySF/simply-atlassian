@@ -15,18 +15,9 @@
  */
 
 import { Args, Flags } from '@oclif/core';
-import {
-  displayValue,
-  formatKeyValue,
-  formatTable,
-  getXrayTest,
-  stepRows,
-  stripControl,
-  type XrayActionStep,
-  type XrayLinkRecord,
-  type XrayTestRecord,
-} from '@simplysf/simply-atlassian-core';
+import { getXrayTest } from '@simplysf/simply-atlassian-core';
 import { stderrLine, XrayCommand, xrayFieldsFlag } from '../../../../../shared/base-command.js';
+import { printXrayTest } from '../../../../../shared/xray-test-view.js';
 
 export default class JiraXrayTestGet extends XrayCommand<typeof JiraXrayTestGet> {
   public static override readonly summary = 'Show one Xray test: steps, definition, links, plans, sets, and path.';
@@ -63,72 +54,8 @@ export default class JiraXrayTestGet extends XrayCommand<typeof JiraXrayTestGet>
     }
     if (this.jsonEnabled()) return result.record;
 
-    this.render(result.record);
+    printXrayTest((message) => this.log(message), result.record);
     for (const note of result.notes) stderrLine(note);
     return result.record;
-  }
-
-  private render(record: XrayTestRecord): void {
-    this.log(
-      formatKeyValue([
-        ['Key', record.key],
-        ['Summary', record.summary],
-        ['Type', record.type],
-        ['Status', record.status],
-        ['Path', record.path],
-        ['Plans', record.plans.length === 0 ? undefined : record.plans.join(', ')],
-        ['Sets', record.sets.length === 0 ? undefined : record.sets.join(', ')],
-      ]),
-    );
-
-    const steps = stepRows(record.steps);
-    if (steps.length > 0) {
-      const withAttachments = steps.some((step) => step.attachments.length > 0);
-      this.log('\nSteps:');
-      this.log(
-        formatTable(steps, [
-          { header: '#', value: (step: XrayActionStep): string => step.index },
-          { header: 'ID', value: (step: XrayActionStep): string | null => step.id },
-          { header: 'ACTION', value: (step: XrayActionStep): string => step.action },
-          { header: 'DATA', value: (step: XrayActionStep): string => step.data },
-          { header: 'EXPECTED RESULT', value: (step: XrayActionStep): string => step.result },
-          ...(withAttachments
-            ? [{ header: 'ATTACHMENTS', value: (step: XrayActionStep): string => step.attachments.join(', ') }]
-            : []),
-        ]),
-      );
-    }
-
-    // Multi-line by design, so newlines survive, but control sequences must not.
-    if (record.definition !== null) this.log(`\nDefinition:\n${stripControl(record.definition)}`);
-
-    if (record.preconditions.length > 0) {
-      this.log('\nPreconditions:');
-      this.log(
-        formatTable(record.preconditions, [
-          { header: 'KEY', value: (pre): string => pre.key },
-          { header: 'SUMMARY', value: (pre): string | null => pre.summary },
-        ]),
-      );
-    }
-
-    if (record.links.length > 0) {
-      this.log('\nLinks:');
-      this.log(
-        formatTable(record.links, [
-          { header: 'RELATIONSHIP', value: (link: XrayLinkRecord): string => link.relationship },
-          { header: 'ISSUE', value: (link: XrayLinkRecord): string | null => link.key },
-          { header: 'TYPE', value: (link: XrayLinkRecord): string | null => link.issueType },
-          { header: 'STATUS', value: (link: XrayLinkRecord): string | null => link.status },
-          { header: 'SUMMARY', value: (link: XrayLinkRecord): string | null => link.summary },
-        ]),
-      );
-    }
-
-    const extras = Object.entries(record.fields);
-    if (extras.length > 0) {
-      this.log('\nFields:');
-      this.log(formatKeyValue(extras.map(([name, value]) => [name, displayValue(value)])));
-    }
   }
 }

@@ -16,6 +16,7 @@
 
 import {
   addIssuesToSprint,
+  addXrayStep,
   BODY_FORMATS,
   buildCommentBody,
   buildCommentEditBody,
@@ -33,6 +34,7 @@ import {
   deleteIssue,
   deleteIssueLink,
   deletePage,
+  deleteXrayStep,
   describeRemoteLink,
   exportXrayTests,
   getXrayTest,
@@ -56,6 +58,7 @@ import {
   type JiraSearchResult,
   type RemoteLink,
   updatePage,
+  updateXrayStep,
 } from '@simplysf/simply-atlassian-core';
 import { z } from 'zod';
 import type { ToolContext } from './context.js';
@@ -168,6 +171,9 @@ const storageMarkdown = z
   );
 
 // --- Xray building blocks, shared by the Xray tools ---
+
+const xrayTestKey = z.string().describe('Test issue key, for example PROJ-12.');
+const xrayStepId = z.string().describe('Step id, as jira_xray_test_get returns it.');
 
 const xrayFields = z
   .array(z.string())
@@ -1034,6 +1040,57 @@ export const TOOLS: readonly ToolSpec[] = [
       const result = await getXrayTest(ctx.xray(), input.test, { fields: input.fields });
       return input.raw === true ? result.issue : { record: result.record, notes: result.notes };
     },
+  }),
+  tool({
+    name: 'jira_xray_test_step_add',
+    title: 'Xray: add a test step',
+    description:
+      "Add a step to the end of a manual test. A new step always goes last: Xray's API documents no way to " +
+      'place one elsewhere. Returns { record, notes }: the test read back, showing the step and its id. ' +
+      'record is null, with a note, if the write landed but the read failed; do not retry then.',
+    command: ['atlassian', 'jira', 'xray', 'test', 'step', 'add'],
+    kind: 'write',
+    app: 'xray',
+    inputSchema: {
+      test: xrayTestKey,
+      action: z.string().describe('What the tester does.'),
+      data: z.string().optional().describe('The data the step uses.'),
+      result: z.string().optional().describe('The expected result.'),
+      ...WRITE_SHAPE,
+    },
+    run: (ctx, input) => addXrayStep(ctx.xray(), input),
+  }),
+  tool({
+    name: 'jira_xray_test_step_update',
+    title: 'Xray: edit a test step',
+    description:
+      "Edit one step's action, data or expected result, sending only what changes. Custom step columns and " +
+      'attachments are left as they are, and a step that calls another test is refused. Step ids come from ' +
+      'jira_xray_test_get. Returns { record, notes }, as jira_xray_test_step_add does.',
+    command: ['atlassian', 'jira', 'xray', 'test', 'step', 'update'],
+    kind: 'write',
+    app: 'xray',
+    inputSchema: {
+      test: xrayTestKey,
+      step: xrayStepId,
+      action: z.string().optional().describe('What the tester does.'),
+      data: z.string().optional().describe('The data the step uses. An empty string clears it.'),
+      result: z.string().optional().describe('The expected result. An empty string clears it.'),
+      ...WRITE_SHAPE,
+    },
+    run: (ctx, input) => updateXrayStep(ctx.xray(), input),
+  }),
+  tool({
+    name: 'jira_xray_test_step_delete',
+    title: 'Xray: delete a test step',
+    description:
+      'Delete one step and its attachments. Irreversible: requires confirm: true. Use dryRun to see what would ' +
+      'be deleted. Step ids come from jira_xray_test_get. Returns { record, notes }.',
+    command: ['atlassian', 'jira', 'xray', 'test', 'step', 'delete'],
+    kind: 'destructive',
+    app: 'xray',
+    inputSchema: { test: xrayTestKey, step: xrayStepId, ...DESTRUCTIVE_SHAPE },
+    run: (ctx, input) => deleteXrayStep(ctx.xray(), input),
   }),
   tool({
     name: 'jira_xray_test_list',

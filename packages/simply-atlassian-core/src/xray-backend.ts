@@ -101,6 +101,12 @@ export interface XrayBackend {
   repositoryFolders(project: string): Promise<unknown>;
   /** The test keys in one repository folder, through Xray's REST API rather than JQL. */
   folderTestKeys(project: string, folderId: string, recursive: boolean): Promise<string[]>;
+  /** A test's steps through Xray's step API, whose ids are the ones the step writes take. */
+  testSteps(test: string): Promise<unknown>;
+  /** Appends a step. Xray's API takes no position. */
+  addTestStep(test: string, body: Record<string, string>): Promise<void>;
+  updateTestStep(test: string, stepId: string, body: Record<string, string>): Promise<void>;
+  deleteTestStep(test: string, stepId: string): Promise<void>;
 }
 
 export interface XrayBackendOptions {
@@ -251,6 +257,22 @@ export class XrayServerBackend implements XrayBackend {
     );
   }
 
+  public testSteps(test: string): Promise<unknown> {
+    return this.client.getFromRoot(stepsPath(test));
+  }
+
+  public addTestStep(test: string, body: Record<string, string>): Promise<void> {
+    return this.client.putToRoot(stepsPath(test), body);
+  }
+
+  public updateTestStep(test: string, stepId: string, body: Record<string, string>): Promise<void> {
+    return this.client.postToRoot(`${stepsPath(test)}/${encodeURIComponent(stepId)}`, body);
+  }
+
+  public deleteTestStep(test: string, stepId: string): Promise<void> {
+    return this.client.deleteFromRoot(`${stepsPath(test)}/${encodeURIComponent(stepId)}`);
+  }
+
   private async followPages(
     query: XrayQuery,
     options: {
@@ -286,6 +308,10 @@ export class XrayServerBackend implements XrayBackend {
     /* eslint-enable no-await-in-loop */
     return { issues, total, pages, complete: false };
   }
+}
+
+function stepsPath(test: string): string {
+  return `${RAVEN_BASE}/api/test/${encodeURIComponent(test)}/step`;
 }
 
 /** Follows Xray's 1-based `page`/`limit` paging until a short page, collecting test keys. */

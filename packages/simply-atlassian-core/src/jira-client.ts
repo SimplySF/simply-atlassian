@@ -507,6 +507,22 @@ export class JiraClient {
     return this.request<T>(path, { method: 'GET', query }, '');
   }
 
+  /**
+   * The verbs Xray's step API writes with, on the same terms as {@link getFromRoot}. Marked mutating
+   * so they get the 403 hint and never retry a 5xx. Xray answers these in plain text.
+   */
+  public async putToRoot(path: string, body: Record<string, unknown>): Promise<void> {
+    await this.request(path, { method: 'PUT', body, mutating: true, acceptsText: true }, '');
+  }
+
+  public async postToRoot(path: string, body: Record<string, unknown>): Promise<void> {
+    await this.request(path, { method: 'POST', body, mutating: true, acceptsText: true }, '');
+  }
+
+  public async deleteFromRoot(path: string): Promise<void> {
+    await this.request(path, { method: 'DELETE', mutating: true, acceptsText: true }, '');
+  }
+
   public getProjectVersions(projectKey: string): Promise<unknown> {
     return this.request(`/project/${encodeURIComponent(projectKey)}/versions`, { method: 'GET' });
   }

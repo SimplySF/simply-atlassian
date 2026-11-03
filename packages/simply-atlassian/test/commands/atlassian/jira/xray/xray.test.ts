@@ -25,10 +25,12 @@ import {
   respondJson,
   routeJiraSearch,
   routeXrayDiscovery,
+  routeXraySteps,
   startTestServer,
   XRAY_FIXTURE_IDS,
   xrayFixtureIssue,
   xrayStep,
+  type FakeXraySteps,
   type TestServer,
 } from '@simplysf/simply-atlassian-core/testing';
 import type { XrayTestRecord } from '@simplysf/simply-atlassian-core';
@@ -39,6 +41,9 @@ import JiraXraySetList from '../../../../../src/commands/atlassian/jira/xray/set
 import JiraXrayTestExport from '../../../../../src/commands/atlassian/jira/xray/test/export.js';
 import JiraXrayTestGet from '../../../../../src/commands/atlassian/jira/xray/test/get.js';
 import JiraXrayTestList from '../../../../../src/commands/atlassian/jira/xray/test/list.js';
+import JiraXrayTestStepAdd from '../../../../../src/commands/atlassian/jira/xray/test/step/add.js';
+import JiraXrayTestStepDelete from '../../../../../src/commands/atlassian/jira/xray/test/step/delete.js';
+import JiraXrayTestStepUpdate from '../../../../../src/commands/atlassian/jira/xray/test/step/update.js';
 
 let server: TestServer;
 let cacheHome: string;
@@ -357,5 +362,135 @@ describe('write safety', () => {
     const result = (await JiraXrayTestList.run(argv('--project', 'OM'))) as { issues: unknown[] };
 
     expect(result.issues).toHaveLength(1);
+  });
+});
+
+describe('jira xray test step', () => {
+  const STEP_PATH = '/rest/raven/1.0/api/test/OM-12/step';
+  let fake: FakeXraySteps;
+
+  beforeEach(() => {
+    fake = routeXraySteps(server, 'OM-12', [
+      { id: 311, action: 'Open Users', result: 'List shown' },
+      { id: 312, action: 'Pick a user', data: 'bob' },
+    ]);
+    server.route('/rest/api/2/issue/OM-12', (_req, res) =>
+      respondJson(res, 200, xrayFixtureIssue('OM-12', { steps: fake.fieldSteps() })),
+    );
+  });
+
+  const writes = (): Array<{ method: string; url: string; body: string }> =>
+    server.requests.filter((request) => request.method !== 'GET');
+  const failure = async (run: Promise<unknown>): Promise<{ message: string; oclif?: { exit?: number } }> =>
+    (await run.catch((caught: unknown) => caught)) as { message: string; oclif?: { exit?: number } };
+
+  it('adds with the documented verb and body, accepts a plain-text 200, and returns the test read back', async () => {
+    const result = (await JiraXrayTestStepAdd.run(
+      argv('OM-12', '--action', 'Save', '--data', 'x', '--result', 'Saved', '--json'),
+    )) as { record: XrayTestRecord; notes: string[] };
+
+    expect(writes()).toEqual([
+      { method: 'PUT', url: STEP_PATH, body: JSON.stringify({ step: 'Save', data: 'x', result: 'Saved' }) },
+    ]);
+    expect(result.record.steps.map((step) => step.action)).toEqual(['Open Users', 'Pick a user', 'Save']);
+    expect(result.record.steps[2]?.id).toBe('1001');
+  });
+
+  it('shows the test and its step ids in the terminal', async () => {
+    await JiraXrayTestStepAdd.run(argv('OM-12', '--action', 'Save'));
+
+    expect(stdout.join('')).toContain('1001');
+    expect(stdout.join('')).toContain('ID');
+  });
+
+  it('updates with POST, sending only what changed', async () => {
+    await JiraXrayTestStepUpdate.run(argv('OM-12', '311', '--action', 'Open Users', '--result', 'Sorted', '--json'));
+
+    expect(writes()).toEqual([{ method: 'POST', url: `${STEP_PATH}/311`, body: JSON.stringify({ result: 'Sorted' }) }]);
+    expect(fake.steps[0]?.result).toBe('Sorted');
+  });
+
+  it('sends nothing when an update changes nothing', async () => {
+    await JiraXrayTestStepUpdate.run(argv('OM-12', '311', '--action', 'Open Users', '--json'));
+
+    expect(writes()).toEqual([]);
+  });
+
+  it('notes custom columns it leaves alone', async () => {
+    fake.steps[0].extra = { fields: { Comment: 'keep' } };
+    const result = (await JiraXrayTestStepUpdate.run(argv('OM-12', '311', '--result', 'New', '--json'))) as {
+      notes: string[];
+    };
+
+    expect(result.notes.join()).toContain('Comment');
+    expect(JSON.parse(writes()[0]?.body ?? '{}')).toEqual({ result: 'New' });
+  });
+
+  it('refuses to edit a call step', async () => {
+    fake.steps[0].extra = { testCallBean: { key: 'OM-2' } };
+    const error = await failure(JiraXrayTestStepUpdate.run(argv('OM-12', '311', '--result', 'New')));
+
+    expect(error.message).toContain('calls another test');
+    expect(error.oclif?.exit).toBe(2);
+    expect(writes()).toEqual([]);
+  });
+
+  it('refuses a step id the test does not have, naming the ones it does', async () => {
+    const error = await failure(JiraXrayTestStepUpdate.run(argv('OM-12', '99', '--result', 'New')));
+
+    expect(error.message).toContain('311, 312');
+    expect(error.oclif?.exit).toBe(2);
+    expect(writes()).toEqual([]);
+  });
+
+  it('deletes with --confirm and returns the test without the step', async () => {
+    const result = (await JiraXrayTestStepDelete.run(argv('OM-12', '311', '--confirm', '--json'))) as {
+      record: XrayTestRecord;
+    };
+
+    expect(writes()).toEqual([{ method: 'DELETE', url: `${STEP_PATH}/311`, body: '' }]);
+    expect(result.record.steps.map((step) => step.id)).toEqual(['312']);
+  });
+
+  it('refuses a delete without --confirm before any request', async () => {
+    const error = await failure(JiraXrayTestStepDelete.run(argv('OM-12', '311')));
+
+    expect(error.message).toContain('--confirm');
+    expect(error.oclif?.exit).toBe(2);
+    expect(server.requests).toEqual([]);
+  });
+
+  it('sends no write on a dry run, and prints what it would do', async () => {
+    await JiraXrayTestStepDelete.run(argv('OM-12', '311', '--dry-run'));
+    await JiraXrayTestStepAdd.run(argv('OM-12', '--action', 'Save', '--dry-run'));
+
+    expect(writes()).toEqual([]);
+    expect(stdout.join('')).toContain('delete step 311: Open Users');
+    expect(stdout.join('')).toContain('add a step: Save');
+  });
+
+  it('refuses every write under ATLASSIAN_READ_ONLY with exit 2', async () => {
+    process.env.ATLASSIAN_READ_ONLY = '1';
+    const error = await failure(JiraXrayTestStepAdd.run(argv('OM-12', '--action', 'Save')));
+
+    expect(error.oclif?.exit).toBe(2);
+    expect(server.requests).toEqual([]);
+  });
+
+  it('adds the write-scope hint to a 403, and does not retry a 500', async () => {
+    server.route(STEP_PATH, (request, response) => {
+      if (request.method === 'GET') respondJson(response, 200, []);
+      else respondJson(response, 403, {});
+    });
+    const denied = await failure(JiraXrayTestStepAdd.run(argv('OM-12', '--action', 'Save')));
+    expect(denied.message).toContain('may lack write scope');
+
+    server.route(`${STEP_PATH}/311`, (_request, response) => respondJson(response, 500, {}));
+    server.route(STEP_PATH, (_request, response) =>
+      respondJson(response, 200, [{ id: 311, index: 1, step: { raw: 'a' }, data: { raw: '' }, result: { raw: '' } }]),
+    );
+    const failed = await failure(JiraXrayTestStepUpdate.run(argv('OM-12', '311', '--result', 'New')));
+    expect(failed.message).toContain('may have been applied');
+    expect(writes().filter((request) => request.url === `${STEP_PATH}/311`)).toHaveLength(1);
   });
 });
