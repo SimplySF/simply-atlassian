@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.15.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.14.2...%40simplysf%2Fsimply-atlassian%400.15.0) (2026-11-03)
+
+### Features
+
+- **simply-atlassian-core:** carry Xray step ids in the export record ([#77](https://github.com/SimplySF/simply-atlassian/issues/77)) ([7ccca55](https://github.com/SimplySF/simply-atlassian/commit/7ccca556473cbf29b7dfdb93c6f1fdfaa2182012))
+
 ## [0.14.2](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.14.1...%40simplysf%2Fsimply-atlassian%400.14.2) (2026-10-26)
 
 **Note:** Version bump only for package @simplysf/simply-atlassian
