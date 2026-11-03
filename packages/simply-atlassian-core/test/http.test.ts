@@ -352,10 +352,10 @@ describe('HttpTransport.stream', () => {
     return Buffer.concat(chunks).toString('utf8');
   }
 
-  it('resolves at the headers with the body unread, asking for any type', async () => {
+  it('resolves at the headers with the body unread, asking for any type and identity encoding', async () => {
     server.route('/file', (req, res) => {
       res.writeHead(200, { 'content-type': 'text/plain', 'content-length': '5' });
-      res.end(req.headers.accept === '*/*' ? 'hello' : 'wrong');
+      res.end(req.headers.accept === '*/*' && req.headers['accept-encoding'] === 'identity' ? 'hello' : 'wrong');
     });
 
     const response = await transport().stream({ method: 'GET', path: '/file' });
@@ -425,6 +425,45 @@ describe('HttpTransport.stream', () => {
 
     expect(error).toBeInstanceOf(NetworkError);
     expect((error as NetworkError).message).toContain('sent no data for 100 ms');
+  });
+
+  it('does not count a slow consumer against the server idle timeout', async () => {
+    server.route('/paced', (_req, res) => {
+      res.writeHead(200);
+      res.write('first-');
+      setTimeout(() => res.end('second'), 20);
+    });
+
+    const response = await transport().stream({ method: 'GET', path: '/paced' }, { idleTimeoutMs: 80 });
+    const chunks: string[] = [];
+    for await (const chunk of response.body) {
+      chunks.push(Buffer.from(chunk).toString('utf8'));
+      // Hold the yielded chunk longer than idleTimeoutMs: the server already delivered it.
+      await new Promise((resolve) => {
+        setTimeout(resolve, 120);
+      });
+    }
+
+    expect(chunks.join('')).toBe('first-second');
+  });
+
+  it('aborts an unstarted stream when return() is called or the idle timer fires', async () => {
+    let closed = false;
+    server.route('/unread', (_req, res) => {
+      res.writeHead(200);
+      res.write('open');
+      res.on('close', () => {
+        closed = true;
+      });
+    });
+
+    const response = await transport().stream({ method: 'GET', path: '/unread' }, { idleTimeoutMs: 60 });
+    const iterator = response.body[Symbol.asyncIterator]();
+    await iterator.return?.();
+    await new Promise((resolve) => {
+      setTimeout(resolve, 30);
+    });
+    expect(closed).toBe(true);
   });
 
   it('keeps a slow body alive while it makes progress, past the transport timeout', async () => {

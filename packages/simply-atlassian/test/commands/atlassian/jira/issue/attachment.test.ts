@@ -157,12 +157,24 @@ describe('jira issue attachment download', () => {
     expect(readdirSync(target)).toEqual(['b.txt']);
   });
 
-  it('refuses an unknown id before downloading anything', async () => {
+  it('refuses an unknown id before downloading anything, even when the issue has no attachments', async () => {
     serveIssue([{ id: '10', filename: 'a.txt', content: 'a' }]);
     await expect(
       run(new JiraIssueAttachmentDownload(argv('PROJ-1', '--id', '10,99', '--output-dir', directory), config)),
     ).rejects.toThrow('No attachment 99 on PROJ-1.');
     expect(readdirSync(directory)).toEqual([]);
+
+    serveIssue([]);
+    await expect(
+      run(new JiraIssueAttachmentDownload(argv('PROJ-1', '--id', '99', '--output-dir', directory), config)),
+    ).rejects.toThrow('No attachment 99 on PROJ-1.');
+  });
+
+  it('says when the issue has no attachments and no --id was asked for', async () => {
+    serveIssue([]);
+    const { output, result } = await run(new JiraIssueAttachmentDownload(argv('PROJ-1'), config));
+    expect(output).toBe('No attachments on PROJ-1.');
+    expect(result).toEqual({ directory: undefined, files: [] });
   });
 
   it('refuses existing files unless --overwrite is passed', async () => {

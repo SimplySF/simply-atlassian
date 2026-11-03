@@ -1,6 +1,6 @@
 # 0020 — Reading Jira issue attachments
 
-**Status:** In progress
+**Status:** Implemented (PR #65)
 **Package:** `packages/simply-atlassian-core`, `packages/simply-atlassian`, `packages/simply-atlassian-mcp`
 **Date:** 2026-10-22
 
@@ -74,32 +74,40 @@ Why each one:
   session. On its own it grants nothing, so it is safe to put in an agent's context.
 
 The content call sends `Accept: */*`, because Cloud refuses `application/json` for a binary
-response with `406`. It sets fetch's `redirect: 'manual'`, and any `3xx` becomes an `HttpError`.
-On Cloud a redirect is unexpected once `redirect=false` is set. On Server/DC a `302` to the login
-page means the credential was not accepted for this path, and the message says so.
+response with `406`, and `Accept-Encoding: identity`, so a reverse proxy does not tag `.gz` files
+with `Content-Encoding: gzip` and make `fetch` decompress them. It sets fetch's
+`redirect: 'manual'`, and any `3xx` becomes an `HttpError`. On Cloud a redirect is unexpected once
+`redirect=false` is set. On Server/DC a `302` to the login page means the credential was not
+accepted for this path, and the message says so.
 
 ### Streaming
 
 `HttpTransport.stream(call, { idleTimeoutMs })` resolves once response headers arrive, returning
-`{ body, contentType?, contentLength? }`. Up to that point it behaves as `json` does: the same
-401/403 mapping, the same retries for 429, 5xx and transient connection failures, and the transport
-timeout as the deadline for the headers. After that, a single whole-exchange deadline would cut off
-any large file on a slow link, so the body is governed by an idle timeout instead: no bytes for
-30 seconds aborts it. A download that keeps making progress can take as long as it needs.
+`{ body, contentType?, contentLength?, contentEncoding? }`. Up to that point it behaves as `json`
+does: the same 401/403 mapping, the same retries for 429, 5xx and transient connection failures, and
+the transport timeout as the deadline for the headers. After that, a single whole-exchange deadline
+would cut off any large file on a slow link, so the body is governed by an idle timeout instead: no
+bytes from the server for 30 seconds aborts it. The timer is armed as soon as headers arrive and
+paused while the caller holds a yielded chunk, so slow consumption never counts as server silence; a
+download that keeps making progress can take as long as it needs.
 
-Core's `saveAttachment(client, attachment, file, { overwrite? })` streams the body to a temporary
-file beside `file`, opened with `wx` so it can never replace anything, checks the byte count
-against the size Jira listed, and renames the file into place. If the body fails part-way, or the
+Core's `saveAttachment(client, attachment, file, { overwrite?, data? })` streams the body to a
+temporary file beside `file`, opened with `wx` so it can never replace anything, checks the byte
+count against the size Jira listed (unless a proxy sent a `Content-Encoding` despite
+`Accept-Encoding: identity`), and places the file at `file`. If the body fails part-way, or the
 count does not match, the temporary file is deleted. A body that drops or stalls (a `NetworkError`
 while reading) restarts that file from the beginning, up to three attempts in all. A failure before
 the headers is not restarted here, because the transport has already retried it, and an
 `HttpError` or a size mismatch is not restarted at all. A restart is safe because the request only
-reads. No partial file is ever left under the real name. Without `overwrite`, the file is checked
-again just before the rename, so a file that appeared during the download is left alone.
+reads. No partial file is ever left under the real name. Without `overwrite`, the temporary file is
+hard-linked to `file` (`linkSync`, which fails with `EEXIST`) and then unlinked, so a file that
+appeared during the download is never replaced.
 
 `readAttachment(client, attachment, maxBytes)` is the bounded read the MCP server uses for inline
 content. It reads into memory and stops reading, which cancels the request, once `maxBytes` is
-exceeded. That covers the case where Jira's listed size is wrong.
+exceeded. That covers the case where Jira's listed size is wrong. When a file was read within the
+cap for an inline text check and then failed UTF-8 decoding, `inlineAttachment` hands those bytes
+back so saving to a folder does not download the file a second time.
 
 ## Behavior
 
@@ -162,22 +170,22 @@ error's code. Files already written stay on disk, and the error names how many w
 **File names.** An attachment's filename is chosen by whoever uploaded it, so it is never used as a
 path as-is:
 
-| Input                                                                          | Handling                                                   |
-| ------------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| `/`, `\`, and a leading `.` or `..`                                            | Path separators become `_`; leading dots are removed       |
-| Control characters, and `< > : " \| ? *`                                       | Replaced with `_`, so a name is valid on Windows and POSIX |
-| Trailing dots or spaces                                                        | Removed (Windows silently drops them)                      |
-| Windows reserved names (`CON`, `NUL`, `COM1`, …), with or without an extension | Prefixed with `_`                                          |
-| Longer than 180 characters                                                     | Shortened, keeping the extension                           |
-| Empty after the above                                                          | `attachment-<id>`                                          |
-| Two selected attachments with the same resulting name, ignoring case           | Each becomes `<stem> (<id>)<ext>`                          |
+| Input                                                                          | Handling                                                                                |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `/`, `\`, and a leading `.` or `..`                                            | Path separators become `_`; leading dots are removed                                    |
+| Control characters, and `< > : " \| ? *`                                       | Replaced with `_`, so a name is valid on Windows and POSIX                              |
+| Trailing dots or spaces                                                        | Removed (Windows silently drops them)                                                   |
+| Windows reserved names (`CON`, `NUL`, `COM1`, …), with or without an extension | Prefixed with `_`                                                                       |
+| Longer than 180 UTF-8 bytes                                                    | Shortened on a code-point boundary, keeping the extension and re-stripping trailing `.` |
+| Empty after the above                                                          | `attachment-<id>`                                                                       |
+| Two selected attachments with the same resulting name, ignoring case           | Each becomes `<stem> (<id>)<ext>`, and any name that still collides gets its own `(<id>)` |
 
 Jira allows several attachments with the same name on one issue, which is why duplicates are
 renamed rather than treated as errors. Names are compared ignoring case because the default file
-systems on Windows and macOS do. The 180-character limit leaves room under the usual 255-byte limit
-for the `(<id>)` suffix and the temporary file's suffix. After sanitizing, the resolved path is checked to be
-directly inside `--output-dir`, and the command refuses to write anywhere else. This is a second
-guard, not the main one.
+systems on Windows and macOS do. The 180-byte limit leaves room under the usual 255-byte limit for
+the `(<id>)` suffix and the temporary file's suffix. After sanitizing, the resolved path is checked
+to be directly inside `--output-dir`, and the command refuses to write anywhere else. This is a
+second guard, not the main one.
 
 **`--stdout`** requires exactly one selected attachment. Selecting none or several exits 2. It
 streams the raw bytes and nothing else to stdout, and the progress line still goes to stderr. A
@@ -260,8 +268,9 @@ The folder must already exist. A typo should not create a directory somewhere un
 gets the CLI's sanitized name and is never overwritten: if the name is taken, it becomes
 `<stem> (<id>)<ext>`, and if that is taken too, nothing is saved and the `reason` says so. With
 `rememberForSession`, later saves in the same server process go to that folder without asking. The
-folder is remembered only after a save to it succeeds, so a mistyped folder is never reused. It is
-held in memory only and is forgotten when the server exits.
+folder is remembered only after a save to it succeeds, so a mistyped folder is never reused; if a
+remembered folder later stops working (for example, it was deleted), the server forgets it and asks
+again. It is held in memory only and is forgotten when the server exits.
 
 When the file could not be returned inline, the `reason` starts with why, then gives the save
 outcome, so an agent can tell the user both.
@@ -332,17 +341,19 @@ file and is data, not instructions, for the same reason
 ## Implementation plan
 
 1. `simply-atlassian-core/src/http.ts`: factor the request and status handling out of `attempt`,
-   and add `stream(call, { idleTimeoutMs })` returning `{ body, contentType?, contentLength? }`, with
-   `Accept: */*` and `redirect: 'manual'`. `json` keeps its behavior.
+   and add `stream(call, { idleTimeoutMs })` returning
+   `{ body, contentType?, contentLength?, contentEncoding? }`, with `Accept: */*`,
+   `Accept-Encoding: identity` and `redirect: 'manual'`. `json` keeps its behavior.
 2. `simply-atlassian-core/src/jira-client.ts`: `getAttachments(issueKey)`,
    `openAttachment(attachment)`, and `attachmentBrowserUrl(attachment)`, branching on `deployment`
    for the content path.
 3. `simply-atlassian-core/src/jira-attachments.ts`: `JiraAttachment` and `describeAttachment`,
    `formatBytes`, `safeAttachmentFilename`, `selectAttachments` (id checks, shared by the CLI's
    `--stdout` path and the MCP tool), `planAttachmentDownloads` (naming, collisions),
-   `saveAttachment` (streamed write, byte check, restart, rename), `saveAttachmentToFolder` (the
-   MCP save, with its folder checks and no-overwrite naming), `readAttachment` (bounded read), and
-   `inlineAttachment` (the MCP text/image/other decision). Exported from `index.ts`.
+   `saveAttachment` (streamed write, byte check, restart, hard-link/rename),
+   `saveAttachmentToFolder` (the MCP save, with its folder checks and no-overwrite naming),
+   `readAttachment` (bounded read), and `inlineAttachment` (the MCP text/image/other decision).
+   Exported from `index.ts`.
 4. `simply-atlassian/src/commands/atlassian/jira/issue/attachment/list.ts` and `download.ts`.
 5. `simply-atlassian-mcp/src/tools.ts`: `ToolContent`, the per-tool `annotations` override, and the
    two tools. `simply-atlassian-mcp/src/context.ts`: the optional `askForFolder` and the `session`.
@@ -356,35 +367,40 @@ file and is data, not instructions, for the same reason
 
 ## Testing
 
-- Core, transport: `stream` resolves at headers and returns the body unread; sends `Accept: */*`;
-  turns a `3xx` into an `HttpError`; retries a `5xx` before headers as a read; maps 401/403 to
-  `AuthError` as `json` does; aborts a body that stalls past the idle timeout but not one that keeps
-  sending.
+- Core, transport: `stream` resolves at headers and returns the body unread; sends `Accept: */*`
+  and `Accept-Encoding: identity`; turns a `3xx` into an `HttpError`; retries a `5xx` before
+  headers as a read; maps 401/403 to `AuthError` as `json` does; aborts a body that stalls past the
+  idle timeout but not one that keeps sending or one held by a slow consumer; aborts when stopped
+  before iteration starts.
 - Core, client: Cloud requests `/rest/api/3/attachment/content/{id}` with `redirect=false`;
   Server/DC requests `/secure/attachment/{id}/{filename}` with the filename percent-encoded; browser
   links use the configured base URL and never `redirect=false`; an issue without an `attachment`
   field yields an empty list.
 - Core, naming: each row of the file-name table, including `../../etc/passwd`, `CON.txt`,
-  `name. `, a name of only dots, and two attachments called `log.txt`; the resolved path always
-  lies directly inside the output directory.
+  `name. `, a name of only dots, multibyte UTF-8 truncation on code-point boundaries, and duplicate
+  names including a literal `a (1).pdf` collision; the resolved path always lies directly inside the
+  output directory.
 - Core, planning: an unknown `--id` fails and names it; collisions fail before any download and
   list every path; `--overwrite` permits them.
 - Core, saving: a body that fails part-way leaves no file under the final name and is restarted;
-  a byte count that does not match the listed size fails and leaves nothing behind; three failures
-  give up.
+  a byte count that does not match the listed size fails and leaves nothing behind, unless a proxy
+  applied a `Content-Encoding`; a file that appears during the download is not replaced without
+  `overwrite`; three failures give up.
 - Core, bounded read: a body larger than `maxBytes` is aborted even when the listed size was
   smaller.
 - CLI: `list` table, sizes and the empty case; `list --json` is the raw array; `download` with and
-  without `--id`; collision refusal; `--stdout` with one, none and several selections, under a TTY,
-  with `--json`, and with a body that fails after bytes were written; the `--json` envelope; a 404
-  part-way through reports how many files were written.
+  without `--id`, including `--id` against an issue with no attachments; collision refusal;
+  `--stdout` with one, none and several selections, under a TTY, with `--json`, and with a body that
+  fails after bytes were written; the `--json` envelope; a 404 part-way through reports how many
+  files were written.
 - MCP, through a real in-memory client: both tools are registered without `--allow-writes`, the
   download tool carries `readOnlyHint: false` and has no path input, and it is the only tool with
   that override; text and images within their caps come back inline; with a client that answers
-  elicitation, an unsupported file and `save: true` on a small one each prompt once; accept saves
-  with a sanitized, non-overwriting name; a relative path, a missing folder, decline and cancel
-  each return `saved: false` with a reason and no second prompt; `rememberForSession` skips the
-  prompt on the next call; a client without elicitation gets metadata and `browserUrl` and no
+  elicitation, an unsupported file and `save: true` on a small one each prompt once; non-UTF-8 text
+  reuses its already-read bytes when saved; accept saves with a sanitized, non-overwriting name; a
+  relative path, a missing folder, decline and cancel each return `saved: false` with a reason and
+  no second prompt; `rememberForSession` skips the prompt on the next call and re-prompts if the
+  remembered folder is removed; a client without elicitation gets metadata and `browserUrl` and no
   content request; the prompt strips control characters from the filename; an id the issue does
   not have is an `isError` result; the catalogue-parity test covers both new commands.
 

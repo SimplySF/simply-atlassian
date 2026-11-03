@@ -55,6 +55,7 @@ export interface StreamResponse {
   readonly body: AsyncIterable<Uint8Array>;
   readonly contentType?: string;
   readonly contentLength?: number;
+  readonly contentEncoding?: string;
 }
 
 /** Where and how a transport talks: fixed per client instance. */
@@ -102,6 +103,7 @@ type AttemptOutcome<T> =
 /** How one kind of call reads a successful response; everything before that is shared. */
 interface Exchange<T> {
   readonly accept: string;
+  readonly headers?: Record<string, string>;
   readonly redirect: NonNullable<RequestInit['redirect']>;
   readonly read: (response: Response, controller: AbortController) => Promise<T>;
 }
@@ -185,6 +187,9 @@ export class HttpTransport {
     const idleTimeoutMs = options.idleTimeoutMs ?? this.timeoutMs;
     return this.execute(call, {
       accept: '*/*',
+      // Ask for raw bytes: a proxy that tags .gz files with Content-Encoding: gzip would
+      // otherwise make fetch decompress the file and disagree with Jira's listed byte count.
+      headers: { 'Accept-Encoding': 'identity' },
       redirect: 'manual',
       read: (response, controller): Promise<StreamResponse> => {
         const length = Number(response.headers.get('content-length') ?? Number.NaN);
@@ -192,6 +197,7 @@ export class HttpTransport {
           body: guardBody(response.body, controller, idleTimeoutMs, call),
           contentType: response.headers.get('content-type') ?? undefined,
           contentLength: Number.isSafeInteger(length) && length >= 0 ? length : undefined,
+          contentEncoding: response.headers.get('content-encoding') ?? undefined,
         });
       },
     });
@@ -231,7 +237,7 @@ export class HttpTransport {
     }, this.timeoutMs);
 
     try {
-      const headers: Record<string, string> = { Accept: exchange.accept, ...this.target.headers };
+      const headers: Record<string, string> = { Accept: exchange.accept, ...exchange.headers, ...this.target.headers };
       if (call.body !== undefined) headers['Content-Type'] = 'application/json';
 
       const response = await fetch(url, {
@@ -349,45 +355,69 @@ export class HttpTransport {
 const TRANSIENT = Symbol('transient-transport-failure');
 
 /**
- * Yields a response body chunk by chunk, abandoning it after `idleMs` without a byte. Every way
- * out — the end, a failure, or the caller stopping early — aborts the request, so an unfinished
- * body never holds a socket open.
+ * Yields a response body chunk by chunk, abandoning it after `idleMs` without a byte from the
+ * server. The timer is armed as soon as headers arrive and paused while the caller holds a
+ * yielded chunk, so slow consumption never counts as server silence. Every way out — the end, a
+ * failure, the caller stopping early, or never iterating at all — aborts the request so an
+ * unfinished body never holds a socket open.
  */
-async function* guardBody(
+function guardBody(
   body: ReadableStream<Uint8Array> | null,
   controller: AbortController,
   idleMs: number,
   call: StreamCall,
 ): AsyncGenerator<Uint8Array> {
-  if (body === null) return;
-  const reader = body.getReader();
-  let idle: NodeJS.Timeout | undefined;
-  try {
-    /* Chunks arrive in order; each read has to wait for the one before it. */
-    /* eslint-disable no-await-in-loop */
-    for (;;) {
-      clearTimeout(idle);
-      idle = setTimeout(() => {
-        controller.abort();
-      }, idleMs);
-      let chunk: Awaited<ReturnType<typeof reader.read>>;
-      try {
-        chunk = await reader.read();
-      } catch (error) {
-        if (isAbort(error)) {
-          throw new NetworkError(`${call.method} ${call.path} sent no data for ${idleMs} ms and was abandoned.`);
-        }
-        const description = transportCode(error) ?? (error instanceof Error ? error.message : String(error));
-        throw new NetworkError(`${call.method} ${call.path} failed while reading the response: ${description}.`);
-      }
-      if (chunk.done) return;
-      yield chunk.value;
-    }
-    /* eslint-enable no-await-in-loop */
-  } finally {
+  const reader = body?.getReader();
+  let idle: NodeJS.Timeout | undefined =
+    reader === undefined
+      ? undefined
+      : setTimeout(() => {
+          controller.abort();
+        }, idleMs);
+  const stop = (): void => {
     clearTimeout(idle);
     controller.abort();
+  };
+  if (reader === undefined) stop();
+
+  async function* iterate(): AsyncGenerator<Uint8Array> {
+    if (reader === undefined) return;
+    try {
+      /* Chunks arrive in order; each read has to wait for the one before it. */
+      /* eslint-disable no-await-in-loop */
+      for (;;) {
+        clearTimeout(idle);
+        idle = setTimeout(() => {
+          controller.abort();
+        }, idleMs);
+        let chunk: Awaited<ReturnType<typeof reader.read>>;
+        try {
+          chunk = await reader.read();
+        } catch (error) {
+          if (isAbort(error)) {
+            throw new NetworkError(`${call.method} ${call.path} sent no data for ${idleMs} ms and was abandoned.`);
+          }
+          const description = transportCode(error) ?? (error instanceof Error ? error.message : String(error));
+          throw new NetworkError(`${call.method} ${call.path} failed while reading the response: ${description}.`);
+        } finally {
+          clearTimeout(idle);
+        }
+        if (chunk.done) return;
+        yield chunk.value;
+      }
+      /* eslint-enable no-await-in-loop */
+    } finally {
+      stop();
+    }
   }
+
+  const generator = iterate();
+  const originalReturn = generator.return.bind(generator);
+  generator.return = (): Promise<IteratorResult<Uint8Array>> => {
+    stop();
+    return originalReturn(undefined);
+  };
+  return generator;
 }
 
 /** `Retry-After` arrives as delay-seconds or an HTTP date; both are capped so a hostile value can't park the CLI. */

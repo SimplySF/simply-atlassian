@@ -164,6 +164,18 @@ describe('attachment tools', () => {
     expect(readFileSync(join(folder, 'report.pdf'), 'utf8')).toBe('pdf-bytes');
   });
 
+  it('reuses already-fetched bytes when saving a text attachment that is not UTF-8', async () => {
+    const latin1 = Buffer.from([0xff, 0xfe, 0x41]);
+    serve([{ id: '10', filename: 'latin1.txt', mimeType: 'text/plain', content: latin1 }]);
+    await connect(() => ({ action: 'accept', content: { directory: folder } }));
+
+    const { meta } = await download({ issue: 'PROJ-1', id: '10' });
+
+    expect(meta).toMatchObject({ saved: true, path: join(folder, 'latin1.txt') });
+    expect(readFileSync(join(folder, 'latin1.txt'))).toEqual(latin1);
+    expect(contentRequests()).toBe(1);
+  });
+
   it('asks for a folder when save is true, even for a readable file', async () => {
     serve([{ id: '10', filename: 'a.txt', mimeType: 'text/plain', content: 'hi' }]);
     const { prompts } = await connect(() => ({ action: 'accept', content: { directory: folder } }));
@@ -210,6 +222,29 @@ describe('attachment tools', () => {
     expect(prompts).toHaveLength(1);
     expect(meta).toMatchObject({ saved: true, path: join(folder, 'a (10).pdf') });
     expect(readdirSync(folder).sort()).toEqual(['a (10).pdf', 'a.pdf']);
+  });
+
+  it('asks again when a remembered folder has been removed', async () => {
+    serve([{ id: '10', filename: 'a.pdf', mimeType: 'application/pdf', content: 'pdf' }]);
+    const replacement = mkdtempSync(join(tmpdir(), 'mcp-attachments-next-'));
+    try {
+      let current = folder;
+      const { prompts } = await connect(() => ({
+        action: 'accept',
+        content: { directory: current, rememberForSession: true },
+      }));
+
+      await download({ issue: 'PROJ-1', id: '10' });
+      rmSync(folder, { recursive: true, force: true });
+      current = replacement;
+
+      const { meta } = await download({ issue: 'PROJ-1', id: '10' });
+
+      expect(prompts).toHaveLength(2);
+      expect(meta).toMatchObject({ saved: true, path: join(replacement, 'a.pdf') });
+    } finally {
+      rmSync(replacement, { recursive: true, force: true });
+    }
   });
 
   it('strips control characters from the filename it shows the user', async () => {

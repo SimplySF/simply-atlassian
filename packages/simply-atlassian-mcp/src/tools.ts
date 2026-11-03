@@ -216,8 +216,8 @@ async function downloadAttachment(
 ): Promise<ToolContent> {
   const jira = ctx.jira();
   const listed = (await jira.getAttachments(input.issue)).map((raw) => describeAttachment(raw));
-  const [attachment] = selectAttachments(listed, input.issue, [input.id]);
-  if (attachment === undefined) throw new Error(`No attachment ${input.id} on ${input.issue}.`);
+  // `selectAttachments` throws a `CliError` when `input.id` is not on the issue.
+  const [attachment] = selectAttachments(listed, input.issue, [input.id]) as [JiraAttachment];
   const metadata: AttachmentMetadata = {
     id: attachment.id,
     filename: attachment.filename,
@@ -227,6 +227,7 @@ async function downloadAttachment(
   };
 
   let why = '';
+  let prefetched: Uint8Array | undefined;
   if (input.save !== true) {
     const inline = await inlineAttachment(jira, attachment);
     const header = jsonBlock({ ...metadata, returned: inline.kind !== 'none', saved: false });
@@ -235,9 +236,10 @@ async function downloadAttachment(
       return new ToolContent([header, { type: 'image', data: inline.data, mimeType: inline.mimeType }]);
     }
     why = `${inline.reason} `;
+    prefetched = inline.data;
   }
 
-  const outcome = await saveWithPermission(ctx, jira, attachment, input.issue);
+  const outcome = await saveWithPermission(ctx, jira, attachment, input.issue, prefetched);
   return new ToolContent([
     jsonBlock(
       outcome.saved
@@ -253,9 +255,15 @@ async function saveWithPermission(
   jira: JiraClient,
   attachment: JiraAttachment,
   issue: string,
+  prefetched?: Uint8Array,
 ): Promise<FolderSaveOutcome> {
   const remembered = ctx.session.downloadFolder;
-  if (remembered !== undefined) return saveAttachmentToFolder(jira, attachment, remembered);
+  if (remembered !== undefined) {
+    const outcome = await saveAttachmentToFolder(jira, attachment, remembered, { data: prefetched });
+    if (outcome.saved) return outcome;
+    // The remembered folder was removed or cannot take this file; forget it and ask again.
+    ctx.session.downloadFolder = undefined;
+  }
   if (ctx.askForFolder === undefined) {
     return {
       saved: false,
@@ -270,7 +278,7 @@ async function saveWithPermission(
   const answer = await ctx.askForFolder(`Save "${name}"${size === undefined ? '' : ` (${size})`} from ${issue}?`);
   if (answer.action !== 'accept') return { saved: false, reason: 'The user declined to save the file.' };
 
-  const outcome = await saveAttachmentToFolder(jira, attachment, answer.directory);
+  const outcome = await saveAttachmentToFolder(jira, attachment, answer.directory, { data: prefetched });
   // Remembered only once it has worked, so a mistyped folder is not reused silently.
   if (outcome.saved && answer.remember) ctx.session.downloadFolder = answer.directory;
   return outcome;

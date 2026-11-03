@@ -17,6 +17,7 @@
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { gzipSync } from 'node:zlib';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { AtlassianConfig } from '../src/config.js';
 import { CliError, HttpError } from '../src/errors.js';
@@ -152,10 +153,23 @@ describe('safeAttachmentFilename', () => {
     expect(safeAttachmentFilename(input, '7')).toBe(expected);
   });
 
-  it('shortens a long name but keeps its extension', () => {
+  it('shortens a long name by UTF-8 byte length on code-point boundaries, keeping its extension', () => {
     const safe = safeAttachmentFilename(`${'a'.repeat(300)}.log`, '7');
-    expect(safe.length).toBe(180);
+    expect(Buffer.byteLength(safe, 'utf8')).toBe(180);
     expect(safe.endsWith('.log')).toBe(true);
+
+    const multibyte = safeAttachmentFilename(`${'あ'.repeat(100)}.log`, '7');
+    expect(Buffer.byteLength(multibyte, 'utf8')).toBeLessThanOrEqual(180);
+    expect(multibyte.endsWith('.log')).toBe(true);
+    expect(multibyte).not.toContain('\uFFFD');
+
+    const astral = safeAttachmentFilename(`${'😀'.repeat(60)}.png`, '7');
+    expect(Buffer.byteLength(astral, 'utf8')).toBeLessThanOrEqual(180);
+    expect(astral.endsWith('.png')).toBe(true);
+    expect(Buffer.from(astral, 'utf8').toString('utf8')).toBe(astral);
+
+    const trailingAfterCut = safeAttachmentFilename(`${'a'.repeat(179)} bar`, '7');
+    expect(trailingAfterCut.endsWith(' ')).toBe(false);
   });
 });
 
@@ -165,6 +179,12 @@ describe('planAttachmentDownloads', () => {
   it('selects everything by default, and tells duplicate names apart by id', () => {
     const plan = planAttachmentDownloads(list, { issueKey: 'PROJ-1', directory });
     expect(plan.map((download) => path.basename(download.path))).toEqual(['log (1).txt', 'LOG (2).txt', 'shot.png']);
+  });
+
+  it('disambiguates when a disambiguated name would collide with another attachment', () => {
+    const colliding = [attachment('1', 'a.pdf'), attachment('2', 'a.pdf'), attachment('3', 'a (1).pdf')];
+    const plan = planAttachmentDownloads(colliding, { issueKey: 'PROJ-1', directory });
+    expect(plan.map((download) => path.basename(download.path))).toEqual(['a (1).pdf', 'a (2).pdf', 'a (1) (3).pdf']);
   });
 
   it('keeps list order for a selection', () => {
@@ -257,6 +277,35 @@ describe('saveAttachment', () => {
     expect(readdirSync(directory)).toEqual([]);
   });
 
+  it('accepts a response that a proxy compressed despite Accept-Encoding: identity', async () => {
+    const raw = 'hello'.repeat(50);
+    const compressed = gzipSync(raw);
+    server.route('/rest/api/3/attachment/content/1', (_req, res) => {
+      res.writeHead(200, { 'content-encoding': 'gzip' });
+      res.end(compressed);
+    });
+    const file = path.join(directory, 'a.txt.gz');
+
+    await saveAttachment(client('cloud'), attachment('1', 'a.txt.gz', { size: compressed.byteLength }), file);
+
+    expect(readFileSync(file, 'utf8')).toBe(raw);
+  });
+
+  it('refuses to overwrite a file that appeared during the download', async () => {
+    const file = path.join(directory, 'a.txt');
+    server.route('/rest/api/3/attachment/content/1', (_req, res) => {
+      writeFileSync(file, 'existing');
+      res.writeHead(200);
+      res.end('new');
+    });
+
+    await expect(saveAttachment(client('cloud'), attachment('1', 'a.txt', { size: 3 }), file)).rejects.toThrow(
+      'appeared while a.txt was downloading',
+    );
+    expect(readFileSync(file, 'utf8')).toBe('existing');
+    expect(readdirSync(directory)).toEqual(['a.txt']);
+  });
+
   it('does not retry an HTTP error', async () => {
     server.route('/rest/api/3/attachment/content/1', (_req, res) => respondJson(res, 404, {}));
     await expect(
@@ -312,10 +361,15 @@ describe('inlineAttachment', () => {
     });
   });
 
-  it('refuses text that is not UTF-8', async () => {
-    serveCloud('1', Buffer.from([0xff, 0xfe, 0x00]));
+  it('refuses text that is not UTF-8 and hands back the read bytes for saving', async () => {
+    const bytes = Buffer.from([0xff, 0xfe, 0x00]);
+    serveCloud('1', bytes);
     const result = await inlineAttachment(client('cloud'), attachment('1', 'a.txt', { mimeType: 'text/plain' }));
-    expect(result).toMatchObject({ kind: 'none', reason: expect.stringContaining('not valid UTF-8') as unknown });
+    expect(result).toMatchObject({
+      kind: 'none',
+      reason: expect.stringContaining('not valid UTF-8') as unknown,
+      data: bytes,
+    });
   });
 
   it('refuses an unsupported type or a listed oversize without a request', async () => {

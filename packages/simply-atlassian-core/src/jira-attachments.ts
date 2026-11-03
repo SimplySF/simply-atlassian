@@ -15,7 +15,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { createWriteStream, existsSync, renameSync, rmSync, statSync } from 'node:fs';
+import { createWriteStream, existsSync, linkSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { CliError, NetworkError } from './errors.js';
@@ -51,11 +51,15 @@ export type FolderSaveOutcome =
   | { readonly saved: true; readonly path: string; readonly size: number }
   | { readonly saved: false; readonly reason: string };
 
-/** An attachment's content in a form an agent can read, or why it cannot be. */
+/**
+ * An attachment's content in a form an agent can read, or why it cannot be. When the bytes were
+ * already read into memory before the check failed (e.g. a file listed as text that is not valid
+ * UTF-8), `data` carries them so saving does not download the file a second time.
+ */
 export type InlineAttachment =
   | { readonly kind: 'text'; readonly text: string }
   | { readonly kind: 'image'; readonly data: string; readonly mimeType: string }
-  | { readonly kind: 'none'; readonly reason: string };
+  | { readonly kind: 'none'; readonly reason: string; readonly data?: Uint8Array };
 
 export const INLINE_TEXT_MAX_BYTES = 1024 * 1024;
 export const INLINE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
@@ -65,7 +69,7 @@ const IDLE_TIMEOUT_MS = 30_000;
 const SAVE_ATTEMPTS = 3;
 
 /** Leaves room under the common 255-byte limit for the ` (<id>)` a duplicate gets and the temporary suffix. */
-const MAX_FILENAME_LENGTH = 180;
+const MAX_FILENAME_BYTES = 180;
 
 /** Windows refuses these as file names whatever the extension, and older tools treat them as devices. */
 const RESERVED_NAME = /^(?:con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\..*)?$/i;
@@ -83,7 +87,8 @@ export function describeAttachment(raw: unknown): JiraAttachment {
   return {
     id,
     filename: typeof value.filename === 'string' ? value.filename : '',
-    size: typeof value.size === 'number' && Number.isSafeInteger(value.size) ? value.size : undefined,
+    size:
+      typeof value.size === 'number' && Number.isSafeInteger(value.size) && value.size >= 0 ? value.size : undefined,
     mimeType: typeof value.mimeType === 'string' ? value.mimeType : undefined,
     author: firstString(author.displayName, author.accountId, author.name),
     created: typeof value.created === 'string' ? value.created : undefined,
@@ -115,11 +120,13 @@ export function safeAttachmentFilename(name: string, id: string): string {
     .replace(/^\.+/, '')
     .replace(/[. ]+$/, '');
   if (RESERVED_NAME.test(safe)) safe = `_${safe}`;
-  if (safe.length > MAX_FILENAME_LENGTH) {
-    const extension = path.extname(safe).slice(0, 20);
-    safe = `${safe.slice(0, MAX_FILENAME_LENGTH - extension.length)}${extension}`;
+  if (Buffer.byteLength(safe, 'utf8') > MAX_FILENAME_BYTES) {
+    const extension = sliceUtf8(path.extname(safe), 20).replace(/[. ]+$/, '');
+    const stem = sliceUtf8(safe, MAX_FILENAME_BYTES - Buffer.byteLength(extension, 'utf8')).replace(/[. ]+$/, '');
+    safe = `${stem}${extension}`.replace(/^\.+/, '');
+    if (RESERVED_NAME.test(safe)) safe = `_${safe}`;
   }
-  return safe === '' ? `attachment-${id}` : safe;
+  return safe === '' ? `attachment-${safeId(id)}` : safe;
 }
 
 /**
@@ -152,13 +159,28 @@ export function planAttachmentDownloads(
 
   // Case-insensitively, because the file systems people run this on on Windows and macOS are.
   const names = selected.map((attachment) => safeAttachmentFilename(attachment.filename, attachment.id));
-  const counts = new Map<string, number>();
-  for (const name of names) counts.set(name.toLowerCase(), (counts.get(name.toLowerCase()) ?? 0) + 1);
+  const counts = countLower(names);
+  const firstPass = selected.map((attachment, index) => {
+    const name = names[index] ?? '';
+    return (counts.get(name.toLowerCase()) ?? 0) > 1 ? withId(name, attachment.id) : name;
+  });
+  const firstPassCounts = countLower(firstPass);
+  const taken = new Set<string>();
 
   const directory = path.resolve(options.directory);
   const plan = selected.map((attachment, index) => {
-    const name = names[index] ?? '';
-    const unique = (counts.get(name.toLowerCase()) ?? 0) > 1 ? withId(name, attachment.id) : name;
+    const base = names[index] ?? '';
+    let unique = firstPass[index] ?? '';
+    // An upload literally named `a (1).pdf` collides when `a.pdf` (id 1) is disambiguated to
+    // `a (1).pdf`; give the literal upload its own id suffix too, and keep disambiguating if
+    // any case-folded collision remains.
+    if ((firstPassCounts.get(unique.toLowerCase()) ?? 0) > 1 && unique === base) {
+      unique = withId(base, attachment.id);
+    }
+    while (taken.has(unique.toLowerCase())) {
+      unique = withId(unique, attachment.id);
+    }
+    taken.add(unique.toLowerCase());
     const target = path.join(directory, unique);
     if (path.dirname(target) !== directory) {
       throw new CliError(`Refusing to write attachment ${attachment.id} outside ${directory}.`);
@@ -187,9 +209,25 @@ export async function saveAttachment(
   client: JiraClient,
   attachment: JiraAttachment,
   file: string,
-  options: { readonly overwrite?: boolean; readonly idleTimeoutMs?: number } = {},
+  options: { readonly overwrite?: boolean; readonly idleTimeoutMs?: number; readonly data?: Uint8Array } = {},
 ): Promise<number> {
   const label = stripControlOneLine(attachment.filename) || attachment.id;
+  if (options.data !== undefined) {
+    const temporary = `${file}.${randomUUID()}.tmp`;
+    try {
+      writeFileSync(temporary, options.data, { flag: 'wx' });
+      const written = options.data.byteLength;
+      if (attachment.size !== undefined && written !== attachment.size) {
+        throw new CliError(`${label} arrived as ${written} bytes, but Jira lists it as ${attachment.size}.`);
+      }
+      placeFile(temporary, file, label, options.overwrite === true);
+      return written;
+    } catch (error) {
+      rmSync(temporary, { force: true });
+      throw error;
+    }
+  }
+
   /* A restart must follow the failed attempt, never overlap it. */
   /* eslint-disable no-await-in-loop */
   for (let attempt = 1; ; attempt += 1) {
@@ -210,13 +248,10 @@ export async function saveAttachment(
         },
         createWriteStream(temporary, { flags: 'wx' }),
       );
-      if (attachment.size !== undefined && written !== attachment.size) {
+      if (attachment.size !== undefined && !isEncoded(response.contentEncoding) && written !== attachment.size) {
         throw new CliError(`${label} arrived as ${written} bytes, but Jira lists it as ${attachment.size}.`);
       }
-      if (options.overwrite !== true && existsSync(file)) {
-        throw new CliError(`${file} appeared while ${label} was downloading; it was left as it is.`);
-      }
-      renameSync(temporary, file);
+      placeFile(temporary, file, label, options.overwrite === true);
       return written;
     } catch (error) {
       rmSync(temporary, { force: true });
@@ -235,6 +270,7 @@ export async function saveAttachmentToFolder(
   client: JiraClient,
   attachment: JiraAttachment,
   directory: string,
+  options: { readonly data?: Uint8Array } = {},
 ): Promise<FolderSaveOutcome> {
   if (!path.isAbsolute(directory)) {
     return { saved: false, reason: `"${stripControlOneLine(directory)}" is not an absolute path.` };
@@ -253,7 +289,7 @@ export async function saveAttachmentToFolder(
       reason: `${name} already exists in that folder, and so does ${withId(name, attachment.id)}.`,
     };
   }
-  const size = await saveAttachment(client, attachment, target);
+  const size = await saveAttachment(client, attachment, target, { data: options.data });
   return { saved: true, path: target, size };
 }
 
@@ -304,15 +340,67 @@ export async function inlineAttachment(client: JiraClient, attachment: JiraAttac
   try {
     return { kind, text: new TextDecoder('utf-8', { fatal: true }).decode(data) };
   } catch {
-    return { kind: 'none', reason: `It is listed as ${type} but is not valid UTF-8 text.` };
+    return { kind: 'none', reason: `It is listed as ${type} but is not valid UTF-8 text.`, data };
   }
+}
+
+/**
+ * Places `temporary` at `file`. Without `overwrite`, uses a hard link so an existing file is
+ * never replaced even if it was created while the download was in flight (`rename` overwrites
+ * on POSIX).
+ */
+function placeFile(temporary: string, file: string, label: string, overwrite: boolean): void {
+  if (overwrite) {
+    renameSync(temporary, file);
+    return;
+  }
+  try {
+    linkSync(temporary, file);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+      throw new CliError(`${file} appeared while ${label} was downloading; it was left as it is.`);
+    }
+    throw error;
+  }
+  rmSync(temporary, { force: true });
+}
+
+function isEncoded(contentEncoding: string | undefined): boolean {
+  const normalized = contentEncoding?.trim().toLowerCase();
+  return normalized !== undefined && normalized !== '' && normalized !== 'identity';
+}
+
+/** Slices `text` to at most `maxBytes` UTF-8 bytes without splitting a code point. */
+function sliceUtf8(text: string, maxBytes: number): string {
+  let bytes = 0;
+  let end = 0;
+  for (const char of text) {
+    const charBytes = Buffer.byteLength(char, 'utf8');
+    if (bytes + charBytes > maxBytes) break;
+    bytes += charBytes;
+    end += char.length;
+  }
+  return text.slice(0, end);
+}
+
+function countLower(names: readonly string[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const name of names) {
+    const key = name.toLowerCase();
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function safeId(id: string): string {
+  return id.replaceAll(/[/\\\p{Cc}<>:"|?*]/gu, '_').replace(/[. ]+$/, '') || 'unknown';
 }
 
 /** `report.pdf` → `report (10234).pdf`. */
 function withId(name: string, id: string): string {
   const extension = path.extname(name);
   const stem = extension === '' ? name : name.slice(0, -extension.length);
-  return `${stem} (${id})${extension}`;
+  return `${stem} (${safeId(id)})${extension}`;
 }
 
 function firstString(...values: unknown[]): string | undefined {

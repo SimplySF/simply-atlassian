@@ -24,7 +24,9 @@ import {
   planAttachmentDownloads,
   saveAttachment,
   selectAttachments,
+  stripControlOneLine,
   type JiraAttachment,
+  type JiraClient,
 } from '@simplysf/simply-atlassian-core';
 import { JiraCommand, parseMultiList, stderrLine } from '../../../../../shared/base-command.js';
 
@@ -70,6 +72,7 @@ export default class JiraIssueAttachmentDownload extends JiraCommand<typeof Jira
       summary: 'Attachment id to download, as "attachment list" shows. Comma-separated or repeatable.',
       description: 'Default: every attachment on the issue.',
       multiple: true,
+      multipleNonGreedy: true,
     }),
     'output-dir': Flags.string({
       char: 'o',
@@ -90,12 +93,13 @@ export default class JiraIssueAttachmentDownload extends JiraCommand<typeof Jira
 
   public async run(): Promise<DownloadResult> {
     const { issue } = this.args;
-    const attachments = (await this.jira().getAttachments(issue)).map((raw) => describeAttachment(raw));
+    const jira = this.jira();
+    const attachments = (await jira.getAttachments(issue)).map((raw) => describeAttachment(raw));
     const ids = parseMultiList(this.flags.id);
 
-    if (this.flags.stdout) return this.toStdout(selectAttachments(attachments, issue, ids));
+    if (this.flags.stdout) return this.toStdout(jira, selectAttachments(attachments, issue, ids));
 
-    if (attachments.length === 0) {
+    if (attachments.length === 0 && ids === undefined) {
       this.logSafe(`No attachments on ${issue}.`);
       return { directory: undefined, files: [] };
     }
@@ -116,7 +120,7 @@ export default class JiraIssueAttachmentDownload extends JiraCommand<typeof Jira
     for (const { attachment, path: file } of plan) {
       let size: number;
       try {
-        size = await saveAttachment(this.jira(), attachment, file, { overwrite: this.flags.overwrite });
+        size = await saveAttachment(jira, attachment, file, { overwrite: this.flags.overwrite });
       } catch (error) {
         // Kept as the same error, so its exit code and --json shape are unchanged.
         if (error instanceof Error) {
@@ -133,7 +137,7 @@ export default class JiraIssueAttachmentDownload extends JiraCommand<typeof Jira
     return { directory, files };
   }
 
-  private async toStdout(selected: JiraAttachment[]): Promise<DownloadResult> {
+  private async toStdout(jira: JiraClient, selected: JiraAttachment[]): Promise<DownloadResult> {
     if (this.jsonEnabled()) {
       throw new CliError(
         '--stdout cannot be combined with --json: stdout cannot carry both the file and the result.',
@@ -156,7 +160,8 @@ export default class JiraIssueAttachmentDownload extends JiraCommand<typeof Jira
       );
     }
 
-    const response = await this.jira().openAttachment(attachment);
+    const label = stripControlOneLine(attachment.filename) || attachment.id;
+    const response = await jira.openAttachment(attachment);
     let size = 0;
     try {
       for await (const chunk of response.body) {
@@ -166,9 +171,9 @@ export default class JiraIssueAttachmentDownload extends JiraCommand<typeof Jira
     } catch (error) {
       // Bytes have already gone out, so restarting would duplicate them: say so and stop.
       const reason = error instanceof Error ? error.message : String(error);
-      throw new CliError(`${attachment.filename} stopped after ${size} bytes; the output is incomplete. ${reason}`);
+      throw new CliError(`${label} stopped after ${size} bytes; the output is incomplete. ${reason}`);
     }
-    stderrLine(`downloaded ${attachment.filename} (${formatBytes(size) ?? `${size} B`})`);
+    stderrLine(`downloaded ${label} (${formatBytes(size) ?? `${size} B`})`);
     return {
       files: [{ id: attachment.id, filename: attachment.filename, path: '-', size, mimeType: attachment.mimeType }],
     };
