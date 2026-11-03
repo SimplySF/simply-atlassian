@@ -234,3 +234,91 @@ export function xrayStep(index: number, action: string, result = '', data = ''):
     testVersionId: 1,
   };
 }
+
+/** A step as Xray's step API returns it (Test Steps - REST), which is what `FakeXraySteps` keeps. */
+interface FakeStep {
+  id: number;
+  action: string;
+  data: string;
+  result: string;
+  attachments: unknown[];
+  extra?: Record<string, unknown>;
+}
+
+export interface FakeXraySteps {
+  /** The steps now, in order. Tests assert on this and on the recorded requests. */
+  readonly steps: FakeStep[];
+  /** The same steps as the Jira steps field returns them, for `xrayFixtureIssue`'s `steps`. */
+  fieldSteps(): unknown[];
+}
+
+/**
+ * Xray's step API for one test, keeping state and shaped as "Test Steps - REST" documents: `PUT` to
+ * add, `POST` to update, `DELETE` to remove, and a plain-text 200 for each write.
+ */
+export function routeXraySteps(
+  server: Pick<TestServer, 'route'>,
+  test: string,
+  initial: ReadonlyArray<Partial<FakeStep> & { readonly id: number }>,
+): FakeXraySteps {
+  const base = `/rest/raven/1.0/api/test/${test}/step`;
+  const steps: FakeStep[] = initial.map((step) => ({ action: '', data: '', result: '', attachments: [], ...step }));
+  const ok = (response: ServerResponse): void => {
+    response.writeHead(200, { 'content-type': 'text/plain' });
+    response.end('OK');
+  };
+  const routeStep = (id: number): void => {
+    server.route(`${base}/${id}`, (request, response, body) => {
+      const position = steps.findIndex((step) => step.id === id);
+      const step = steps[position];
+      if (step === undefined) {
+        respondJson(response, 400, { error: 'no such step' });
+      } else if (request.method === 'DELETE') {
+        steps.splice(position, 1);
+        ok(response);
+      } else {
+        const sent = JSON.parse(body) as { step?: string; data?: string; result?: string };
+        step.action = sent.step ?? step.action;
+        step.data = sent.data ?? step.data;
+        step.result = sent.result ?? step.result;
+        ok(response);
+      }
+    });
+  };
+  steps.forEach((step) => routeStep(step.id));
+  server.route(base, (request, response, body) => {
+    if (request.method === 'PUT') {
+      const sent = JSON.parse(body) as { step?: string; data?: string; result?: string };
+      const id = Math.max(1000, ...steps.map((step) => step.id)) + 1;
+      steps.push({ id, action: sent.step ?? '', data: sent.data ?? '', result: sent.result ?? '', attachments: [] });
+      routeStep(id);
+      ok(response);
+      return;
+    }
+    respondJson(
+      response,
+      200,
+      steps.map((step, position) => ({
+        id: step.id,
+        index: position + 1,
+        step: { raw: step.action, rendered: `<p>${step.action}</p>` },
+        data: { raw: step.data, rendered: `<p>${step.data}</p>` },
+        result: { raw: step.result, rendered: `<p>${step.result}</p>` },
+        attachments: step.attachments,
+        ...step.extra,
+      })),
+    );
+  });
+  return {
+    steps,
+    fieldSteps: (): unknown[] =>
+      steps.map((step, position) => ({
+        id: step.id,
+        index: position + 1,
+        fields: { Action: step.action, Data: step.data, 'Expected Result': step.result },
+        attachments: step.attachments,
+        testVersionId: 1,
+        ...step.extra,
+      })),
+  };
+}

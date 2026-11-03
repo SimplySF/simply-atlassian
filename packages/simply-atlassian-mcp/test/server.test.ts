@@ -26,6 +26,7 @@ import {
   respondJson,
   routeJiraSearch,
   routeXrayDiscovery,
+  routeXraySteps,
   startTestServer,
   XRAY_FIXTURE_IDS,
   xrayFixtureIssue,
@@ -382,12 +383,45 @@ describe('Xray tools', () => {
     for (const name of xrayNames) expect(names).not.toContain(name);
   });
 
-  it('are all registered as reads with --xray', async () => {
+  it('registers the writes only with both --xray and --allow-writes', async () => {
+    const c = await connect({ xray: true, allowWrites: true, env: xrayEnv() });
+    const names = (await c.listTools()).tools.map((tool) => tool.name);
+
+    for (const name of xrayNames) expect(names).toContain(name);
+  });
+
+  it('demands confirm before deleting a step, sending nothing', async () => {
+    const c = await connect({ xray: true, allowWrites: true, env: xrayEnv() });
+    const result = await c.callTool({ name: 'jira_xray_test_step_delete', arguments: { test: 'OM-12', step: '311' } });
+
+    expect(result.isError).toBe(true);
+    expect(JSON.stringify(result.content)).toContain('confirm-required');
+    expect(atlassian.requests.filter((request) => request.method !== 'GET')).toEqual([]);
+  });
+
+  it('adds a step and returns the test read back', async () => {
+    const fake = routeXraySteps(atlassian, 'OM-12', [{ id: 311, action: 'Open' }]);
+    atlassian.route('/rest/api/2/issue/OM-12', (_request, response) =>
+      respondJson(response, 200, xrayFixtureIssue('OM-12', { steps: fake.fieldSteps() })),
+    );
+    const c = await connect({ xray: true, allowWrites: true, env: xrayEnv() });
+    const result = await c.callTool({
+      name: 'jira_xray_test_step_add',
+      arguments: { test: 'OM-12', action: 'Save' },
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(fake.steps.map((step) => step.action)).toEqual(['Open', 'Save']);
+    expect(JSON.stringify(result.content)).toContain('1001');
+  });
+
+  it('registers only the reads with --xray, and the writes need --allow-writes too', async () => {
     const c = await connect({ xray: true, env: xrayEnv() });
     const { tools } = await c.listTools();
 
+    const reads = TOOLS.filter((tool) => tool.app === 'xray' && tool.kind === 'read').map((tool) => tool.name);
     const registered = tools.filter((tool) => xrayNames.includes(tool.name));
-    expect(registered.map((tool) => tool.name).sort()).toEqual([...xrayNames].sort());
+    expect(registered.map((tool) => tool.name).sort()).toEqual([...reads].sort());
     for (const tool of registered) expect(tool.annotations?.readOnlyHint, tool.name).toBe(true);
   });
 

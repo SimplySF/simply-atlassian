@@ -53,6 +53,7 @@ refactors that keep the public surface identical (though a short doc is welcome 
 | 0018 | [`atlassian mcp install`](0018-mcp-install.md)                                                    | In progress                     |
 | 0019 | [Confluence page history](0019-confluence-page-history.md)                                        | Implemented (PR #64)            |
 | 0020 | [Reading Jira issue attachments](0020-jira-issue-attachments.md)                                  | Implemented (PR #65)            |
+| 0021 | [Xray test authoring](0021-jira-xray-test-authoring.md)                                           | In progress                     |
 
 ## Template
 

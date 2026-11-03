@@ -135,6 +135,12 @@ describe('@simplysf/simply-atlassian-core', () => {
         'selectAttachments',
         // xray (docs/design/0015-jira-xray.md)
         'XRAY_FIELD_ROLES',
+        'XrayPartialWriteError',
+        'addXrayStep',
+        'deleteXrayStep',
+        'describeStepOperation',
+        'planStepChanges',
+        'updateXrayStep',
         'XRAY_PAGE_SIZE',
         'XRAY_SCHEMA_PREFIX',
         'XrayInstance',

@@ -52,7 +52,12 @@ describe('TOOLS catalogue', () => {
 
   it('marks exactly the CLI commands that take --confirm as destructive', () => {
     const destructive = TOOLS.filter((tool) => tool.kind === 'destructive').map((tool) => tool.name);
-    expect(destructive.sort()).toEqual(['confluence_page_delete', 'jira_issue_comment_delete', 'jira_issue_delete']);
+    expect(destructive.sort()).toEqual([
+      'confluence_page_delete',
+      'jira_issue_comment_delete',
+      'jira_issue_delete',
+      'jira_xray_test_step_delete',
+    ]);
   });
 
   /*
@@ -113,7 +118,7 @@ describe('TOOLS catalogue', () => {
   });
 
   it('catalogues the seven Xray reads, all marked for the Xray app', () => {
-    const xray = TOOLS.filter((tool) => tool.app === 'xray');
+    const xray = TOOLS.filter((tool) => tool.app === 'xray' && tool.kind === 'read');
 
     expect(xray.map((tool) => tool.name).sort()).toEqual([
       'jira_xray_fields',
@@ -124,7 +129,17 @@ describe('TOOLS catalogue', () => {
       'jira_xray_test_get',
       'jira_xray_test_list',
     ]);
-    for (const tool of xray) expect(tool.kind, tool.name).toBe('read');
+  });
+
+  it('catalogues the Xray writes, all marked for the Xray app', () => {
+    const writes = TOOLS.filter((tool) => tool.name.startsWith('jira_xray_') && tool.kind !== 'read');
+
+    expect(writes.map((tool) => tool.name).sort()).toEqual([
+      'jira_xray_test_step_add',
+      'jira_xray_test_step_delete',
+      'jira_xray_test_step_update',
+    ]);
+    for (const tool of writes) expect(tool.app, tool.name).toBe('xray');
   });
 
   it('exposes the Xray scopes and filters the CLI accepts, but not an output format', () => {

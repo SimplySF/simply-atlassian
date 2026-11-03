@@ -71,3 +71,19 @@ export class HttpError extends CliError {
     this.body = body;
   }
 }
+
+/**
+ * An Xray write that stopped part-way: some of it landed. The message says what did and what did
+ * not, because a caller who only sees "failed" would repeat what already happened.
+ */
+export class XrayPartialWriteError extends CliError {
+  public readonly applied: readonly string[];
+  public readonly notApplied: readonly string[];
+
+  public constructor(message: string, applied: readonly string[], notApplied: readonly string[], next: string) {
+    super(`${message} Applied: ${applied.join('; ')}. Not applied: ${notApplied.join('; ')}. ${next}`, 1);
+    this.name = 'XrayPartialWriteError';
+    this.applied = applied;
+    this.notApplied = notApplied;
+  }
+}

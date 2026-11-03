@@ -24,6 +24,7 @@ import {
   type ConfigOverrides,
   ConfluenceClient,
   createXrayBackend,
+  describeStepOperation,
   defaultXrayCacheDir,
   HttpError,
   JiraClient,
@@ -39,7 +40,10 @@ import {
   type XrayBackend,
   type XrayFilters,
   type XrayScope,
+  type XrayStepOperation,
+  type XrayWriteResult,
 } from '@simplysf/simply-atlassian-core';
+import { printXrayTest } from './xray-test-view.js';
 
 /**
  * Splits a comma-separated flag value, dropping blanks. `--fields ''` and `--fields 'a,'`
@@ -469,6 +473,34 @@ export abstract class XrayCommand<T extends typeof Command> extends JiraCommand<
   protected xrayFields(): string[] | undefined {
     return parseMultiList(this.rawFlags.fields as string[] | undefined);
   }
+
+  /** What every Xray write prints: the re-read test, or the plan on a dry run, with notes on stderr. */
+  protected reportXrayWrite<R extends XrayWriteResult | { readonly dryRun: true; readonly notes: string[] }>(
+    result: R,
+    print: (dryRun: Exclude<R, XrayWriteResult>) => void,
+  ): R {
+    if (this.jsonEnabled()) return result;
+    if ('dryRun' in result) {
+      print(result as Exclude<R, XrayWriteResult>);
+    } else if (result.record !== null) {
+      printXrayTest((message) => this.log(message), result.record);
+    }
+    for (const note of result.notes) stderrLine(note);
+    return result;
+  }
+}
+
+/** A dry run of a step write: one line for each thing that would be sent. */
+export function printStepDryRun(
+  log: (message: string) => void,
+  plan: { readonly test: string; readonly operations: readonly XrayStepOperation[] },
+): void {
+  if (plan.operations.length === 0) {
+    log(`Dry run — not sent. Nothing would change on ${plan.test}.`);
+    return;
+  }
+  log(`Dry run — not sent. On ${plan.test}, would:`);
+  for (const operation of plan.operations) log(`  ${describeStepOperation(operation)}`);
 }
 
 /**

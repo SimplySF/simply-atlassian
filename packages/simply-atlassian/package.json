@@ -1,7 +1,7 @@
 {
   "name": "@simplysf/simply-atlassian",
   "description": "Command-line interface for working with Atlassian products",
-  "version": "0.14.2",
+  "version": "0.16.0",
   "author": "@ClayChipps",
   "homepage": "https://github.com/SimplySF/simply-atlassian",
   "bugs": "https://github.com/SimplySF/simply-atlassian/issues",
@@ -78,10 +78,13 @@
         "description": "List sprints, sprint issues, and add issues to sprints."
       },
       "atlassian:jira:xray": {
-        "description": "Read Xray tests, plans, sets, and repository paths (Server/Data Center)."
+        "description": "Read Xray tests, plans, sets, and repository paths, and write tests (Server/Data Center)."
       },
       "atlassian:jira:xray:test": {
-        "description": "Read, list, and export Xray tests."
+        "description": "Read, list, export, and write Xray tests."
+      },
+      "atlassian:jira:xray:test:step": {
+        "description": "Add, edit, and delete a manual Xray test's steps."
       },
       "atlassian:jira:xray:plan": {
         "description": "List Xray test plans."
@@ -108,7 +111,7 @@
   },
   "dependencies": {
     "@oclif/core": "^4.11.2",
-    "@simplysf/simply-atlassian-core": "workspace:^0.8.2"
+    "@simplysf/simply-atlassian-core": "workspace:^0.10.0"
   },
   "devDependencies": {
     "@oclif/plugin-command-snapshot": "^5.4.0",
