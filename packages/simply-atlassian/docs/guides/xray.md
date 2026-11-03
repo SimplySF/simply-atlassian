@@ -197,8 +197,8 @@ change and no key will be removed without a breaking release.
   "path": "/O&M/Accounts",
   "preconditions": [{ "key": "PROJ-3", "summary": "Admin account exists" }],
   "steps": [
-    { "index": "1", "action": "Open Users", "data": "", "result": "List shown", "attachments": [] },
-    { "index": "2", "action": "Pick a user", "data": "bob", "result": "Details shown", "attachments": [] }
+    { "index": "1", "id": "311", "action": "Open Users", "data": "", "result": "List shown", "attachments": [] },
+    { "index": "2", "id": "312", "action": "Pick a user", "data": "bob", "result": "Details shown", "attachments": [] }
   ],
   "definition": null,
   "links": [
@@ -226,7 +226,7 @@ change and no key will be removed without a breaking release.
 | `type`          | `Manual`, `Cucumber`, `Generic`, or the instance's own test type name; null if the test has none.                                                                                                                                                                    |
 | `path`          | Repository folder, with a leading slash; null if the test is in none.                                                                                                                                                                                                |
 | `preconditions` | Each precondition's key and summary. `summary` is null for one you cannot see.                                                                                                                                                                                       |
-| `steps`         | Each step's `index`, `action`, `data`, `result`, and `attachments` (as file names), plus `extra` when the step carries data this version does not interpret (below). Empty if not manual.                                                                            |
+| `steps`         | Each step's `index`, `id` (Xray's own, which the step commands take), `action`, `data`, `result`, and `attachments` (as file names), plus `extra` when the step carries data this version does not interpret (below). Empty if not manual.                           |
 | `definition`    | The Cucumber scenario or generic definition; null for a manual test.                                                                                                                                                                                                 |
 | `links`         | Every issue link, read from this test's side: the link `type` name, which end the other issue is on (`direction`), the phrase from this side (`relationship`, such as `tests` or `is tested by`), and the other issue's `key`, `issueType`, `status`, and `summary`. |
 | `plans`, `sets` | Keys of the plans and sets that contain the test.                                                                                                                                                                                                                    |
