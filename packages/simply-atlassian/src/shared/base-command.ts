@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import { readFileSync } from 'node:fs';
 import process from 'node:process';
 import { Command, Flags, type Interfaces } from '@oclif/core';
 import {
@@ -487,6 +488,15 @@ export abstract class XrayCommand<T extends typeof Command> extends JiraCommand<
     }
     for (const note of result.notes) stderrLine(note);
     return result;
+  }
+}
+
+/** A flag's file, with a usage error rather than a stack trace when it cannot be read. */
+export function readTextFile(path: string): string {
+  try {
+    return readFileSync(path, 'utf8');
+  } catch (error) {
+    throw new ConfigError(`Could not read ${path}: ${error instanceof Error ? error.message : 'unknown reason'}`);
   }
 }
 
