@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
+import * as fs from 'node:fs';
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { gzipSync } from 'node:zlib';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AtlassianConfig } from '../src/config.js';
 import { CliError, HttpError } from '../src/errors.js';
 import {
@@ -33,6 +34,12 @@ import {
 } from '../src/jira-attachments.js';
 import { JiraClient } from '../src/jira-client.js';
 import { respondJson, startTestServer, type TestServer } from '../src/testing.js';
+
+// Lets a test simulate a file system without hard links; every other test gets the real `linkSync`.
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return { ...actual, linkSync: vi.fn(actual.linkSync) };
+});
 
 let server: TestServer;
 let directory: string;
@@ -298,6 +305,33 @@ describe('saveAttachment', () => {
       res.writeHead(200);
       res.end('new');
     });
+
+    await expect(saveAttachment(client('cloud'), attachment('1', 'a.txt', { size: 3 }), file)).rejects.toThrow(
+      'appeared while a.txt was downloading',
+    );
+    expect(readFileSync(file, 'utf8')).toBe('existing');
+    expect(readdirSync(directory)).toEqual(['a.txt']);
+  });
+
+  it('falls back to an exclusive copy where hard links are unsupported', async () => {
+    vi.mocked(fs.linkSync).mockImplementationOnce(() => {
+      throw Object.assign(new Error('operation not permitted'), { code: 'EPERM' });
+    });
+    serveCloud('1', 'hello');
+    const file = path.join(directory, 'a.txt');
+
+    expect(await saveAttachment(client('cloud'), attachment('1', 'a.txt', { size: 5 }), file)).toBe(5);
+    expect(readFileSync(file, 'utf8')).toBe('hello');
+    expect(readdirSync(directory)).toEqual(['a.txt']);
+  });
+
+  it('still refuses to replace a file when falling back to a copy', async () => {
+    const file = path.join(directory, 'a.txt');
+    vi.mocked(fs.linkSync).mockImplementationOnce(() => {
+      writeFileSync(file, 'existing');
+      throw Object.assign(new Error('operation not supported'), { code: 'ENOTSUP' });
+    });
+    serveCloud('1', 'new');
 
     await expect(saveAttachment(client('cloud'), attachment('1', 'a.txt', { size: 3 }), file)).rejects.toThrow(
       'appeared while a.txt was downloading',

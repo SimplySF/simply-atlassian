@@ -101,7 +101,9 @@ the headers is not restarted here, because the transport has already retried it,
 `HttpError` or a size mismatch is not restarted at all. A restart is safe because the request only
 reads. No partial file is ever left under the real name. Without `overwrite`, the temporary file is
 hard-linked to `file` (`linkSync`, which fails with `EEXIST`) and then unlinked, so a file that
-appeared during the download is never replaced.
+appeared during the download is never replaced. On a file system without hard links (exFAT, FAT32,
+some network shares), the link fails with a code such as `EPERM` or `ENOTSUP`, and the file is
+copied instead with `COPYFILE_EXCL`, which also refuses an existing target.
 
 `readAttachment(client, attachment, maxBytes)` is the bounded read the MCP server uses for inline
 content. It reads into memory and stops reading, which cancels the request, once `maxBytes` is
@@ -170,14 +172,14 @@ error's code. Files already written stay on disk, and the error names how many w
 **File names.** An attachment's filename is chosen by whoever uploaded it, so it is never used as a
 path as-is:
 
-| Input                                                                          | Handling                                                                                |
-| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| `/`, `\`, and a leading `.` or `..`                                            | Path separators become `_`; leading dots are removed                                    |
-| Control characters, and `< > : " \| ? *`                                       | Replaced with `_`, so a name is valid on Windows and POSIX                              |
-| Trailing dots or spaces                                                        | Removed (Windows silently drops them)                                                   |
-| Windows reserved names (`CON`, `NUL`, `COM1`, …), with or without an extension | Prefixed with `_`                                                                       |
-| Longer than 180 UTF-8 bytes                                                    | Shortened on a code-point boundary, keeping the extension and re-stripping trailing `.` |
-| Empty after the above                                                          | `attachment-<id>`                                                                       |
+| Input                                                                          | Handling                                                                                  |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `/`, `\`, and a leading `.` or `..`                                            | Path separators become `_`; leading dots are removed                                      |
+| Control characters, and `< > : " \| ? *`                                       | Replaced with `_`, so a name is valid on Windows and POSIX                                |
+| Trailing dots or spaces                                                        | Removed (Windows silently drops them)                                                     |
+| Windows reserved names (`CON`, `NUL`, `COM1`, …), with or without an extension | Prefixed with `_`                                                                         |
+| Longer than 180 UTF-8 bytes                                                    | Shortened on a code-point boundary, keeping the extension and re-stripping trailing `.`   |
+| Empty after the above                                                          | `attachment-<id>`                                                                         |
 | Two selected attachments with the same resulting name, ignoring case           | Each becomes `<stem> (<id>)<ext>`, and any name that still collides gets its own `(<id>)` |
 
 Jira allows several attachments with the same name on one issue, which is why duplicates are

@@ -15,7 +15,17 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { createWriteStream, existsSync, linkSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  constants,
+  copyFileSync,
+  createWriteStream,
+  existsSync,
+  linkSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { CliError, NetworkError } from './errors.js';
@@ -73,6 +83,9 @@ const MAX_FILENAME_BYTES = 180;
 
 /** Windows refuses these as file names whatever the extension, and older tools treat them as devices. */
 const RESERVED_NAME = /^(?:con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\..*)?$/i;
+
+/** What `link` fails with on a file system that cannot hold hard links. */
+const NO_HARD_LINK_CODES = new Set(['EPERM', 'ENOTSUP', 'EOPNOTSUPP', 'ENOSYS', 'EXDEV', 'EMLINK']);
 
 const TEXT_TYPES = new Set(['application/json', 'application/xml', 'application/yaml', 'application/x-ndjson']);
 const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
@@ -347,20 +360,28 @@ export async function inlineAttachment(client: JiraClient, attachment: JiraAttac
 /**
  * Places `temporary` at `file`. Without `overwrite`, uses a hard link so an existing file is
  * never replaced even if it was created while the download was in flight (`rename` overwrites
- * on POSIX).
+ * on POSIX). Where the file system has no hard links (exFAT, FAT32, some network shares), it
+ * falls back to an exclusive copy, which keeps the same never-replace guarantee.
  */
 function placeFile(temporary: string, file: string, label: string, overwrite: boolean): void {
   if (overwrite) {
     renameSync(temporary, file);
     return;
   }
+  const appeared = (): CliError =>
+    new CliError(`${file} appeared while ${label} was downloading; it was left as it is.`);
   try {
     linkSync(temporary, file);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
-      throw new CliError(`${file} appeared while ${label} was downloading; it was left as it is.`);
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === 'EEXIST') throw appeared();
+    if (code === undefined || !NO_HARD_LINK_CODES.has(code)) throw error;
+    try {
+      copyFileSync(temporary, file, constants.COPYFILE_EXCL);
+    } catch (copyError) {
+      if ((copyError as NodeJS.ErrnoException).code === 'EEXIST') throw appeared();
+      throw copyError;
     }
-    throw error;
   }
   rmSync(temporary, { force: true });
 }
