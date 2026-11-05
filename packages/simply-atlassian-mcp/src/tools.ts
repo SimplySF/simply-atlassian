@@ -26,6 +26,7 @@ import {
   buildPageCreateBody,
   buildTransitionBody,
   buildUpdateIssueBody,
+  createXrayTest,
   changelogJson,
   currentAccount,
   buildRemoteLinkBody,
@@ -66,8 +67,10 @@ import {
   resolveTransitionId,
   type JiraSearchResult,
   type RemoteLink,
+  type XrayStepInput,
   updatePage,
   updateXrayStep,
+  updateXrayTest,
 } from '@simplysf/simply-atlassian-core';
 import type { CallToolResult, ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
@@ -295,6 +298,43 @@ function jsonBlock(value: unknown): { type: 'text'; text: string } {
 
 const xrayTestKey = z.string().describe('Test issue key, for example PROJ-12.');
 const xrayStepId = z.string().describe('Step id, as jira_xray_test_get returns it.');
+
+const xrayTestInputShape = {
+  record: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe(
+      'One test record, the shape jira_xray_test_get returns under "record". summary, type, steps, definition ' +
+        'and fields are applied; other keys are named in notes. Typed properties override it.',
+    ),
+  summary: z.string().optional().describe('The summary.'),
+  type: z.string().optional().describe('manual, cucumber, generic, or another type the field allows.'),
+  steps: z
+    .array(
+      z.object({
+        id: z.string().nullable().optional().describe('The existing step this is, on update. Omit for a new step.'),
+        action: z.string(),
+        data: z.string().optional(),
+        result: z.string().optional(),
+      }),
+    )
+    .optional()
+    .describe('Manual steps. On update this replaces the list.'),
+  gherkin: z.string().optional().describe('The Cucumber scenario.'),
+  definition: z.string().optional().describe('The generic test definition.'),
+  fields: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe('Other fields, by Xray role or field name; no customfield_ id is needed.'),
+  body,
+} as const;
+
+/** The tool schema leaves data and result optional; core's step input always has all three. */
+function toolSteps(
+  steps: ReadonlyArray<{ id?: string | null; action: string; data?: string; result?: string }> | undefined,
+): XrayStepInput[] | undefined {
+  return steps?.map((step) => ({ ...step, data: step.data ?? '', result: step.result ?? '' }));
+}
 
 const xrayFields = z
   .array(z.string())
@@ -1195,6 +1235,41 @@ export const TOOLS: readonly ToolSpec[] = [
       const result = await getXrayTest(ctx.xray(), input.test, { fields: input.fields });
       return input.raw === true ? result.issue : { record: result.record, notes: result.notes };
     },
+  }),
+  tool({
+    name: 'jira_xray_test_create',
+    title: 'Xray: create a test',
+    description:
+      'Create a Manual, Cucumber or Generic test, with its steps or definition, from a record or typed ' +
+      'properties. verifies links the requirements it tests. Steps go in the same request as the issue. A ' +
+      'step that calls another test is refused. Returns { record, notes }: the test read back, with record ' +
+      'null and a note if the write landed but the read failed; do not retry then. Use dryRun to see the request.',
+    command: ['atlassian', 'jira', 'xray', 'test', 'create'],
+    kind: 'write',
+    app: 'xray',
+    inputSchema: {
+      project: z.string().optional().describe('Project key the test belongs to.'),
+      verifies: z.array(z.string()).optional().describe('Requirements this test verifies; each gets a link.'),
+      ...xrayTestInputShape,
+      ...WRITE_SHAPE,
+    },
+    run: (ctx, input) => createXrayTest(ctx.xray(), { ...input, steps: toolSteps(input.steps) }),
+  }),
+  tool({
+    name: 'jira_xray_test_update',
+    title: 'Xray: update a test',
+    description:
+      "Apply a record or typed properties to a test, sending only what differs. steps replaces the test's list, " +
+      'matched by id, or by position if no step has one. A missing step is deleted, which requires confirm: ' +
+      "true. Xray's API documents no way to reorder, so a reordered list is refused and new steps go last. Custom " +
+      'step columns and attachments are left alone. Use dryRun to see the plan. Returns { record, notes }.',
+    command: ['atlassian', 'jira', 'xray', 'test', 'update'],
+    kind: 'destructive',
+    // Whether this deletes is known only after the read, so core enforces confirm once it has the plan.
+    requiresConfirm: () => false,
+    app: 'xray',
+    inputSchema: { test: xrayTestKey, ...xrayTestInputShape, ...DESTRUCTIVE_SHAPE },
+    run: (ctx, input) => updateXrayTest(ctx.xray(), { ...input, steps: toolSteps(input.steps) }),
   }),
   tool({
     name: 'jira_xray_test_step_add',

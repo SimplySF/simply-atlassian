@@ -399,6 +399,52 @@ describe('Xray tools', () => {
     expect(atlassian.requests.filter((request) => request.method !== 'GET')).toEqual([]);
   });
 
+  it('updates from a record object, and enforces confirm once the plan deletes a step', async () => {
+    const fake = routeXraySteps(atlassian, 'OM-12', [
+      { id: 311, action: 'Open' },
+      { id: 312, action: 'Save' },
+    ]);
+    atlassian.route('/rest/api/2/issue/OM-12', (_request, response) =>
+      respondJson(response, 200, xrayFixtureIssue('OM-12', { steps: fake.fieldSteps() })),
+    );
+    const c = await connect({ xray: true, allowWrites: true, env: xrayEnv() });
+    const record = { key: 'OM-12', steps: [{ id: '311', action: 'Open', data: '', result: '' }] };
+
+    const refused = await c.callTool({ name: 'jira_xray_test_update', arguments: { test: 'OM-12', record } });
+    expect(refused.isError).toBe(true);
+    expect(JSON.stringify(refused.content)).toContain('confirm');
+    expect(fake.steps).toHaveLength(2);
+
+    const done = await c.callTool({
+      name: 'jira_xray_test_update',
+      arguments: { test: 'OM-12', record, confirm: true },
+    });
+    expect(done.isError).toBeFalsy();
+    expect(fake.steps.map((step) => step.id)).toEqual([311]);
+  });
+
+  it('creates from typed properties', async () => {
+    let sent = '';
+    atlassian.route('/rest/api/2/issue', (_request, response, body) => {
+      sent = body;
+      respondJson(response, 201, { id: '1', key: 'OM-50' });
+    });
+    atlassian.route('/rest/api/2/issue/OM-50', (_request, response) =>
+      respondJson(response, 200, xrayFixtureIssue('OM-50')),
+    );
+    const c = await connect({ xray: true, allowWrites: true, env: xrayEnv() });
+    const result = await c.callTool({
+      name: 'jira_xray_test_create',
+      arguments: { project: 'OM', summary: 'S', steps: [{ action: 'Open' }] },
+    });
+
+    expect(result.isError).toBeFalsy();
+    const { fields } = JSON.parse(sent) as { fields: Record<string, unknown> };
+    expect(fields[XRAY_FIXTURE_IDS.steps]).toEqual({
+      steps: [{ index: 1, fields: { action: 'Open', data: '', 'expected result': '' } }],
+    });
+  });
+
   it('adds a step and returns the test read back', async () => {
     const fake = routeXraySteps(atlassian, 'OM-12', [{ id: 311, action: 'Open' }]);
     atlassian.route('/rest/api/2/issue/OM-12', (_request, response) =>

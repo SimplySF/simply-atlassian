@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.11.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-core%400.10.0...%40simplysf%2Fsimply-atlassian-core%400.11.0) (2026-11-04)
+
+### Features
+
+- add jira xray test create and update ([#79](https://github.com/SimplySF/simply-atlassian/issues/79)) ([010d44b](https://github.com/SimplySF/simply-atlassian/commit/010d44bae93e48ce43c99e57ff931741cdefa2fa))
+
 # [0.10.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-core%400.9.0...%40simplysf%2Fsimply-atlassian-core%400.10.0) (2026-11-03)
 
 ### Features

@@ -21,7 +21,7 @@ export interface JiraField {
   readonly id?: string;
   readonly name?: string;
   readonly custom?: boolean;
-  readonly schema?: { readonly type?: string; readonly custom?: string };
+  readonly schema?: { readonly type?: string; readonly custom?: string; readonly items?: string };
 }
 
 export interface FieldFilter {

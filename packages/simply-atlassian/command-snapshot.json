@@ -770,6 +770,34 @@
   },
   {
     "alias": [],
+    "command": "atlassian:jira:xray:test:create",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "body",
+      "body-file",
+      "definition",
+      "dry-run",
+      "env-file",
+      "field",
+      "file",
+      "gherkin",
+      "gherkin-file",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "json",
+      "project",
+      "step",
+      "summary",
+      "type",
+      "verifies"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
     "command": "atlassian:jira:xray:test:export",
     "flagAliases": [],
     "flagChars": ["e"],
@@ -888,6 +916,33 @@
       "jira-username",
       "json",
       "result"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:xray:test:update",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": [
+      "body",
+      "body-file",
+      "confirm",
+      "definition",
+      "dry-run",
+      "env-file",
+      "field",
+      "file",
+      "gherkin",
+      "gherkin-file",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "json",
+      "step",
+      "summary",
+      "type"
     ],
     "plugin": "@simplysf/simply-atlassian"
   }

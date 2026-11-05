@@ -93,7 +93,12 @@ export async function startTestServer(): Promise<TestServer> {
  */
 export const XRAY_FIXTURE_FIELDS = [
   { id: 'summary', name: 'Summary', custom: false, schema: { type: 'string', system: 'summary' } },
-  { id: 'components', name: 'Component/s', custom: false, schema: { type: 'array', system: 'components' } },
+  {
+    id: 'components',
+    name: 'Component/s',
+    custom: false,
+    schema: { type: 'array', items: 'component', system: 'components' },
+  },
   { id: 'customfield_40016', name: 'Story Points', custom: true, schema: { type: 'number' } },
   xrayField('customfield_93001', 'Prüfart', 'test-type-custom-field'),
   xrayField('customfield_93002', 'Schritte', 'manual-test-steps-custom-field'),

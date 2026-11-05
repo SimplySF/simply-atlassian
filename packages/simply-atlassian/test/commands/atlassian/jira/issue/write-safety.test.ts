@@ -248,6 +248,8 @@ describe('write-command coverage', () => {
         'atlassian/confluence/page/label/add.ts',
         'atlassian/jira/issue/remotelink/create.ts',
         'atlassian/jira/issue/remotelink/delete.ts',
+        'atlassian/jira/xray/test/create.ts',
+        'atlassian/jira/xray/test/update.ts',
         'atlassian/jira/xray/test/step/add.ts',
         'atlassian/jira/xray/test/step/delete.ts',
         'atlassian/jira/xray/test/step/update.ts',

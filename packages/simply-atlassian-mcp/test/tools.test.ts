@@ -57,6 +57,7 @@ describe('TOOLS catalogue', () => {
       'jira_issue_comment_delete',
       'jira_issue_delete',
       'jira_xray_test_step_delete',
+      'jira_xray_test_update',
     ]);
   });
 
@@ -135,9 +136,11 @@ describe('TOOLS catalogue', () => {
     const writes = TOOLS.filter((tool) => tool.name.startsWith('jira_xray_') && tool.kind !== 'read');
 
     expect(writes.map((tool) => tool.name).sort()).toEqual([
+      'jira_xray_test_create',
       'jira_xray_test_step_add',
       'jira_xray_test_step_delete',
       'jira_xray_test_step_update',
+      'jira_xray_test_update',
     ]);
     for (const tool of writes) expect(tool.app, tool.name).toBe('xray');
   });

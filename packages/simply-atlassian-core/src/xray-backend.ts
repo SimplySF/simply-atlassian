@@ -101,6 +101,8 @@ export interface XrayBackend {
   repositoryFolders(project: string): Promise<unknown>;
   /** The test keys in one repository folder, through Xray's REST API rather than JQL. */
   folderTestKeys(project: string, folderId: string, recursive: boolean): Promise<string[]>;
+  /** The Jira client underneath, since a Test is written through Jira's own issue API. */
+  jira(): JiraClient;
   /** A test's steps through Xray's step API, whose ids are the ones the step writes take. */
   testSteps(test: string): Promise<unknown>;
   /** Appends a step. Xray's API takes no position. */
@@ -255,6 +257,10 @@ export class XrayServerBackend implements XrayBackend {
     return pagedKeys((page) =>
       this.client.getFromRoot<unknown>(base, { allDescendants: recursive, page, limit: XRAY_PAGE_SIZE }),
     );
+  }
+
+  public jira(): JiraClient {
+    return this.client;
   }
 
   public testSteps(test: string): Promise<unknown> {

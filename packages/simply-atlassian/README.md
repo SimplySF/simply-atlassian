@@ -165,12 +165,14 @@ error that says the credential cannot make changes, rather than looking like a p
 - [`simply atlassian jira xray path list`](#simply-atlassian-jira-xray-path-list)
 - [`simply atlassian jira xray plan list`](#simply-atlassian-jira-xray-plan-list)
 - [`simply atlassian jira xray set list`](#simply-atlassian-jira-xray-set-list)
+- [`simply atlassian jira xray test create`](#simply-atlassian-jira-xray-test-create)
 - [`simply atlassian jira xray test export`](#simply-atlassian-jira-xray-test-export)
 - [`simply atlassian jira xray test get TEST`](#simply-atlassian-jira-xray-test-get-test)
 - [`simply atlassian jira xray test list`](#simply-atlassian-jira-xray-test-list)
 - [`simply atlassian jira xray test step add TEST`](#simply-atlassian-jira-xray-test-step-add-test)
 - [`simply atlassian jira xray test step delete TEST STEP`](#simply-atlassian-jira-xray-test-step-delete-test-step)
 - [`simply atlassian jira xray test step update TEST STEP`](#simply-atlassian-jira-xray-test-step-update-test-step)
+- [`simply atlassian jira xray test update TEST`](#simply-atlassian-jira-xray-test-update-test)
 
 ## `simply atlassian confluence open PAGE`
 
@@ -218,7 +220,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/confluence/open.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/confluence/open.js)_
+_See code: [lib/commands/atlassian/confluence/open.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/confluence/open.js)_
 
 ## `simply atlassian confluence page children PAGE`
 
@@ -265,7 +267,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/children.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/children.js)_
+_See code: [lib/commands/atlassian/confluence/page/children.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/children.js)_
 
 ## `simply atlassian confluence page comment add PAGE`
 
@@ -319,7 +321,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/comment/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/comment/add.js)_
+_See code: [lib/commands/atlassian/confluence/page/comment/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/comment/add.js)_
 
 ## `simply atlassian confluence page comment list PAGE`
 
@@ -365,7 +367,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/comment/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/comment/list.js)_
+_See code: [lib/commands/atlassian/confluence/page/comment/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/comment/list.js)_
 
 ## `simply atlassian confluence page create`
 
@@ -426,7 +428,7 @@ FLAG DESCRIPTIONS
     Without this the page lands at the space root. A page URL is accepted as well as a bare id.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/create.js)_
+_See code: [lib/commands/atlassian/confluence/page/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/create.js)_
 
 ## `simply atlassian confluence page delete PAGE`
 
@@ -482,7 +484,7 @@ FLAG DESCRIPTIONS
     bare, never --confirm=true or --confirm=false.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/delete.js)_
+_See code: [lib/commands/atlassian/confluence/page/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/delete.js)_
 
 ## `simply atlassian confluence page get PAGE`
 
@@ -536,7 +538,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/get.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/get.js)_
+_See code: [lib/commands/atlassian/confluence/page/get.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/get.js)_
 
 ## `simply atlassian confluence page history PAGE`
 
@@ -584,7 +586,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/history.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/history.js)_
+_See code: [lib/commands/atlassian/confluence/page/history.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/history.js)_
 
 ## `simply atlassian confluence page label add PAGE`
 
@@ -639,7 +641,7 @@ FLAG DESCRIPTIONS
     Confluence namespaces labels; global is what the UI applies and what you almost always want.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/label/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/label/add.js)_
+_See code: [lib/commands/atlassian/confluence/page/label/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/label/add.js)_
 
 ## `simply atlassian confluence page label list PAGE`
 
@@ -685,7 +687,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/label/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/label/list.js)_
+_See code: [lib/commands/atlassian/confluence/page/label/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/label/list.js)_
 
 ## `simply atlassian confluence page search`
 
@@ -731,7 +733,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/search.js)_
+_See code: [lib/commands/atlassian/confluence/page/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/search.js)_
 
 ## `simply atlassian confluence page update PAGE`
 
@@ -794,7 +796,7 @@ FLAG DESCRIPTIONS
     bare update has always done.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/update.js)_
+_See code: [lib/commands/atlassian/confluence/page/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/update.js)_
 
 ## `simply atlassian jira board list`
 
@@ -840,7 +842,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/board/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/board/list.js)_
+_See code: [lib/commands/atlassian/jira/board/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/board/list.js)_
 
 ## `simply atlassian jira fields`
 
@@ -888,7 +890,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/fields.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/fields.js)_
+_See code: [lib/commands/atlassian/jira/fields.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/fields.js)_
 
 ## `simply atlassian jira issue attachment download ISSUE`
 
@@ -951,7 +953,7 @@ FLAG DESCRIPTIONS
     Default: every attachment on the issue.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/attachment/download.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/attachment/download.js)_
+_See code: [lib/commands/atlassian/jira/issue/attachment/download.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/attachment/download.js)_
 
 ## `simply atlassian jira issue attachment list ISSUE`
 
@@ -993,7 +995,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/attachment/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/attachment/list.js)_
+_See code: [lib/commands/atlassian/jira/issue/attachment/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/attachment/list.js)_
 
 ## `simply atlassian jira issue comment add ISSUE`
 
@@ -1051,7 +1053,7 @@ FLAG DESCRIPTIONS
     candidates, rather than a guess at who was meant.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/comment/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/add.js)_
+_See code: [lib/commands/atlassian/jira/issue/comment/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/add.js)_
 
 ## `simply atlassian jira issue comment delete ISSUE COMMENT`
 
@@ -1103,7 +1105,7 @@ FLAG DESCRIPTIONS
     bare, never --confirm=true or --confirm=false.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/comment/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/delete.js)_
+_See code: [lib/commands/atlassian/jira/issue/comment/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/delete.js)_
 
 ## `simply atlassian jira issue comment edit ISSUE COMMENT`
 
@@ -1160,7 +1162,7 @@ FLAG DESCRIPTIONS
     A term matching more than one user is an error listing the candidates, rather than a guess.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/comment/edit.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/edit.js)_
+_See code: [lib/commands/atlassian/jira/issue/comment/edit.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/edit.js)_
 
 ## `simply atlassian jira issue comment list ISSUE`
 
@@ -1205,7 +1207,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/comment/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/list.js)_
+_See code: [lib/commands/atlassian/jira/issue/comment/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/list.js)_
 
 ## `simply atlassian jira issue create`
 
@@ -1270,7 +1272,7 @@ FLAG DESCRIPTIONS
     error is more current than any rule encoded here.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/create.js)_
+_See code: [lib/commands/atlassian/jira/issue/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/create.js)_
 
 ## `simply atlassian jira issue delete ISSUE`
 
@@ -1328,7 +1330,7 @@ FLAG DESCRIPTIONS
     Without this, Jira refuses to delete an issue that has subtasks.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/delete.js)_
+_See code: [lib/commands/atlassian/jira/issue/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/delete.js)_
 
 ## `simply atlassian jira issue history ISSUE`
 
@@ -1376,7 +1378,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/history.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/history.js)_
+_See code: [lib/commands/atlassian/jira/issue/history.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/history.js)_
 
 ## `simply atlassian jira issue link create FROM TYPE TO`
 
@@ -1428,7 +1430,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/link/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/create.js)_
+_See code: [lib/commands/atlassian/jira/issue/link/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/create.js)_
 
 ## `simply atlassian jira issue link delete LINK-ID`
 
@@ -1475,7 +1477,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/link/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/delete.js)_
+_See code: [lib/commands/atlassian/jira/issue/link/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/delete.js)_
 
 ## `simply atlassian jira issue link list ISSUE`
 
@@ -1520,7 +1522,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/link/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/list.js)_
+_See code: [lib/commands/atlassian/jira/issue/link/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/list.js)_
 
 ## `simply atlassian jira issue link types`
 
@@ -1563,7 +1565,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/link/types.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/types.js)_
+_See code: [lib/commands/atlassian/jira/issue/link/types.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/types.js)_
 
 ## `simply atlassian jira issue remotelink create ISSUE`
 
@@ -1619,7 +1621,7 @@ FLAG DESCRIPTIONS
     Jira renders this as the heading the link is grouped under on the issue.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/remotelink/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/remotelink/create.js)_
+_See code: [lib/commands/atlassian/jira/issue/remotelink/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/remotelink/create.js)_
 
 ## `simply atlassian jira issue remotelink delete ISSUE LINK-ID`
 
@@ -1665,7 +1667,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/remotelink/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/remotelink/delete.js)_
+_See code: [lib/commands/atlassian/jira/issue/remotelink/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/remotelink/delete.js)_
 
 ## `simply atlassian jira issue remotelink list ISSUE`
 
@@ -1707,7 +1709,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/remotelink/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/remotelink/list.js)_
+_See code: [lib/commands/atlassian/jira/issue/remotelink/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/remotelink/list.js)_
 
 ## `simply atlassian jira issue search`
 
@@ -1757,7 +1759,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/search.js)_
+_See code: [lib/commands/atlassian/jira/issue/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/search.js)_
 
 ## `simply atlassian jira issue transition ISSUE TRANSITION`
 
@@ -1817,7 +1819,7 @@ FLAG DESCRIPTIONS
     A digits-only argument is otherwise taken as an id, which makes a workflow step literally named "41" unreachable.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/transition.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/transition.js)_
+_See code: [lib/commands/atlassian/jira/issue/transition.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/transition.js)_
 
 ## `simply atlassian jira issue transitions ISSUE`
 
@@ -1859,7 +1861,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/transitions.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/transitions.js)_
+_See code: [lib/commands/atlassian/jira/issue/transitions.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/transitions.js)_
 
 ## `simply atlassian jira issue update ISSUE`
 
@@ -1916,7 +1918,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/update.js)_
+_See code: [lib/commands/atlassian/jira/issue/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/update.js)_
 
 ## `simply atlassian jira issue view ISSUE`
 
@@ -1964,7 +1966,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/view.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/view.js)_
+_See code: [lib/commands/atlassian/jira/issue/view.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/view.js)_
 
 ## `simply atlassian jira open TARGET`
 
@@ -2011,7 +2013,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/open.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/open.js)_
+_See code: [lib/commands/atlassian/jira/open.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/open.js)_
 
 ## `simply atlassian jira project versions PROJECT`
 
@@ -2056,7 +2058,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/project/versions.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/project/versions.js)_
+_See code: [lib/commands/atlassian/jira/project/versions.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/project/versions.js)_
 
 ## `simply atlassian jira projects`
 
@@ -2098,7 +2100,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/projects.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/projects.js)_
+_See code: [lib/commands/atlassian/jira/projects.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/projects.js)_
 
 ## `simply atlassian jira sprint add SPRINT ISSUE`
 
@@ -2145,7 +2147,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/sprint/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/add.js)_
+_See code: [lib/commands/atlassian/jira/sprint/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/add.js)_
 
 ## `simply atlassian jira sprint create`
 
@@ -2193,7 +2195,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/sprint/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/create.js)_
+_See code: [lib/commands/atlassian/jira/sprint/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/create.js)_
 
 ## `simply atlassian jira sprint issues SPRINT`
 
@@ -2239,7 +2241,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/sprint/issues.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/issues.js)_
+_See code: [lib/commands/atlassian/jira/sprint/issues.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/issues.js)_
 
 ## `simply atlassian jira sprint list BOARD`
 
@@ -2285,7 +2287,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/sprint/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/list.js)_
+_See code: [lib/commands/atlassian/jira/sprint/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/list.js)_
 
 ## `simply atlassian jira sprint update SPRINT`
 
@@ -2340,7 +2342,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/sprint/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/update.js)_
+_See code: [lib/commands/atlassian/jira/sprint/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/update.js)_
 
 ## `simply atlassian jira user search QUERY`
 
@@ -2392,7 +2394,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/user/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/user/search.js)_
+_See code: [lib/commands/atlassian/jira/user/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/user/search.js)_
 
 ## `simply atlassian jira user view ACCOUNT`
 
@@ -2434,7 +2436,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/user/view.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/user/view.js)_
+_See code: [lib/commands/atlassian/jira/user/view.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/user/view.js)_
 
 ## `simply atlassian jira whoami`
 
@@ -2475,7 +2477,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/whoami.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/whoami.js)_
+_See code: [lib/commands/atlassian/jira/whoami.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/whoami.js)_
 
 ## `simply atlassian jira xray fields`
 
@@ -2525,7 +2527,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/fields.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/fields.js)_
+_See code: [lib/commands/atlassian/jira/xray/fields.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/fields.js)_
 
 ## `simply atlassian jira xray path list`
 
@@ -2573,7 +2575,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/path/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/path/list.js)_
+_See code: [lib/commands/atlassian/jira/xray/path/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/path/list.js)_
 
 ## `simply atlassian jira xray plan list`
 
@@ -2628,7 +2630,7 @@ FLAG DESCRIPTIONS
     (components, customfield_10400, "Story Points"). A name that matches nothing is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/plan/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/plan/list.js)_
+_See code: [lib/commands/atlassian/jira/xray/plan/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/plan/list.js)_
 
 ## `simply atlassian jira xray set list`
 
@@ -2683,7 +2685,74 @@ FLAG DESCRIPTIONS
     (components, customfield_10400, "Story Points"). A name that matches nothing is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/set/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/set/list.js)_
+_See code: [lib/commands/atlassian/jira/xray/set/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/set/list.js)_
+
+## `simply atlassian jira xray test create`
+
+Create an Xray test, with its steps or definition.
+
+```
+USAGE
+  $ simply atlassian jira xray test create [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>] [--jira-api-token
+    <value>] [--jira-personal-token <value>] [--dry-run] [--project <value>] [--verifies <value>...] [--file <value>]
+    [--summary <value>] [--type <value>] [--step <value>...] [--gherkin <value> | --gherkin-file <value>] [--definition
+    <value>] [--field <value>...] [--body <value> | --body-file <value>]
+
+FLAGS
+  --body=<value>          Raw JSON request body, merged underneath.
+  --body-file=<value>     Path to a file holding the raw JSON request body.
+  --definition=<value>    The generic test definition.
+  --dry-run               Print the request that would be sent and exit without sending it.
+  --field=<value>...      Another field, as role=value. Repeatable.
+  --file=<value>          Path to one test record, as "test export --format json" writes it.
+  --gherkin=<value>       The Cucumber scenario.
+  --gherkin-file=<value>  Path to a file holding the Cucumber scenario.
+  --project=<value>       Project key the test belongs to.
+  --step=<value>...       A step, as 'action|data|result'. Repeatable; a literal pipe is written \|.
+  --summary=<value>       The summary.
+  --type=<value>          manual, cucumber, generic, or another type the field allows.
+  --verifies=<value>...   A requirement this test verifies, which gets a link. Repeatable.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Create an Xray test, with its steps or definition.
+
+  Takes a record from "test export", flags, or both, with flags winning. The type is inferred from the steps, Gherkin or
+  definition unless --type says. Steps go in the same request as the issue, so a test is created with them or not at
+  all. --verifies links the requirement it tests.
+
+  Keys of a record this does not write, such as links and preconditions, are named in a note. A step that calls another
+  test is refused. Returns the test read back. Xray credentials have no read-only scope, so ATLASSIAN_READ_ONLY is the
+  only guard against an unintended write.
+
+EXAMPLES
+  $ simply atlassian jira xray test create --project OM --summary "Reset a password" --step "Open Users||List shown" --verifies OM-40
+
+  $ simply atlassian jira xray test create --project OM --summary "Log in" --gherkin-file ./login.feature
+
+  $ simply atlassian jira xray test create --project OM --file ./test.json --summary "A copy" --dry-run
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+
+  --field=<value>...  Another field, as role=value. Repeatable.
+
+    A role or field name, as --fields takes on "test get"; no customfield_ id is needed.
+```
+
+_See code: [lib/commands/atlassian/jira/xray/test/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/create.js)_
 
 ## `simply atlassian jira xray test export`
 
@@ -2761,7 +2830,7 @@ FLAG DESCRIPTIONS
     (components, customfield_10400, "Story Points"). A name that matches nothing is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/test/export.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/export.js)_
+_See code: [lib/commands/atlassian/jira/xray/test/export.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/export.js)_
 
 ## `simply atlassian jira xray test get TEST`
 
@@ -2821,7 +2890,7 @@ FLAG DESCRIPTIONS
     (components, customfield_10400, "Story Points"). A name that matches nothing is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/test/get.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/get.js)_
+_See code: [lib/commands/atlassian/jira/xray/test/get.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/get.js)_
 
 ## `simply atlassian jira xray test list`
 
@@ -2890,7 +2959,7 @@ FLAG DESCRIPTIONS
     (components, customfield_10400, "Story Points"). A name that matches nothing is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/test/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/list.js)_
+_See code: [lib/commands/atlassian/jira/xray/test/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/list.js)_
 
 ## `simply atlassian jira xray test step add TEST`
 
@@ -2938,7 +3007,7 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/test/step/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/step/add.js)_
+_See code: [lib/commands/atlassian/jira/xray/test/step/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/step/add.js)_
 
 ## `simply atlassian jira xray test step delete TEST STEP`
 
@@ -2990,7 +3059,7 @@ FLAG DESCRIPTIONS
     bare, never --confirm=true or --confirm=false.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/test/step/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/step/delete.js)_
+_See code: [lib/commands/atlassian/jira/xray/test/step/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/step/delete.js)_
 
 ## `simply atlassian jira xray test step update TEST STEP`
 
@@ -3041,7 +3110,80 @@ FLAG DESCRIPTIONS
     explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/test/step/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.16.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/step/update.js)_
+_See code: [lib/commands/atlassian/jira/xray/test/step/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/step/update.js)_
+
+## `simply atlassian jira xray test update TEST`
+
+Apply a record or flags to an Xray test, replacing its steps if given.
+
+```
+USAGE
+  $ simply atlassian jira xray test update TEST [--json] [-e <value>] [--jira-url <value>] [--jira-username <value>]
+    [--jira-api-token <value>] [--jira-personal-token <value>] [--dry-run] [--confirm] [--file <value>] [--summary
+    <value>] [--type <value>] [--step <value>...] [--gherkin <value> | --gherkin-file <value>] [--definition <value>]
+    [--field <value>...] [--body <value> | --body-file <value>]
+
+ARGUMENTS
+  TEST  Test issue key, for example OM-12.
+
+FLAGS
+  --body=<value>          Raw JSON request body, merged underneath.
+  --body-file=<value>     Path to a file holding the raw JSON request body.
+  --confirm               Required to proceed with an irreversible change.
+  --definition=<value>    The generic test definition.
+  --dry-run               Print the request that would be sent and exit without sending it.
+  --field=<value>...      Another field, as role=value. Repeatable.
+  --file=<value>          Path to one test record, as "test export --format json" writes it.
+  --gherkin=<value>       The Cucumber scenario.
+  --gherkin-file=<value>  Path to a file holding the Cucumber scenario.
+  --step=<value>...       A step, as 'action|data|result'. Repeatable; a literal pipe is written \|.
+  --summary=<value>       The summary.
+  --type=<value>          manual, cucumber, generic, or another type the field allows.
+
+CONNECTION FLAGS
+  -e, --env-file=<value>             Path to a .env file holding connection settings.
+      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
+      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+
+GLOBAL FLAGS
+  --json  Format output as json.
+
+DESCRIPTION
+  Apply a record or flags to an Xray test, replacing its steps if given.
+
+  Only what differs is sent, so an unchanged "test export" record writes nothing. Steps given in a record or with --step
+  replace the test's list: matched by id when the input has ids, by position when it has none. A step missing from the
+  input is deleted, which needs --confirm.
+
+  Xray's API documents no way to reorder steps or to add one at a position, so a reordered list is refused; new steps go
+  after the existing ones. Custom step columns and attachments are left as they are. Use --dry-run to see the plan.
+
+EXAMPLES
+  $ simply atlassian jira xray test update OM-12 --file ./test.json --dry-run
+
+  $ simply atlassian jira xray test update OM-12 --file ./test.json --confirm
+
+  $ simply atlassian jira xray test update OM-12 --summary "Reset a locked password"
+
+FLAG DESCRIPTIONS
+  -e, --env-file=<value>  Path to a .env file holding connection settings.
+
+    Loaded before anything else. Variables already present in the environment win, so the file never overrides an
+    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+
+  --confirm  Required to proceed with an irreversible change.
+
+    There is deliberately no short form: a single letter is too easy to add by habit. It also takes no value — pass it
+    bare, never --confirm=true or --confirm=false.
+
+  --field=<value>...  Another field, as role=value. Repeatable.
+
+    A role or field name, as --fields takes on "test get"; no customfield_ id is needed.
+```
+
+_See code: [lib/commands/atlassian/jira/xray/test/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.17.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/update.js)_
 <!-- commandsstop -->
 
 ## License
