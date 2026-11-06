@@ -2597,7 +2597,8 @@ FLAGS
   --definition=<value>    The generic test definition.
   --dry-run               Print the request that would be sent and exit without sending it.
   --field=<value>...      Another field, as role=value. Repeatable.
-  --file=<value>          Path to one test record, as "test export --format json" writes it.
+  --file=<value>          Path to one test record, as "test get --json" prints it, or one line of "test export --format
+                          jsonl".
   --gherkin=<value>       The Cucumber scenario.
   --gherkin-file=<value>  Path to a file holding the Cucumber scenario.
   --project=<value>       Project key the test belongs to.
@@ -2619,9 +2620,9 @@ GLOBAL FLAGS
 DESCRIPTION
   Create an Xray test, with its steps or definition.
 
-  Takes a record from "test export", flags, or both, with flags winning. The type is inferred from the steps, Gherkin or
-  definition unless --type says. Steps go in the same request as the issue, so a test is created with them or not at
-  all. --verifies links the requirement it tests.
+  Takes a record from "test get --json", flags, or both, with flags winning. The type is inferred from the steps,
+  Gherkin or definition unless --type says. Steps go in the same request as the issue, so a test is created with them or
+  not at all. --verifies links the requirement it tests.
 
   Keys of a record this does not write, such as links and preconditions, are named in a note. A step that calls another
   test is refused. Returns the test read back. Xray credentials have no read-only scope, so ATLASSIAN_READ_ONLY is the
@@ -3026,7 +3027,8 @@ FLAGS
   --definition=<value>    The generic test definition.
   --dry-run               Print the request that would be sent and exit without sending it.
   --field=<value>...      Another field, as role=value. Repeatable.
-  --file=<value>          Path to one test record, as "test export --format json" writes it.
+  --file=<value>          Path to one test record, as "test get --json" prints it, or one line of "test export --format
+                          jsonl".
   --gherkin=<value>       The Cucumber scenario.
   --gherkin-file=<value>  Path to a file holding the Cucumber scenario.
   --step=<value>...       A step, as 'action|data|result'. Repeatable; a literal pipe is written \|.
@@ -3046,9 +3048,9 @@ GLOBAL FLAGS
 DESCRIPTION
   Apply a record or flags to an Xray test, replacing its steps if given.
 
-  Only what differs is sent, so an unchanged "test export" record writes nothing. Steps given in a record or with --step
-  replace the test's list: matched by id when the input has ids, by position when it has none. A step missing from the
-  input is deleted, which needs --confirm.
+  Only what differs is sent, so an unchanged "test get --json" record writes nothing. Steps given in a record or with
+  --step replace the test's list: matched by id when the input has ids, by position when it has none. A step missing
+  from the input is deleted, which needs --confirm.
 
   Xray's API documents no way to reorder steps or to add one at a position, so a reordered list is refused; new steps go
   after the existing ones. Custom step columns and attachments are left as they are. Use --dry-run to see the plan.

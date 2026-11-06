@@ -52,7 +52,7 @@ refactors that keep the public surface identical (though a short doc is welcome 
 | 0017 | [Retrying only the writes that cannot have landed](0017-retrying-writes.md)                       | Draft                           |
 | 0018 | [`atlassian mcp install`](0018-mcp-install.md)                                                    | In progress                     |
 | 0019 | [Confluence page history](0019-confluence-page-history.md)                                        | Implemented (PR #64)            |
-| 0021 | [Xray test authoring](0021-jira-xray-test-authoring.md)                                           | In progress                     |
+| 0021 | [Xray test authoring](0021-jira-xray-test-authoring.md)                                           | Implemented (PRs #77–#80)       |
 
 ## Template
 

@@ -1,14 +1,15 @@
 ---
 title: Xray
-description: Read Xray tests, plans, sets, and the test repository on Jira Server/Data Center, and export them in bulk as records with a documented shape.
+description: Read Xray tests, plans, sets, and the test repository on Jira Server/Data Center, export them as records with a documented shape, and create and update tests.
 ---
 
 [Xray](https://www.getxray.app/) keeps its tests, test sets, test plans, and preconditions as Jira
 issues, so `jira issue view` already shows their summary and status. The parts that make them
 tests live in Xray's own fields and API: a test's steps, its preconditions, the plans and sets
-that contain it, and where it sits in the test repository. The `jira xray` commands read those.
+that contain it, and where it sits in the test repository. The `jira xray` commands read those,
+and can [create and update tests](#writing-tests).
 
-They are **read-only** and support **Xray on Jira Server/Data Center** only. Xray Cloud is a
+They support **Xray on Jira Server/Data Center** only. Xray Cloud is a
 separate service with its own API, and is not supported yet: pointed at an `*.atlassian.net` site,
 every `jira xray` command stops with a configuration error (exit code 2) before sending anything.
 
@@ -83,15 +84,20 @@ in `overrides` as above.
 
 ## Commands
 
-| Command                         | What it answers                                                            |
-| ------------------------------- | -------------------------------------------------------------------------- |
-| `jira xray fields`              | Which Jira fields hold Xray's data on this instance                        |
-| `jira xray test get <test>`     | One test: type, steps, definition, preconditions, links, plans, sets, path |
-| `jira xray test list <scope>`   | A table of tests in a project, plan, set, or folder                        |
-| `jira xray test export <scope>` | Full test records for the same scopes, in bulk                             |
-| `jira xray plan list`           | Test plans in a project, with test counts                                  |
-| `jira xray set list`            | Test sets in a project, with test counts                                   |
-| `jira xray path list`           | The test repository's folder tree for a project, with test counts          |
+| Command                                    | What it answers                                                              |
+| ------------------------------------------ | ---------------------------------------------------------------------------- |
+| `jira xray fields`                         | Which Jira fields hold Xray's data on this instance                          |
+| `jira xray test get <test>`                | One test: type, steps, definition, preconditions, links, plans, sets, path   |
+| `jira xray test list <scope>`              | A table of tests in a project, plan, set, or folder                          |
+| `jira xray test export <scope>`            | Full test records for the same scopes, in bulk                               |
+| `jira xray plan list`                      | Test plans in a project, with test counts                                    |
+| `jira xray set list`                       | Test sets in a project, with test counts                                     |
+| `jira xray path list`                      | The test repository's folder tree for a project, with test counts            |
+| `jira xray test create`                    | Creates a test, with its steps or definition and the requirement it verifies |
+| `jira xray test update <test>`             | Applies a record or flags to a test, replacing its steps if given            |
+| `jira xray test step add <test>`           | Adds a step to the end of a manual test                                      |
+| `jira xray test step update <test> <step>` | Edits one step                                                               |
+| `jira xray test step delete <test> <step>` | Deletes one step                                                             |
 
 Each command's output feeds the next: `plan list` gives the key `test list --plan` takes, and
 `path list` gives the path `test export --project X --path` takes.
@@ -265,13 +271,89 @@ simply atlassian jira xray path list --project OM
 simply atlassian jira xray test export --project OM --path "/O&M/Accounts" --recursive --format markdown > accounts.md
 ```
 
+## Writing tests
+
+Writes are built from [Xray's published REST documentation](https://docs.getxray.app/space/XRAY/301474262/Tests%20-%20REST)
+and have **not been checked against a live instance**. Try `--dry-run`, then one test, before
+scripting anything large, and [tell us](https://github.com/SimplySF/simply-atlassian/issues) what you find.
+
+### From a story to a test
+
+```sh
+simply atlassian jira xray test create --project OM --summary "Admin can reset a password" \
+  --step "Open Users||The list is shown" \
+  --step "Pick a user|bob|Their details are shown" \
+  --verifies OM-40
+
+simply atlassian jira xray test create --project OM --summary "Log in" --gherkin-file ./login.feature
+simply atlassian jira xray test create --project OM --summary "Sum" --type generic --definition sum.sh
+```
+
+`--step` is `action|data|result`, with later parts optional and a literal pipe written `\|`. The type
+comes from what you pass unless `--type` says, and `--field role=value` sets anything else by role or
+field name. Steps travel in the same request as the issue, so a test is created with its steps or not
+at all. `--verifies` adds a link afterwards; if one fails, the error names the created test and how
+to finish, and the test is left in place.
+
+On Xray before 7.3.0 a Cucumber test also needs its type, which is not guessed:
+`--field cucumberType=Scenario`.
+
+### Export, edit, update
+
+```sh
+simply atlassian jira xray test get OM-12 --json > test.json
+# edit test.json
+simply atlassian jira xray test update OM-12 --file test.json --dry-run
+simply atlassian jira xray test update OM-12 --file test.json
+```
+
+`--file` takes one record. `summary`, `type`, `steps`, `definition` and `fields` are applied, and flags
+override them. Other keys (`status`, `links`, `plans`, …) are not written, and a note names them. Only
+what differs is sent, so an unchanged record writes nothing.
+
+Steps in the input **replace the list**, matched by their `id`:
+
+| In the input                                                     | What happens                                                |
+| ---------------------------------------------------------------- | ----------------------------------------------------------- |
+| A step whose text changed                                        | That step is updated, and only the changed columns are sent |
+| A step with no `id`, after the existing ones                     | Added                                                       |
+| An existing step left out                                        | Deleted, which needs `--confirm`                            |
+| An `id` the test does not have                                   | Refused, and nothing is sent                                |
+| Steps in a different order, or a new step before an existing one | Refused, and nothing is sent                                |
+
+Xray documents no way to reorder steps or to add one at a position, so to move a step, delete and
+re-add it. A hand-written list with no ids at all is matched by position instead, and warns when a step
+with attachments changes text, because attachments stay with the step.
+
+Custom step columns and attachments are left as they are, with a note, since Xray documents no way
+to write them through these calls. A step that calls another test is refused rather than flattened.
+Changing the type of a test that has steps is refused too: delete the steps first.
+
+### One step at a time
+
+```sh
+simply atlassian jira xray test get OM-12                       # shows step ids
+simply atlassian jira xray test step add OM-12 --action "Save" --result "Saved"
+simply atlassian jira xray test step update OM-12 311 --result "Saved, and listed"
+simply atlassian jira xray test step delete OM-12 311 --confirm
+```
+
+Every write returns the test read back, as `{ record, notes }` under `--json`. If the write landed but
+the read failed, `record` is `null` and a note says so: do not retry.
+
 ## Write safety
 
-Every `jira xray` command is a read, and all of them work under `ATLASSIAN_READ_ONLY`. The one
-thing they write is the local instance record, which is a cache of the instance's layout rather
-than a change to Jira, so the read-only guard does not apply to it.
+**Xray credentials have no read-only scope.** A token that can read tests can write them, so
+`ATLASSIAN_READ_ONLY` is the only guard here. Set it in any context that should not write: every write
+above then exits 2 before sending anything. Read commands work under it. Their one local write, the
+instance record, is a cache of the instance's layout and not a change to Jira, so the guard does not
+apply to it.
+
+All writes take `--dry-run` and `--json`. `test step delete`, and a `test update` that would delete a
+step, need `--confirm`.
 
 ## In the MCP server
 
-The MCP server has one tool per command, registered only when it is started with `--xray`. See
+The MCP server has one tool per command, registered only when it is started with `--xray`, and the
+writes only with `--allow-writes` as well. See
 the [MCP server guide](/guides/mcp-server/#xray-tools---xray).
