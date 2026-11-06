@@ -421,7 +421,15 @@ For Jira Server/Data Center with [Xray](https://www.getxray.app/) installed, sta
 `jira_xray_test_list`, `jira_xray_test_export`, `jira_xray_plan_list`, `jira_xray_set_list`, and
 `jira_xray_path_list`. They are off by default because a client shows its model every registered
 tool and most instances have no Xray, and Xray Server/Data Center needs no settings of its own that
-the server could detect it by. `--allow-writes` does not register them; they are all reads.
+the server could detect it by.
+
+With `--allow-writes` as well, five write tools join them: `jira_xray_test_create`,
+`jira_xray_test_update`, `jira_xray_test_step_add`, `jira_xray_test_step_update`, and
+`jira_xray_test_step_delete`. Each returns `{ record, notes }`, the test read back, or the plan under
+`dryRun`. `jira_xray_test_step_delete` needs `confirm: true`, and so does a `jira_xray_test_update`
+whose plan deletes a step. They were built from Xray's published documentation and have not been run
+against a live instance. Xray credentials have no read-only scope, so `ATLASSIAN_READ_ONLY` is the only
+guard against a write.
 
 They differ from the other tools in three ways, all described in the
 [Xray guide](/guides/xray/):

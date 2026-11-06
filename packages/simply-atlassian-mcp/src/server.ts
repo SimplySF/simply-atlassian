@@ -77,7 +77,8 @@ const INSTRUCTIONS =
   'on issue tools to keep payloads small. Xray tools (jira_xray_*, Server/Data Center only) are ' +
   'registered only when the server was started with --xray; they return assembled records and rows ' +
   'keyed by field name rather than raw payloads, and their "fields" input adds to the defaults ' +
-  'instead of replacing them.';
+  'instead of replacing them. Xray writes also need --allow-writes; they take a record as a JSON object and ' +
+  'return the test read back.';
 
 const ANNOTATIONS: Readonly<Record<ToolKind, ToolAnnotations>> = {
   read: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },

@@ -27,7 +27,7 @@ Use the smallest relevant topic document rather than loading the whole directory
 - [Jira issue attachments](docs/design/0020-jira-issue-attachments.md): `issue attachment list` and
   `download`, the transport's streaming read, safe file names, and the MCP tool that returns a file
   inline or saves it only to a folder the user types into an elicitation prompt.
-- [Jira Xray](docs/design/0015-jira-xray.md): the read-only, Server/DC-only `jira xray` subtopic,
+- [Jira Xray](docs/design/0015-jira-xray.md): the Server/DC-only `jira xray` subtopic and its reads,
   Xray field discovery and the per-instance record, test scopes and bulk export, and the rule that a
   Marketplace app lives under its host product.
 - [Xray test authoring](docs/design/0021-jira-xray-test-authoring.md): creating and updating Tests,

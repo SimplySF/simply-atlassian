@@ -387,7 +387,7 @@ function stepBody(text: Partial<XrayStepText>): Record<string, string> {
 
 /** What `create` and `update` both accept. Flags override `record`, and `record` overrides `body`. */
 export interface XrayTestInput {
-  /** One export record, as `test export --format json` writes one test. */
+  /** One export record, as `test get --json` prints it. */
   readonly record?: Record<string, unknown>;
   readonly summary?: string;
   readonly type?: string;

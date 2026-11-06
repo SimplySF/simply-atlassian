@@ -35,7 +35,7 @@ export default class JiraXrayTestUpdate extends XrayCommand<typeof JiraXrayTestU
 
   public static override readonly summary = 'Apply a record or flags to an Xray test, replacing its steps if given.';
   public static override readonly description =
-    'Only what differs is sent, so an unchanged "test export" record writes nothing. Steps given in a record ' +
+    'Only what differs is sent, so an unchanged "test get --json" record writes nothing. Steps given in a record ' +
     "or with --step replace the test's list: matched by id when the input has ids, by position when it has " +
     'none. A step missing from the input is deleted, which needs --confirm.\n\n' +
     "Xray's API documents no way to reorder steps or to add one at a position, so a reordered list is refused; " +
@@ -55,7 +55,9 @@ export default class JiraXrayTestUpdate extends XrayCommand<typeof JiraXrayTestU
   public static override readonly flags = {
     ...writeFlags,
     ...confirmFlag,
-    file: Flags.string({ summary: 'Path to one test record, as "test export --format json" writes it.' }),
+    file: Flags.string({
+      summary: 'Path to one test record, as "test get --json" prints it, or one line of "test export --format jsonl".',
+    }),
     summary: Flags.string({ summary: 'The summary.' }),
     type: Flags.string({ summary: 'manual, cucumber, generic, or another type the field allows.' }),
     step: Flags.string({
