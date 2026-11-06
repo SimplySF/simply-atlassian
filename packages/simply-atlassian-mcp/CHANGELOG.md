@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.12.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-mcp%400.11.1...%40simplysf%2Fsimply-atlassian-mcp%400.12.0) (2026-11-06)
+
+### Features
+
+- read jira issue attachments ([#83](https://github.com/SimplySF/simply-atlassian/issues/83)) ([dda949d](https://github.com/SimplySF/simply-atlassian/commit/dda949ddfbcef07008b374e900e790bab957df74))
+
 ## [0.11.1](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-mcp%400.11.0...%40simplysf%2Fsimply-atlassian-mcp%400.11.1) (2026-11-06)
 
 **Note:** Version bump only for package @simplysf/simply-atlassian-mcp
