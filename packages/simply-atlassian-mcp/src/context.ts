@@ -61,12 +61,30 @@ export interface ToolContext {
   readonly env: EnvLike;
   readonly allowWrites: boolean;
   readonly xrayEnabled: boolean;
+  /**
+   * Asks the person at the client for a folder, through MCP elicitation. Present only for a call
+   * whose client declared it can show a form, so a tool must handle its absence. The answer is
+   * the person's, typed into the client's own prompt: an agent never supplies a path.
+   */
+  readonly askForFolder?: (message: string) => Promise<FolderAnswer>;
+  /** State that lasts as long as the server process, shared by every call. */
+  readonly session: SessionState;
   jiraConfig(): AtlassianConfig;
   jira(): JiraClient;
   confluenceConfig(): AtlassianConfig;
   confluence(): ConfluenceClient;
   /** Xray on the configured Jira, with the instance record in the CLI's default cache directory. */
   xray(): XrayBackend;
+}
+
+/** What a person answered when asked for a folder. */
+export type FolderAnswer =
+  | { readonly action: 'accept'; readonly directory: string; readonly remember: boolean }
+  | { readonly action: 'decline' | 'cancel' };
+
+export interface SessionState {
+  /** A folder the person asked to reuse for later saves. Held in memory only. */
+  downloadFolder?: string;
 }
 
 /** Builds the context, loading the env file first so every later lookup sees it. */
@@ -88,5 +106,6 @@ export function createContext(options: ServerOptions = {}): ToolContext {
         // stderr, never stdout: stdout is the protocol channel. A host shows this in its server log.
         onWarning: (message) => process.stderr.write(`${stripControlOneLine(message)}\n`),
       }),
+    session: {},
   };
 }

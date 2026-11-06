@@ -255,6 +255,33 @@
   },
   {
     "alias": [],
+    "command": "atlassian:jira:issue:attachment:download",
+    "flagAliases": [],
+    "flagChars": ["e", "o"],
+    "flags": [
+      "env-file",
+      "id",
+      "jira-api-token",
+      "jira-personal-token",
+      "jira-url",
+      "jira-username",
+      "json",
+      "output-dir",
+      "overwrite",
+      "stdout"
+    ],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
+    "command": "atlassian:jira:issue:attachment:list",
+    "flagAliases": [],
+    "flagChars": ["e"],
+    "flags": ["env-file", "jira-api-token", "jira-personal-token", "jira-url", "jira-username", "json"],
+    "plugin": "@simplysf/simply-atlassian"
+  },
+  {
+    "alias": [],
     "command": "atlassian:jira:issue:comment:add",
     "flagAliases": [],
     "flagChars": ["e"],

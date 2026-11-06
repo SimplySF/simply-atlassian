@@ -36,7 +36,7 @@ with `--allow-writes`, and even then a write is refused when the environment car
 
 | Option              | Effect                                                                                                            |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| (none)              | Registers the 20 read tools.                                                                                      |
+| (none)              | Registers the 22 read tools.                                                                                      |
 | `--allow-writes`    | Also registers the 10 write and 3 destructive tools. `ATLASSIAN_READ_ONLY` in the environment still refuses each. |
 | `--env-file <path>` | A `.env` file loaded once at startup. Precedence is the CLI's: environment > file. A missing file exits 2.        |
 | `--help`            | Prints options and the tool list to **stderr** (stdout is the protocol stream) and exits 0.                       |
@@ -52,17 +52,23 @@ package version, and supplies MCP `instructions` summarising the above for the h
 One per CLI command; `test/tools.test.ts` asserts the catalogue equals the CLI's
 `command-snapshot.json`, so a new command cannot ship unexposed. Kinds and annotations:
 
-| Kind          | Tools                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Annotations                      | Extra inputs        |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------- | ------------------- |
-| `read`        | `jira_whoami`, `jira_user_search`, `jira_user_view`, `jira_open`, `jira_issue_search`, `jira_issue_view`, `jira_issue_history`, `jira_issue_transitions`, `jira_issue_comment_list`, `jira_issue_link_list`, `jira_issue_link_types`, `jira_board_list`, `jira_sprint_list`, `jira_sprint_issues`, `confluence_open`, `confluence_page_get`, `confluence_page_search`, `confluence_page_children`, `confluence_page_history`, `confluence_page_comment_list` | `readOnlyHint`, `idempotentHint` | —                   |
-| `write`       | `jira_issue_create`, `jira_issue_update`, `jira_issue_transition`, `jira_issue_comment_add`, `jira_issue_comment_edit`, `jira_issue_link_create`, `jira_issue_link_delete`, `jira_sprint_add`, `confluence_page_create`, `confluence_page_update`, `confluence_page_comment_add`                                                                                                                                                                             | neither                          | `dryRun`            |
-| `destructive` | `jira_issue_delete`, `jira_issue_comment_delete`, `confluence_page_delete`                                                                                                                                                                                                                                                                                                                                                                                   | `destructiveHint`                | `dryRun`, `confirm` |
+| Kind          | Tools                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Annotations                      | Extra inputs        |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- | ------------------- |
+| `read`        | `jira_whoami`, `jira_user_search`, `jira_user_view`, `jira_open`, `jira_issue_search`, `jira_issue_view`, `jira_issue_history`, `jira_issue_attachment_list`, `jira_issue_attachment_download`, `jira_issue_transitions`, `jira_issue_comment_list`, `jira_issue_link_list`, `jira_issue_link_types`, `jira_board_list`, `jira_sprint_list`, `jira_sprint_issues`, `confluence_open`, `confluence_page_get`, `confluence_page_search`, `confluence_page_children`, `confluence_page_history`, `confluence_page_comment_list` | `readOnlyHint`, `idempotentHint` | —                   |
+| `write`       | `jira_issue_create`, `jira_issue_update`, `jira_issue_transition`, `jira_issue_comment_add`, `jira_issue_comment_edit`, `jira_issue_link_create`, `jira_issue_link_delete`, `jira_sprint_add`, `confluence_page_create`, `confluence_page_update`, `confluence_page_comment_add`                                                                                                                                                                                                                                             | neither                          | `dryRun`            |
+| `destructive` | `jira_issue_delete`, `jira_issue_comment_delete`, `confluence_page_delete`                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `destructiveHint`                | `dryRun`, `confirm` |
 
 `destructive` is exactly the set of CLI commands that take `--confirm`. `jira_issue_link_delete`
 is a write, not destructive, because the CLI does not demand `--confirm` for it; the server does
 not add safety the CLI doesn't have, for the reason 0004 gives — training callers to pass `confirm`
 everywhere protects nothing. By the same rule `confluence_page_delete` demands `confirm` only
 with `purge: true`: trashing a page is reversible and the CLI trashes without `--confirm`.
+
+A tool may override its kind's annotations when the kind does not describe its effect. Only
+`jira_issue_attachment_download` does: it reads Jira, so it is `read` and needs no
+`--allow-writes`, but it can save a file to a folder the user typed in, so it carries
+`readOnlyHint: false` and `idempotentHint: false`. See
+[0020](0020-jira-issue-attachments.md).
 
 Inputs are the command's arguments and flags in camel case, with arrays where the CLI takes a
 repeatable or comma-separated flag (`labels`, `fields`, `expand`, `mentions`, `issues`) and an
@@ -82,6 +88,7 @@ add. `dryRun` is exempt because previewing needs no consent.
 | Outcome                    | Tool result                                                                                    |
 | -------------------------- | ---------------------------------------------------------------------------------------------- |
 | success                    | one `text` block: what the command returns under `--json`, serialised (`null` if nothing)      |
+| success, as content blocks | the tool's own blocks, passed through: a JSON `text` block, then the file as `text` or `image` |
 | `ConfigError`              | `isError`, `{ code: "config", name, message, exitCode: 2 }`                                    |
 | `AuthError`                | `isError`, `{ code: "auth", name, message, exitCode: 3, status }`                              |
 | `HttpError`                | `isError`, `{ code: "error", name, message, exitCode: 1, status, body }` with `body` sanitised |
@@ -93,6 +100,12 @@ The error object is the CLI's `--json` stderr line, field for field, produced by
 redaction and control-stripping: a credential from the environment never reaches the message or
 the body. No `structuredContent`/`outputSchema`: the payload shape is Atlassian's and varies by
 instance, so declaring a schema would either be `{}` or wrong.
+
+A tool returns content blocks by resolving to a `ToolContent`. Only
+`jira_issue_attachment_download` does, so it can hand back a file's text or an image. That tool is
+also the only one that asks the user a question mid-call: when the client declared form
+elicitation, the server binds `askForFolder` on that call's context. See
+[0020](0020-jira-issue-attachments.md).
 
 ## Alternatives considered
 
