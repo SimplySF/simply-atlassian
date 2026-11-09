@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.13.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-core%400.12.0...%40simplysf%2Fsimply-atlassian-core%400.13.0) (2026-11-09)
+
+### Features
+
+- **simply-atlassian-core:** move a Confluence page with parent on page update ([#86](https://github.com/SimplySF/simply-atlassian/issues/86)) ([1728f0e](https://github.com/SimplySF/simply-atlassian/commit/1728f0e59b764d1914acebac9bcb72ed68d370cc))
+
 # [0.12.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian-core%400.11.1...%40simplysf%2Fsimply-atlassian-core%400.12.0) (2026-11-06)
 
 ### Features
