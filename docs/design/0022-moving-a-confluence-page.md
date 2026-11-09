@@ -1,6 +1,6 @@
 # 0022 — Moving a Confluence page under a new parent
 
-**Status:** Implemented
+**Status:** Implemented (PR #86)
 **Package:** `packages/simply-atlassian-core`, `packages/simply-atlassian`, `packages/simply-atlassian-mcp`
 **Date:** 2026-11-09
 
