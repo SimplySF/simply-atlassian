@@ -81,6 +81,12 @@ describe('TOOLS catalogue', () => {
     expect(Object.keys(update?.inputSchema ?? {})).toContain('append');
   });
 
+  it('exposes parent on page update, so an agent can move a page as the CLI can', () => {
+    const update = TOOLS.find((t) => t.name === 'confluence_page_update');
+
+    expect(Object.keys(update?.inputSchema ?? {})).toContain('parent');
+  });
+
   it('exposes the discovery, label, sprint-write and remote-link commands', () => {
     const names = TOOLS.map((tool) => tool.name);
 
