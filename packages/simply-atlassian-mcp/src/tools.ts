@@ -954,7 +954,8 @@ export const TOOLS: readonly ToolSpec[] = [
     name: 'confluence_page_update',
     title: 'Confluence: update a page',
     description:
-      "Replace a page's body or title, or add to it with append. The version is handled for you: " +
+      "Replace a page's body or title, add to it with append, or move it with parent. The version " +
+      'is handled for you: ' +
       'the page is read and the ' +
       'next version sent, and a conflicting edit by someone else fails rather than overwriting ' +
       'their work. Use dryRun to preview.',
@@ -973,6 +974,18 @@ export const TOOLS: readonly ToolSpec[] = [
           'Add the new body to the end of the page instead of replacing it. Use this to add a ' +
             'section to an existing page — without it the whole body is replaced.',
         ),
+      parent: z
+        .string()
+        .optional()
+        .describe(
+          'Move the page under this parent page id or URL. Without a body, the current body is ' +
+            'sent back unchanged, so only the page tree changes.',
+        ),
+      minorEdit: z
+        .boolean()
+        .optional()
+        .describe("Mark the change as a minor edit, which is not announced to the page's watchers."),
+      message: z.string().optional().describe("Note recorded with the new version in the page's history."),
       ...WRITE_SHAPE,
     },
     run: async (ctx, input) => {

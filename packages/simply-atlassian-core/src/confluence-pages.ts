@@ -58,6 +58,23 @@ export interface UpdatePageInput extends PageBodyInput {
   readonly title?: string;
   /** Put the new body after the existing one instead of replacing it. */
   readonly append?: boolean;
+  /**
+   * Move the page under this parent: a page id, or a page URL on the configured instance. Sent as
+   * `ancestors: [{ id }]` on the ordinary update, which is how Confluence Data Center moves a page;
+   * it has no separate move endpoint.
+   *
+   * Given without a body, the update re-sends the page's current storage exactly as read, so a
+   * move leaves the content byte-for-byte unchanged. A caller that already holds the storage can
+   * pass it as `body` instead: a storage body is sent as given, with no conversion.
+   */
+  readonly parent?: string;
+  /**
+   * Mark the new version as a minor edit, which Confluence does not announce to the page's
+   * watchers. Sent only when given; without it the instance's default applies.
+   */
+  readonly minorEdit?: boolean;
+  /** The note recorded with the new version in the page history. Sent only when given. */
+  readonly message?: string;
 }
 
 /** An update, fully prepared: the version it was read at is what the request is conditioned on. */
@@ -132,6 +149,9 @@ export function buildPageCreateBody(input: CreatePageInput, instanceUrl: string)
  * number and the title on every update, even when the title is unchanged, so the current state
  * has to be read either way. Only pages are updated: the instance decides what an id is, and
  * echoing its answer back would quietly make this a comment editor.
+ *
+ * With `parent`, the plan also moves the page (see {@link UpdatePageInput.parent}); a page URL
+ * is resolved to its id against `client.url`, as `page create` resolves its parent.
  */
 export async function preparePageUpdate(
   client: ConfluenceClient,
@@ -144,16 +164,20 @@ export async function preparePageUpdate(
   if (input.append === true && body === undefined) {
     throw new ConfigError('--append needs something to add. Pass --text, --markdown, --body, or a file.');
   }
-  if (body === undefined && input.title === undefined) {
+  if (body === undefined && input.title === undefined && input.parent === undefined) {
     throw new ConfigError(
-      'Nothing to update. Pass --title, or a body with --text, --markdown, --body, --body-file, or --markdown-file.',
+      'Nothing to update. Pass --title, --parent, or a body with --text, --markdown, --body, --body-file, or --markdown-file.',
     );
   }
+  // Resolved before the read, so a URL for another instance is refused without a request.
+  const parentId = input.parent === undefined ? undefined : pageIdForInstance(input.parent, client.url);
 
-  // The existing body is only fetched when appending. An ordinary update replaces it, and asking
-  // for a large body just to discard it costs the caller bandwidth for nothing.
+  // A move without a new body has to carry the current one, because the request that moves a page
+  // is a full update. An ordinary update replaces the body, and asking for a large body just to
+  // discard it costs the caller bandwidth for nothing, so the body is read only when it is kept.
+  const keepBody = body === undefined && parentId !== undefined;
   const current = (await client.getPage(pageId, {
-    expand: input.append === true ? ['version', 'body.storage'] : ['version'],
+    expand: input.append === true || keepBody ? ['version', 'body.storage'] : ['version'],
   })) as ConfluencePageSummary;
   const version = current.version?.number;
   if (typeof version !== 'number') {
@@ -166,19 +190,48 @@ export async function preparePageUpdate(
   const payload: Record<string, unknown> = {
     type: 'page',
     title: input.title ?? current.title,
-    version: { number: version + 1 },
+    version: nextVersion(version, input),
   };
+  const nextBody = updatedBody(pageId, current, body, input.append === true, keepBody);
+  if (nextBody !== undefined) payload.body = nextBody;
+  if (parentId !== undefined) payload.ancestors = [{ id: parentId }];
+  return { pageId, version, payload };
+}
+
+/** The `version` object of an update; `minorEdit` and `message` appear only when the caller set them. */
+function nextVersion(version: number, input: UpdatePageInput): Record<string, unknown> {
+  const next: Record<string, unknown> = { number: version + 1 };
+  if (input.minorEdit !== undefined) next.minorEdit = input.minorEdit;
+  if (input.message !== undefined) next.message = input.message;
+  return next;
+}
+
+/**
+ * The body an update sends: the new one, the new one after the current one when appending, the
+ * current one unchanged when the page is only being moved, or none when only the title changes.
+ */
+function updatedBody(
+  pageId: string,
+  current: ConfluencePageSummary,
+  body: StorageBody | undefined,
+  append: boolean,
+  keepBody: boolean,
+): StorageBody | undefined {
+  const existing = current.body?.storage?.value;
   if (body !== undefined) {
     // Concatenated, not merged. Storage is XHTML, so putting a block after the last one is
     // well-defined; replacing a named section or inserting under a heading would need to
     // understand the document's structure, and guessing at that is how an edit lands where
     // nobody intended. Deliberately not attempted — see design 0013.
-    payload.body =
-      input.append === true
-        ? { storage: { value: (current.body?.storage?.value ?? '') + body.storage.value, representation: 'storage' } }
-        : body;
+    return append ? { storage: { value: (existing ?? '') + body.storage.value, representation: 'storage' } } : body;
   }
-  return { pageId, version, payload };
+  if (!keepBody) return undefined;
+  // Sending an empty body here would erase the page while moving it, so a read that came back
+  // without the storage stops the move instead.
+  if (typeof existing !== 'string') {
+    throw new CliError(`The instance returned no body for page ${pageId}, so it cannot be moved without losing it.`);
+  }
+  return { storage: { value: existing, representation: 'storage' } };
 }
 
 /**

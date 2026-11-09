@@ -229,6 +229,35 @@ describe('page update', () => {
     expect(error.message).toContain('Nothing was written');
   });
 
+  it('moves the page with --parent alone, sending its body back unchanged', async () => {
+    const storage = '<p>Unchanged &amp; <ac:emoticon ac:name="tick" /></p>';
+    let sent: unknown;
+    server.route('/rest/api/content/123', (req, res, body) => {
+      if (req.method === 'GET') {
+        respondJson(res, 200, {
+          id: '123',
+          type: 'page',
+          title: 'T',
+          version: { number: 4 },
+          body: { storage: { value: storage } },
+        });
+        return;
+      }
+      sent = JSON.parse(body);
+      respondJson(res, 200, { id: '123', version: { number: 5 } });
+    });
+
+    await ConfluencePageUpdate.run(argv('123', '--parent', '456', '--minor-edit', '--message', 'Moved'));
+
+    expect(sent).toEqual({
+      type: 'page',
+      title: 'T',
+      version: { number: 5, minorEdit: true, message: 'Moved' },
+      ancestors: [{ id: '456' }],
+      body: { storage: { value: storage, representation: 'storage' } },
+    });
+  });
+
   it('refuses an update with nothing to change', async () => {
     const error = (await ConfluencePageUpdate.run(argv('123')).catch((caught: unknown) => caught)) as Failure;
 

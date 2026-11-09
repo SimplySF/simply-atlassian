@@ -28,18 +28,20 @@ import { ConfluenceCommand, writeFlags } from '../../../../shared/base-command.j
 export default class ConfluencePageUpdate extends ConfluenceCommand<typeof ConfluencePageUpdate> {
   public static override isWrite = true;
 
-  public static override readonly summary = "Replace a Confluence page's body or title.";
+  public static override readonly summary = "Replace a Confluence page's body or title, or move it under a new parent.";
   public static override readonly description =
     'The version number is handled for you: the page is read, its version incremented, and the ' +
     'result sent. There is no --version flag, because Confluence refuses a stale version with a ' +
     'conflict rather than overwriting — so if someone edits the page while this runs, the ' +
     'command fails and says so instead of discarding their work. Re-run it to pick up their ' +
-    'change. This REPLACES the body by default; use --append to add to the end instead.';
+    'change. This REPLACES the body by default; use --append to add to the end instead. ' +
+    'With --parent and no body, the page is moved and its body is sent back exactly as it was.';
 
   public static override readonly examples = [
     '<%= config.bin %> <%= command.id %> 123456 --text "Updated status."',
     '<%= config.bin %> <%= command.id %> 123456 --body-file ./page.xml',
     '<%= config.bin %> <%= command.id %> 123456 --title "Renamed" --dry-run',
+    '<%= config.bin %> <%= command.id %> 123456 --parent 654321 --minor-edit --message "Moved under Archive"',
   ];
 
   public static override readonly args = {
@@ -61,6 +63,16 @@ export default class ConfluencePageUpdate extends ConfluenceCommand<typeof Confl
         'is replaced, which is what a bare update has always done.',
       default: false,
     }),
+    parent: Flags.string({
+      summary: 'Move the page under this parent page (id or URL).',
+      description:
+        "Without a body flag, the page's current body is read and sent back unchanged, so only " +
+        'its place in the page tree changes.',
+    }),
+    'minor-edit': Flags.boolean({
+      summary: "Mark the change as a minor edit, which is not announced to the page's watchers.",
+    }),
+    message: Flags.string({ summary: "Note recorded with the new version in the page's history." }),
   };
 
   public async run(): Promise<unknown> {
@@ -75,6 +87,9 @@ export default class ConfluencePageUpdate extends ConfluenceCommand<typeof Confl
       markdown: this.flags.markdown,
       'markdown-file': this.flags['markdown-file'],
       append: this.flags.append,
+      parent: this.flags.parent,
+      minorEdit: this.flags['minor-edit'],
+      message: this.flags.message,
     });
 
     if (this.flags['dry-run']) {

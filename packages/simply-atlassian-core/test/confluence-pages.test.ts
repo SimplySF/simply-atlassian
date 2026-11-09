@@ -174,6 +174,104 @@ describe('page updates', () => {
     await expect(preparePageUpdate(confluence(), '1', { title: 'x' })).rejects.toThrow(/reported no version/);
   });
 
+  /*
+   * Confluence Data Center has no move endpoint (`PUT /content/{id}/move/...` answers 404); a page
+   * moves when an ordinary update names a new ancestor. That update is a full one, so a move must
+   * carry the page's own body back unchanged or it would rewrite the content it only meant to place.
+   */
+  /*
+   * A bulk move of hundreds of pages must not notify every watcher once per page, so a caller can
+   * mark the version minor and say why. Updates that do not ask for either send what they always did.
+   */
+  it('sends minorEdit and message in the version only when given', async () => {
+    server.route('/rest/api/content/1', (_req, res) =>
+      respondJson(res, 200, { type: 'page', title: 'T', version: { number: 2 } }),
+    );
+
+    const marked = await preparePageUpdate(confluence(), '1', { title: 'T2', minorEdit: true, message: 'Moved' });
+    expect(marked.payload.version).toEqual({ number: 3, minorEdit: true, message: 'Moved' });
+
+    const notMinor = await preparePageUpdate(confluence(), '1', { title: 'T2', minorEdit: false });
+    expect(notMinor.payload.version).toEqual({ number: 3, minorEdit: false });
+
+    const plain = await preparePageUpdate(confluence(), '1', { title: 'T2' });
+    expect(plain.payload.version).toEqual({ number: 3 });
+  });
+
+  describe('moving a page with parent', () => {
+    const storage =
+      '<p>Keep <ac:structured-macro ac:name="info"><ac:rich-text-body><p>me</p></ac:rich-text-body></ac:structured-macro> &amp; exactly</p>';
+
+    function routePage(): void {
+      server.route('/rest/api/content/1', (_req, res) =>
+        respondJson(res, 200, {
+          type: 'page',
+          title: 'T',
+          version: { number: 5 },
+          body: { storage: { value: storage } },
+        }),
+      );
+    }
+
+    it('names the new parent in ancestors and re-sends the current storage untouched', async () => {
+      routePage();
+
+      const plan = await preparePageUpdate(confluence(), '1', { parent: '9' });
+
+      expect(plan.payload).toEqual({
+        type: 'page',
+        title: 'T',
+        version: { number: 6 },
+        ancestors: [{ id: '9' }],
+        body: { storage: { value: storage, representation: 'storage' } },
+      });
+      expect(server.requests.at(-1)?.url).toContain('body.storage');
+    });
+
+    it('resolves a page URL on the configured instance to its id', async () => {
+      routePage();
+
+      const plan = await preparePageUpdate(confluence(), '1', {
+        parent: `${server.baseUrl}/pages/viewpage.action?pageId=9`,
+      });
+
+      expect(plan.payload.ancestors).toEqual([{ id: '9' }]);
+    });
+
+    it('refuses a parent URL on another instance before reading the page', async () => {
+      await expect(preparePageUpdate(confluence(), '1', { parent: 'https://other.example/pages/9/T' })).rejects.toThrow(
+        ConfigError,
+      );
+      expect(server.requests).toHaveLength(0);
+    });
+
+    it('sends a storage body given with the move as-is, without reading the old one', async () => {
+      routePage();
+
+      const plan = await preparePageUpdate(confluence(), '1', { parent: '9', body: storage });
+
+      expect(plan.payload.body).toEqual({ storage: { value: storage, representation: 'storage' } });
+      expect(server.requests.at(-1)?.url).not.toContain('body.storage');
+    });
+
+    it('leaves ancestors out of an update that does not move the page', async () => {
+      routePage();
+
+      const plan = await preparePageUpdate(confluence(), '1', { title: 'Renamed' });
+
+      expect(plan.payload).not.toHaveProperty('ancestors');
+      expect(plan.payload).not.toHaveProperty('body');
+    });
+
+    it('refuses to move a page whose body the instance did not return, rather than blanking it', async () => {
+      server.route('/rest/api/content/1', (_req, res) =>
+        respondJson(res, 200, { type: 'page', title: 'T', version: { number: 5 } }),
+      );
+
+      await expect(preparePageUpdate(confluence(), '1', { parent: '9' })).rejects.toThrow(/without losing it/);
+    });
+  });
+
   it('names a version conflict and carries any other 409 through', async () => {
     let message = 'Version mismatch';
     server.route('/rest/api/content/1', (_req, res) => respondJson(res, 409, { message }));
