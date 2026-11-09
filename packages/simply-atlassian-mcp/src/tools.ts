@@ -981,6 +981,11 @@ export const TOOLS: readonly ToolSpec[] = [
           'Move the page under this parent page id or URL. Without a body, the current body is ' +
             'sent back unchanged, so only the page tree changes.',
         ),
+      minorEdit: z
+        .boolean()
+        .optional()
+        .describe("Mark the change as a minor edit, which is not announced to the page's watchers."),
+      message: z.string().optional().describe("Note recorded with the new version in the page's history."),
       ...WRITE_SHAPE,
     },
     run: async (ctx, input) => {

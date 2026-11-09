@@ -36,6 +36,12 @@ the page.
 | no `parent`                     | exactly what `page update` sent before; no `ancestors` key                  |
 | `parent` URL for other instance | refused with a configuration error before any request                       |
 
+`minorEdit` and `message` (`--minor-edit` and `--message` on the CLI) go into the payload's `version`
+object, each only when given, so an update that sets neither sends exactly what it did before. A
+caller moving many pages at once marks each version minor, so the pages' watchers are not notified
+once per page, and records a message saying the page was moved. Neither counts as a change on its
+own: an update with only these still needs a title, a body or a parent.
+
 The version handling, the conflict message on a stale version, `--dry-run`, and the read-only guard
 are the ones `page update` already has (0008).
 
@@ -60,8 +66,6 @@ has not been confirmed against a Cloud site.
 - **Sending a move without a body.** Not chosen, because the tested request includes the body and
   whether Data Center keeps or clears a body that is left out of a full update was not established.
   Re-sending the storage that was just read is the request known to work.
-- **Version `message` and `minorEdit` inputs.** Left out to keep the change small. They would belong
-  in the `version` object of the same payload if a caller needs them.
 
 ## Testing
 
@@ -69,5 +73,6 @@ has not been confirmed against a Cloud site.
 `ancestors` is present when `parent` is given and absent otherwise, a URL resolves to its id, a URL
 for another instance is refused before any request, the current storage is re-sent untouched, a
 storage body given with the move is sent as-is without reading the old one, and a page read without
-its body is not moved. The CLI test in `writes.test.ts` checks the whole request `--parent` sends,
+its body is not moved. A separate test there checks that `minorEdit` and `message` appear in `version`
+only when given. The CLI test in `writes.test.ts` checks the whole request `--parent` sends,
 and the MCP catalogue test checks that `parent` is declared on `confluence_page_update`.

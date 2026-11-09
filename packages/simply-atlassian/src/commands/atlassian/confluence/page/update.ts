@@ -41,7 +41,7 @@ export default class ConfluencePageUpdate extends ConfluenceCommand<typeof Confl
     '<%= config.bin %> <%= command.id %> 123456 --text "Updated status."',
     '<%= config.bin %> <%= command.id %> 123456 --body-file ./page.xml',
     '<%= config.bin %> <%= command.id %> 123456 --title "Renamed" --dry-run',
-    '<%= config.bin %> <%= command.id %> 123456 --parent 654321',
+    '<%= config.bin %> <%= command.id %> 123456 --parent 654321 --minor-edit --message "Moved under Archive"',
   ];
 
   public static override readonly args = {
@@ -69,6 +69,10 @@ export default class ConfluencePageUpdate extends ConfluenceCommand<typeof Confl
         "Without a body flag, the page's current body is read and sent back unchanged, so only " +
         'its place in the page tree changes.',
     }),
+    'minor-edit': Flags.boolean({
+      summary: "Mark the change as a minor edit, which is not announced to the page's watchers.",
+    }),
+    message: Flags.string({ summary: "Note recorded with the new version in the page's history." }),
   };
 
   public async run(): Promise<unknown> {
@@ -84,6 +88,8 @@ export default class ConfluencePageUpdate extends ConfluenceCommand<typeof Confl
       'markdown-file': this.flags['markdown-file'],
       append: this.flags.append,
       parent: this.flags.parent,
+      minorEdit: this.flags['minor-edit'],
+      message: this.flags.message,
     });
 
     if (this.flags['dry-run']) {

@@ -744,7 +744,7 @@ USAGE
   $ simply atlassian confluence page update PAGE [--json] [-e <value>] [--confluence-url <value>] [--confluence-username <value>]
     [--confluence-api-token <value>] [--confluence-personal-token <value>] [--dry-run] [--title <value>] [--text
     <value>] [--body <value>] [--body-file <value>] [--markdown <value>] [--markdown-file <value>] [--append] [--parent
-    <value>]
+    <value>] [--minor-edit] [--message <value>]
 
 ARGUMENTS
   PAGE  Page id, or a page URL.
@@ -756,6 +756,8 @@ FLAGS
   --dry-run                Print the request that would be sent and exit without sending it.
   --markdown=<value>       Body as Markdown; converted to storage format.
   --markdown-file=<value>  Path to a Markdown file; converted to storage format.
+  --message=<value>        Note recorded with the new version in the page's history.
+  --minor-edit             Mark the change as a minor edit, which is not announced to the page's watchers.
   --parent=<value>         Move the page under this parent page (id or URL).
   --text=<value>           Body as plain text; becomes paragraphs, markup escaped.
   --title=<value>          New title. Defaults to the page's current title.
@@ -787,7 +789,7 @@ EXAMPLES
 
   $ simply atlassian confluence page update 123456 --title "Renamed" --dry-run
 
-  $ simply atlassian confluence page update 123456 --parent 654321
+  $ simply atlassian confluence page update 123456 --parent 654321 --minor-edit --message "Moved under Archive"
 
 FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.

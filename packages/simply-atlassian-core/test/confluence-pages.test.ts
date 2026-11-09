@@ -179,6 +179,25 @@ describe('page updates', () => {
    * moves when an ordinary update names a new ancestor. That update is a full one, so a move must
    * carry the page's own body back unchanged or it would rewrite the content it only meant to place.
    */
+  /*
+   * A bulk move of hundreds of pages must not notify every watcher once per page, so a caller can
+   * mark the version minor and say why. Updates that do not ask for either send what they always did.
+   */
+  it('sends minorEdit and message in the version only when given', async () => {
+    server.route('/rest/api/content/1', (_req, res) =>
+      respondJson(res, 200, { type: 'page', title: 'T', version: { number: 2 } }),
+    );
+
+    const marked = await preparePageUpdate(confluence(), '1', { title: 'T2', minorEdit: true, message: 'Moved' });
+    expect(marked.payload.version).toEqual({ number: 3, minorEdit: true, message: 'Moved' });
+
+    const notMinor = await preparePageUpdate(confluence(), '1', { title: 'T2', minorEdit: false });
+    expect(notMinor.payload.version).toEqual({ number: 3, minorEdit: false });
+
+    const plain = await preparePageUpdate(confluence(), '1', { title: 'T2' });
+    expect(plain.payload.version).toEqual({ number: 3 });
+  });
+
   describe('moving a page with parent', () => {
     const storage =
       '<p>Keep <ac:structured-macro ac:name="info"><ac:rich-text-body><p>me</p></ac:rich-text-body></ac:structured-macro> &amp; exactly</p>';

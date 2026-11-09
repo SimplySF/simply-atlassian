@@ -247,12 +247,12 @@ describe('page update', () => {
       respondJson(res, 200, { id: '123', version: { number: 5 } });
     });
 
-    await ConfluencePageUpdate.run(argv('123', '--parent', '456'));
+    await ConfluencePageUpdate.run(argv('123', '--parent', '456', '--minor-edit', '--message', 'Moved'));
 
     expect(sent).toEqual({
       type: 'page',
       title: 'T',
-      version: { number: 5 },
+      version: { number: 5, minorEdit: true, message: 'Moved' },
       ancestors: [{ id: '456' }],
       body: { storage: { value: storage, representation: 'storage' } },
     });

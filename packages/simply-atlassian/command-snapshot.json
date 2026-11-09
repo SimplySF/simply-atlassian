@@ -212,6 +212,8 @@
       "json",
       "markdown",
       "markdown-file",
+      "message",
+      "minor-edit",
       "parent",
       "text",
       "title"

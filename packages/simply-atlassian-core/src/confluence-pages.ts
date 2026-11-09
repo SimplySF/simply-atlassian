@@ -68,6 +68,13 @@ export interface UpdatePageInput extends PageBodyInput {
    * pass it as `body` instead: a storage body is sent as given, with no conversion.
    */
   readonly parent?: string;
+  /**
+   * Mark the new version as a minor edit, which Confluence does not announce to the page's
+   * watchers. Sent only when given; without it the instance's default applies.
+   */
+  readonly minorEdit?: boolean;
+  /** The note recorded with the new version in the page history. Sent only when given. */
+  readonly message?: string;
 }
 
 /** An update, fully prepared: the version it was read at is what the request is conditioned on. */
@@ -183,12 +190,20 @@ export async function preparePageUpdate(
   const payload: Record<string, unknown> = {
     type: 'page',
     title: input.title ?? current.title,
-    version: { number: version + 1 },
+    version: nextVersion(version, input),
   };
   const nextBody = updatedBody(pageId, current, body, input.append === true, keepBody);
   if (nextBody !== undefined) payload.body = nextBody;
   if (parentId !== undefined) payload.ancestors = [{ id: parentId }];
   return { pageId, version, payload };
+}
+
+/** The `version` object of an update; `minorEdit` and `message` appear only when the caller set them. */
+function nextVersion(version: number, input: UpdatePageInput): Record<string, unknown> {
+  const next: Record<string, unknown> = { number: version + 1 };
+  if (input.minorEdit !== undefined) next.minorEdit = input.minorEdit;
+  if (input.message !== undefined) next.message = input.message;
+  return next;
 }
 
 /**
