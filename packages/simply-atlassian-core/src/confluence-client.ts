@@ -92,10 +92,13 @@ interface PagedResponse {
  */
 export class ConfluenceClient {
   public readonly deployment: AtlassianConfig['deployment'];
+  /** The configured instance URL, which a page URL given as input is checked against. */
+  public readonly url: string;
   private readonly transport: HttpTransport;
 
   public constructor(config: AtlassianConfig) {
     this.deployment = config.deployment;
+    this.url = config.url;
     this.transport = new HttpTransport({
       baseUrl: config.url,
       headers: buildAuthHeaders(config),
