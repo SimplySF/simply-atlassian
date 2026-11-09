@@ -212,6 +212,7 @@
       "json",
       "markdown",
       "markdown-file",
+      "parent",
       "text",
       "title"
     ],
