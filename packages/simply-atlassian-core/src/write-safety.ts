@@ -16,16 +16,20 @@
 
 import process from 'node:process';
 import type { EnvLike } from './config.js';
+import { envValue } from './env-vars.js';
 import { ConfigError } from './errors.js';
 
-/** The environment variable that marks a context as one that does not make changes. */
-export const READ_ONLY_ENV = 'ATLASSIAN_READ_ONLY';
+/**
+ * The environment variable that marks a context as one that does not make changes. The deprecated
+ * `ATLASSIAN_READ_ONLY` is still honoured while this one is unset.
+ */
+export const READ_ONLY_ENV = 'SIMPLY_ATLASSIAN_READ_ONLY';
 
 const TRUTHY = new Set(['1', 'true', 'yes', 'on']);
 
 /** Whether the environment says this context does not write. Any value not meaning "yes" is ignored. */
 export function isReadOnly(env: EnvLike = process.env): boolean {
-  const raw = env[READ_ONLY_ENV];
+  const raw = envValue(env, READ_ONLY_ENV);
   return raw !== undefined && TRUTHY.has(raw.trim().toLowerCase());
 }
 

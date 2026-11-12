@@ -26,12 +26,12 @@ let server: TestServer;
 
 beforeEach(async () => {
   server = await startTestServer();
-  delete process.env.ATLASSIAN_READ_ONLY;
+  delete process.env.SIMPLY_ATLASSIAN_READ_ONLY;
 });
 
 afterEach(async () => {
   await server.close();
-  delete process.env.ATLASSIAN_READ_ONLY;
+  delete process.env.SIMPLY_ATLASSIAN_READ_ONLY;
 });
 
 function argv(...extra: string[]): string[] {
@@ -88,12 +88,12 @@ describe('jira agile commands', () => {
   });
 
   it('marks sprint add as a write for the read-only guard', async () => {
-    process.env.ATLASSIAN_READ_ONLY = 'true';
+    process.env.SIMPLY_ATLASSIAN_READ_ONLY = 'true';
 
     const error = (await JiraSprintAdd.run(argv('11', 'PROJ-1')).catch((caught: unknown) => caught)) as Failure;
 
     expect(error.oclif?.exit).toBe(2);
-    expect(error.message).toContain('ATLASSIAN_READ_ONLY');
+    expect(error.message).toContain('SIMPLY_ATLASSIAN_READ_ONLY');
     expect(server.requests).toHaveLength(0);
   });
 });

@@ -26,10 +26,10 @@ if (typeof console.Console !== 'function') {
 }
 
 // Commands resolve their connection from flags, then the environment, so a developer's shell
-// that holds real `JIRA_*` or `CONFLUENCE_*` settings, or `ATLASSIAN_READ_ONLY`, would change what
-// the tests see: "no credentials configured" finds a token, and writes are refused. Each test
-// worker starts without them; a test that needs one sets it itself. This changes only the
+// that holds real `SIMPLY_JIRA_*` or `SIMPLY_CONFLUENCE_*` settings, `SIMPLY_ATLASSIAN_READ_ONLY`,
+// or their deprecated unprefixed names would change what the tests see: "no credentials
+// configured" finds a token, and writes are refused. Each test worker starts without them; a test that needs one sets it itself. This changes only the
 // worker's own copy of the environment, never the shell that started the run.
 for (const name of Object.keys(process.env)) {
-  if (/^(JIRA|CONFLUENCE|ATLASSIAN)_/.test(name)) delete process.env[name];
+  if (/^(SIMPLY_)?(JIRA|CONFLUENCE|ATLASSIAN)_/.test(name)) delete process.env[name];
 }

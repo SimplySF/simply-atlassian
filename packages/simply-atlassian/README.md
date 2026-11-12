@@ -55,14 +55,14 @@ Connection settings come from environment variables, or from a `.env` file named
 it is ignored.
 
 ```
-JIRA_URL=https://your-site.atlassian.net
-JIRA_USERNAME=you@example.com          # Cloud
-JIRA_API_TOKEN=...                     # Cloud
-JIRA_PERSONAL_TOKEN=...                # Server/Data Center, instead of the two above
+SIMPLY_JIRA_URL=https://your-site.atlassian.net
+SIMPLY_JIRA_USERNAME=you@example.com          # Cloud
+SIMPLY_JIRA_API_TOKEN=...                     # Cloud
+SIMPLY_JIRA_PERSONAL_TOKEN=...                # Server/Data Center, instead of the two above
 
-CONFLUENCE_URL=https://your-site.atlassian.net
-CONFLUENCE_USERNAME=you@example.com
-CONFLUENCE_API_TOKEN=...
+SIMPLY_CONFLUENCE_URL=https://your-site.atlassian.net
+SIMPLY_CONFLUENCE_USERNAME=you@example.com
+SIMPLY_CONFLUENCE_API_TOKEN=...
 ```
 
 Explicit flags beat the environment, which beats the file's contents. Certificate verification
@@ -83,7 +83,7 @@ nothing while still implying that it does.
 **`--dry-run`** is accepted by every write command. It prints the request that would be sent
 and sends nothing, which is the cheapest way to see what is about to happen.
 
-**`ATLASSIAN_READ_ONLY`** — set it to `1`, `true`, `yes`, or `on` and every write command
+**`SIMPLY_ATLASSIAN_READ_ONLY`** — set it to `1`, `true`, `yes`, or `on` and every write command
 refuses before making any request. Reads are unaffected. This guards against
 misconfiguration: the wrong credential file, the wrong context. It is not a security boundary,
 because anything that can run commands can also unset an environment variable.
@@ -191,11 +191,12 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>                   Path to a .env file holding connection settings.
-      --confluence-api-token=<value>       [env: CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
-      --confluence-personal-token=<value>  [env: CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
+      --confluence-api-token=<value>       [env: SIMPLY_CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
+      --confluence-personal-token=<value>  [env: SIMPLY_CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
                                            Server/Data Center.
-      --confluence-url=<value>             [env: CONFLUENCE_URL] Base URL of the Confluence instance.
-      --confluence-username=<value>        [env: CONFLUENCE_USERNAME] Account email for Confluence Cloud basic auth.
+      --confluence-url=<value>             [env: SIMPLY_CONFLUENCE_URL] Base URL of the Confluence instance.
+      --confluence-username=<value>        [env: SIMPLY_CONFLUENCE_USERNAME] Account email for Confluence Cloud basic
+                                           auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -217,10 +218,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/confluence/open.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/confluence/open.js)_
+_See code: [lib/commands/atlassian/confluence/open.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/confluence/open.js)_
 
 ## `simply atlassian confluence page children PAGE`
 
@@ -239,11 +242,12 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>                   Path to a .env file holding connection settings.
-      --confluence-api-token=<value>       [env: CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
-      --confluence-personal-token=<value>  [env: CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
+      --confluence-api-token=<value>       [env: SIMPLY_CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
+      --confluence-personal-token=<value>  [env: SIMPLY_CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
                                            Server/Data Center.
-      --confluence-url=<value>             [env: CONFLUENCE_URL] Base URL of the Confluence instance.
-      --confluence-username=<value>        [env: CONFLUENCE_USERNAME] Account email for Confluence Cloud basic auth.
+      --confluence-url=<value>             [env: SIMPLY_CONFLUENCE_URL] Base URL of the Confluence instance.
+      --confluence-username=<value>        [env: SIMPLY_CONFLUENCE_USERNAME] Account email for Confluence Cloud basic
+                                           auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -264,10 +268,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/children.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/children.js)_
+_See code: [lib/commands/atlassian/confluence/page/children.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/children.js)_
 
 ## `simply atlassian confluence page comment add PAGE`
 
@@ -292,11 +298,12 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>                   Path to a .env file holding connection settings.
-      --confluence-api-token=<value>       [env: CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
-      --confluence-personal-token=<value>  [env: CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
+      --confluence-api-token=<value>       [env: SIMPLY_CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
+      --confluence-personal-token=<value>  [env: SIMPLY_CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
                                            Server/Data Center.
-      --confluence-url=<value>             [env: CONFLUENCE_URL] Base URL of the Confluence instance.
-      --confluence-username=<value>        [env: CONFLUENCE_USERNAME] Account email for Confluence Cloud basic auth.
+      --confluence-url=<value>             [env: SIMPLY_CONFLUENCE_URL] Base URL of the Confluence instance.
+      --confluence-username=<value>        [env: SIMPLY_CONFLUENCE_USERNAME] Account email for Confluence Cloud basic
+                                           auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -318,10 +325,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/comment/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/comment/add.js)_
+_See code: [lib/commands/atlassian/confluence/page/comment/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/comment/add.js)_
 
 ## `simply atlassian confluence page comment list PAGE`
 
@@ -340,11 +349,12 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>                   Path to a .env file holding connection settings.
-      --confluence-api-token=<value>       [env: CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
-      --confluence-personal-token=<value>  [env: CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
+      --confluence-api-token=<value>       [env: SIMPLY_CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
+      --confluence-personal-token=<value>  [env: SIMPLY_CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
                                            Server/Data Center.
-      --confluence-url=<value>             [env: CONFLUENCE_URL] Base URL of the Confluence instance.
-      --confluence-username=<value>        [env: CONFLUENCE_USERNAME] Account email for Confluence Cloud basic auth.
+      --confluence-url=<value>             [env: SIMPLY_CONFLUENCE_URL] Base URL of the Confluence instance.
+      --confluence-username=<value>        [env: SIMPLY_CONFLUENCE_USERNAME] Account email for Confluence Cloud basic
+                                           auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -364,10 +374,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/comment/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/comment/list.js)_
+_See code: [lib/commands/atlassian/confluence/page/comment/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/comment/list.js)_
 
 ## `simply atlassian confluence page create`
 
@@ -393,11 +405,12 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>                   Path to a .env file holding connection settings.
-      --confluence-api-token=<value>       [env: CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
-      --confluence-personal-token=<value>  [env: CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
+      --confluence-api-token=<value>       [env: SIMPLY_CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
+      --confluence-personal-token=<value>  [env: SIMPLY_CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
                                            Server/Data Center.
-      --confluence-url=<value>             [env: CONFLUENCE_URL] Base URL of the Confluence instance.
-      --confluence-username=<value>        [env: CONFLUENCE_USERNAME] Account email for Confluence Cloud basic auth.
+      --confluence-url=<value>             [env: SIMPLY_CONFLUENCE_URL] Base URL of the Confluence instance.
+      --confluence-username=<value>        [env: SIMPLY_CONFLUENCE_USERNAME] Account email for Confluence Cloud basic
+                                           auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -421,14 +434,16 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --parent=<value>  Parent page id or URL, making this a child of it.
 
     Without this the page lands at the space root. A page URL is accepted as well as a bare id.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/create.js)_
+_See code: [lib/commands/atlassian/confluence/page/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/create.js)_
 
 ## `simply atlassian confluence page delete PAGE`
 
@@ -449,11 +464,12 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>                   Path to a .env file holding connection settings.
-      --confluence-api-token=<value>       [env: CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
-      --confluence-personal-token=<value>  [env: CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
+      --confluence-api-token=<value>       [env: SIMPLY_CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
+      --confluence-personal-token=<value>  [env: SIMPLY_CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
                                            Server/Data Center.
-      --confluence-url=<value>             [env: CONFLUENCE_URL] Base URL of the Confluence instance.
-      --confluence-username=<value>        [env: CONFLUENCE_USERNAME] Account email for Confluence Cloud basic auth.
+      --confluence-url=<value>             [env: SIMPLY_CONFLUENCE_URL] Base URL of the Confluence instance.
+      --confluence-username=<value>        [env: SIMPLY_CONFLUENCE_USERNAME] Account email for Confluence Cloud basic
+                                           auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -476,7 +492,9 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --confirm  Required to proceed with an irreversible change.
 
@@ -484,7 +502,7 @@ FLAG DESCRIPTIONS
     bare, never --confirm=true or --confirm=false.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/delete.js)_
+_See code: [lib/commands/atlassian/confluence/page/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/delete.js)_
 
 ## `simply atlassian confluence page get PAGE`
 
@@ -506,11 +524,12 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>                   Path to a .env file holding connection settings.
-      --confluence-api-token=<value>       [env: CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
-      --confluence-personal-token=<value>  [env: CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
+      --confluence-api-token=<value>       [env: SIMPLY_CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
+      --confluence-personal-token=<value>  [env: SIMPLY_CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
                                            Server/Data Center.
-      --confluence-url=<value>             [env: CONFLUENCE_URL] Base URL of the Confluence instance.
-      --confluence-username=<value>        [env: CONFLUENCE_USERNAME] Account email for Confluence Cloud basic auth.
+      --confluence-url=<value>             [env: SIMPLY_CONFLUENCE_URL] Base URL of the Confluence instance.
+      --confluence-username=<value>        [env: SIMPLY_CONFLUENCE_USERNAME] Account email for Confluence Cloud basic
+                                           auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -535,10 +554,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/get.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/get.js)_
+_See code: [lib/commands/atlassian/confluence/page/get.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/get.js)_
 
 ## `simply atlassian confluence page history PAGE`
 
@@ -557,11 +578,12 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>                   Path to a .env file holding connection settings.
-      --confluence-api-token=<value>       [env: CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
-      --confluence-personal-token=<value>  [env: CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
+      --confluence-api-token=<value>       [env: SIMPLY_CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
+      --confluence-personal-token=<value>  [env: SIMPLY_CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
                                            Server/Data Center.
-      --confluence-url=<value>             [env: CONFLUENCE_URL] Base URL of the Confluence instance.
-      --confluence-username=<value>        [env: CONFLUENCE_USERNAME] Account email for Confluence Cloud basic auth.
+      --confluence-url=<value>             [env: SIMPLY_CONFLUENCE_URL] Base URL of the Confluence instance.
+      --confluence-username=<value>        [env: SIMPLY_CONFLUENCE_USERNAME] Account email for Confluence Cloud basic
+                                           auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -583,10 +605,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/history.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/history.js)_
+_See code: [lib/commands/atlassian/confluence/page/history.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/history.js)_
 
 ## `simply atlassian confluence page label add PAGE`
 
@@ -608,11 +632,12 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>                   Path to a .env file holding connection settings.
-      --confluence-api-token=<value>       [env: CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
-      --confluence-personal-token=<value>  [env: CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
+      --confluence-api-token=<value>       [env: SIMPLY_CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
+      --confluence-personal-token=<value>  [env: SIMPLY_CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
                                            Server/Data Center.
-      --confluence-url=<value>             [env: CONFLUENCE_URL] Base URL of the Confluence instance.
-      --confluence-username=<value>        [env: CONFLUENCE_USERNAME] Account email for Confluence Cloud basic auth.
+      --confluence-url=<value>             [env: SIMPLY_CONFLUENCE_URL] Base URL of the Confluence instance.
+      --confluence-username=<value>        [env: SIMPLY_CONFLUENCE_USERNAME] Account email for Confluence Cloud basic
+                                           auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -634,14 +659,16 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --prefix=<value>  Label namespace.
 
     Confluence namespaces labels; global is what the UI applies and what you almost always want.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/label/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/label/add.js)_
+_See code: [lib/commands/atlassian/confluence/page/label/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/label/add.js)_
 
 ## `simply atlassian confluence page label list PAGE`
 
@@ -660,11 +687,12 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>                   Path to a .env file holding connection settings.
-      --confluence-api-token=<value>       [env: CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
-      --confluence-personal-token=<value>  [env: CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
+      --confluence-api-token=<value>       [env: SIMPLY_CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
+      --confluence-personal-token=<value>  [env: SIMPLY_CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
                                            Server/Data Center.
-      --confluence-url=<value>             [env: CONFLUENCE_URL] Base URL of the Confluence instance.
-      --confluence-username=<value>        [env: CONFLUENCE_USERNAME] Account email for Confluence Cloud basic auth.
+      --confluence-url=<value>             [env: SIMPLY_CONFLUENCE_URL] Base URL of the Confluence instance.
+      --confluence-username=<value>        [env: SIMPLY_CONFLUENCE_USERNAME] Account email for Confluence Cloud basic
+                                           auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -684,10 +712,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/label/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/label/list.js)_
+_See code: [lib/commands/atlassian/confluence/page/label/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/label/list.js)_
 
 ## `simply atlassian confluence page search`
 
@@ -704,11 +734,12 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>                   Path to a .env file holding connection settings.
-      --confluence-api-token=<value>       [env: CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
-      --confluence-personal-token=<value>  [env: CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
+      --confluence-api-token=<value>       [env: SIMPLY_CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
+      --confluence-personal-token=<value>  [env: SIMPLY_CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
                                            Server/Data Center.
-      --confluence-url=<value>             [env: CONFLUENCE_URL] Base URL of the Confluence instance.
-      --confluence-username=<value>        [env: CONFLUENCE_USERNAME] Account email for Confluence Cloud basic auth.
+      --confluence-url=<value>             [env: SIMPLY_CONFLUENCE_URL] Base URL of the Confluence instance.
+      --confluence-username=<value>        [env: SIMPLY_CONFLUENCE_USERNAME] Account email for Confluence Cloud basic
+                                           auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -730,10 +761,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/search.js)_
+_See code: [lib/commands/atlassian/confluence/page/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/search.js)_
 
 ## `simply atlassian confluence page update PAGE`
 
@@ -764,11 +797,12 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>                   Path to a .env file holding connection settings.
-      --confluence-api-token=<value>       [env: CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
-      --confluence-personal-token=<value>  [env: CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
+      --confluence-api-token=<value>       [env: SIMPLY_CONFLUENCE_API_TOKEN] API token for Confluence Cloud basic auth.
+      --confluence-personal-token=<value>  [env: SIMPLY_CONFLUENCE_PERSONAL_TOKEN] Personal access token for Confluence
                                            Server/Data Center.
-      --confluence-url=<value>             [env: CONFLUENCE_URL] Base URL of the Confluence instance.
-      --confluence-username=<value>        [env: CONFLUENCE_USERNAME] Account email for Confluence Cloud basic auth.
+      --confluence-url=<value>             [env: SIMPLY_CONFLUENCE_URL] Base URL of the Confluence instance.
+      --confluence-username=<value>        [env: SIMPLY_CONFLUENCE_USERNAME] Account email for Confluence Cloud basic
+                                           auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -795,7 +829,9 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --append  Add the new body to the end of the page instead of replacing it.
 
@@ -808,7 +844,7 @@ FLAG DESCRIPTIONS
     changes.
 ```
 
-_See code: [lib/commands/atlassian/confluence/page/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/update.js)_
+_See code: [lib/commands/atlassian/confluence/page/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/confluence/page/update.js)_
 
 ## `simply atlassian jira board list`
 
@@ -826,10 +862,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -851,10 +888,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/board/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/board/list.js)_
+_See code: [lib/commands/atlassian/jira/board/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/board/list.js)_
 
 ## `simply atlassian jira fields`
 
@@ -872,10 +911,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -899,10 +939,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/fields.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/fields.js)_
+_See code: [lib/commands/atlassian/jira/fields.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/fields.js)_
 
 ## `simply atlassian jira issue attachment download ISSUE`
 
@@ -925,10 +967,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -958,14 +1001,16 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --id=<value>...  Attachment id to download, as "attachment list" shows. Comma-separated or repeatable.
 
     Default: every attachment on the issue.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/attachment/download.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/attachment/download.js)_
+_See code: [lib/commands/atlassian/jira/issue/attachment/download.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/attachment/download.js)_
 
 ## `simply atlassian jira issue attachment list ISSUE`
 
@@ -981,10 +1026,11 @@ ARGUMENTS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1004,10 +1050,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/attachment/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/attachment/list.js)_
+_See code: [lib/commands/atlassian/jira/issue/attachment/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/attachment/list.js)_
 
 ## `simply atlassian jira issue comment add ISSUE`
 
@@ -1031,10 +1079,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1057,7 +1106,9 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --mention=<value>...  Account id, or a name or email to resolve. Repeatable.
 
@@ -1065,7 +1116,7 @@ FLAG DESCRIPTIONS
     candidates, rather than a guess at who was meant.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/comment/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/add.js)_
+_See code: [lib/commands/atlassian/jira/issue/comment/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/add.js)_
 
 ## `simply atlassian jira issue comment delete ISSUE COMMENT`
 
@@ -1086,10 +1137,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1109,7 +1161,9 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --confirm  Required to proceed with an irreversible change.
 
@@ -1117,7 +1171,7 @@ FLAG DESCRIPTIONS
     bare, never --confirm=true or --confirm=false.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/comment/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/delete.js)_
+_See code: [lib/commands/atlassian/jira/issue/comment/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/delete.js)_
 
 ## `simply atlassian jira issue comment edit ISSUE COMMENT`
 
@@ -1142,10 +1196,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1167,14 +1222,16 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --mention=<value>...  Account id, or a name or email to resolve. Repeatable.
 
     A term matching more than one user is an error listing the candidates, rather than a guess.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/comment/edit.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/edit.js)_
+_See code: [lib/commands/atlassian/jira/issue/comment/edit.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/edit.js)_
 
 ## `simply atlassian jira issue comment list ISSUE`
 
@@ -1193,10 +1250,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1216,10 +1274,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/comment/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/list.js)_
+_See code: [lib/commands/atlassian/jira/issue/comment/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/comment/list.js)_
 
 ## `simply atlassian jira issue create`
 
@@ -1247,10 +1307,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1275,7 +1336,9 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --parent=<value>  Parent issue key, making this a subtask of it.
 
@@ -1284,7 +1347,7 @@ FLAG DESCRIPTIONS
     error is more current than any rule encoded here.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/create.js)_
+_See code: [lib/commands/atlassian/jira/issue/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/create.js)_
 
 ## `simply atlassian jira issue delete ISSUE`
 
@@ -1305,10 +1368,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1330,7 +1394,9 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --confirm  Required to proceed with an irreversible change.
 
@@ -1342,7 +1408,7 @@ FLAG DESCRIPTIONS
     Without this, Jira refuses to delete an issue that has subtasks.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/delete.js)_
+_See code: [lib/commands/atlassian/jira/issue/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/delete.js)_
 
 ## `simply atlassian jira issue history ISSUE`
 
@@ -1362,10 +1428,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1387,10 +1454,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/history.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/history.js)_
+_See code: [lib/commands/atlassian/jira/issue/history.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/history.js)_
 
 ## `simply atlassian jira issue link create FROM TYPE TO`
 
@@ -1412,10 +1481,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1439,10 +1509,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/link/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/create.js)_
+_See code: [lib/commands/atlassian/jira/issue/link/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/create.js)_
 
 ## `simply atlassian jira issue link delete LINK-ID`
 
@@ -1461,10 +1533,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1486,10 +1559,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/link/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/delete.js)_
+_See code: [lib/commands/atlassian/jira/issue/link/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/delete.js)_
 
 ## `simply atlassian jira issue link list ISSUE`
 
@@ -1508,10 +1583,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1531,10 +1607,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/link/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/list.js)_
+_See code: [lib/commands/atlassian/jira/issue/link/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/list.js)_
 
 ## `simply atlassian jira issue link types`
 
@@ -1550,10 +1628,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1574,10 +1653,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/link/types.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/types.js)_
+_See code: [lib/commands/atlassian/jira/issue/link/types.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/link/types.js)_
 
 ## `simply atlassian jira issue remotelink create ISSUE`
 
@@ -1601,10 +1682,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1626,14 +1708,16 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --relationship=<value>  How the issue relates to the target, e.g. "documented by".
 
     Jira renders this as the heading the link is grouped under on the issue.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/remotelink/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/remotelink/create.js)_
+_See code: [lib/commands/atlassian/jira/issue/remotelink/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/remotelink/create.js)_
 
 ## `simply atlassian jira issue remotelink delete ISSUE LINK-ID`
 
@@ -1653,10 +1737,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1676,10 +1761,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/remotelink/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/remotelink/delete.js)_
+_See code: [lib/commands/atlassian/jira/issue/remotelink/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/remotelink/delete.js)_
 
 ## `simply atlassian jira issue remotelink list ISSUE`
 
@@ -1695,10 +1782,11 @@ ARGUMENTS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1718,10 +1806,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/remotelink/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/remotelink/list.js)_
+_See code: [lib/commands/atlassian/jira/issue/remotelink/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/remotelink/list.js)_
 
 ## `simply atlassian jira issue search`
 
@@ -1739,10 +1829,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1768,10 +1859,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/search.js)_
+_See code: [lib/commands/atlassian/jira/issue/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/search.js)_
 
 ## `simply atlassian jira issue transition ISSUE TRANSITION`
 
@@ -1796,10 +1889,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1824,14 +1918,16 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --by-name  Treat the transition argument as a name even if it is all digits.
 
     A digits-only argument is otherwise taken as an id, which makes a workflow step literally named "41" unreachable.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/transition.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/transition.js)_
+_See code: [lib/commands/atlassian/jira/issue/transition.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/transition.js)_
 
 ## `simply atlassian jira issue transitions ISSUE`
 
@@ -1847,10 +1943,11 @@ ARGUMENTS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1870,10 +1967,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/transitions.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/transitions.js)_
+_See code: [lib/commands/atlassian/jira/issue/transitions.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/transitions.js)_
 
 ## `simply atlassian jira issue update ISSUE`
 
@@ -1901,10 +2000,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1927,10 +2027,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/update.js)_
+_See code: [lib/commands/atlassian/jira/issue/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/update.js)_
 
 ## `simply atlassian jira issue view ISSUE`
 
@@ -1950,10 +2052,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -1975,10 +2078,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/issue/view.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/view.js)_
+_See code: [lib/commands/atlassian/jira/issue/view.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/issue/view.js)_
 
 ## `simply atlassian jira open TARGET`
 
@@ -1997,10 +2102,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -2022,10 +2128,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/open.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/open.js)_
+_See code: [lib/commands/atlassian/jira/open.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/open.js)_
 
 ## `simply atlassian jira project versions PROJECT`
 
@@ -2044,10 +2152,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -2067,10 +2176,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/project/versions.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/project/versions.js)_
+_See code: [lib/commands/atlassian/jira/project/versions.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/project/versions.js)_
 
 ## `simply atlassian jira projects`
 
@@ -2086,10 +2197,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -2109,10 +2221,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/projects.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/projects.js)_
+_See code: [lib/commands/atlassian/jira/projects.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/projects.js)_
 
 ## `simply atlassian jira sprint add SPRINT ISSUE`
 
@@ -2132,10 +2246,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -2156,10 +2271,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/sprint/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/add.js)_
+_See code: [lib/commands/atlassian/jira/sprint/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/add.js)_
 
 ## `simply atlassian jira sprint create`
 
@@ -2181,10 +2298,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -2204,10 +2322,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/sprint/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/create.js)_
+_See code: [lib/commands/atlassian/jira/sprint/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/create.js)_
 
 ## `simply atlassian jira sprint issues SPRINT`
 
@@ -2227,10 +2347,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -2250,10 +2371,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/sprint/issues.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/issues.js)_
+_See code: [lib/commands/atlassian/jira/sprint/issues.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/issues.js)_
 
 ## `simply atlassian jira sprint list BOARD`
 
@@ -2273,10 +2396,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -2296,10 +2420,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/sprint/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/list.js)_
+_See code: [lib/commands/atlassian/jira/sprint/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/list.js)_
 
 ## `simply atlassian jira sprint update SPRINT`
 
@@ -2325,10 +2451,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -2351,10 +2478,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/sprint/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/update.js)_
+_See code: [lib/commands/atlassian/jira/sprint/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/sprint/update.js)_
 
 ## `simply atlassian jira user search QUERY`
 
@@ -2373,10 +2502,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -2403,10 +2533,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/user/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/user/search.js)_
+_See code: [lib/commands/atlassian/jira/user/search.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/user/search.js)_
 
 ## `simply atlassian jira user view ACCOUNT`
 
@@ -2422,10 +2554,11 @@ ARGUMENTS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -2445,10 +2578,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/user/view.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/user/view.js)_
+_See code: [lib/commands/atlassian/jira/user/view.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/user/view.js)_
 
 ## `simply atlassian jira whoami`
 
@@ -2461,10 +2596,11 @@ USAGE
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -2486,10 +2622,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/whoami.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/whoami.js)_
+_See code: [lib/commands/atlassian/jira/whoami.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/whoami.js)_
 
 ## `simply atlassian jira xray fields`
 
@@ -2505,10 +2643,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -2536,10 +2675,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/fields.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/fields.js)_
+_See code: [lib/commands/atlassian/jira/xray/fields.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/fields.js)_
 
 ## `simply atlassian jira xray path list`
 
@@ -2557,10 +2698,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -2584,10 +2726,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/path/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/path/list.js)_
+_See code: [lib/commands/atlassian/jira/xray/path/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/path/list.js)_
 
 ## `simply atlassian jira xray plan list`
 
@@ -2608,10 +2752,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -2634,7 +2779,9 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --fields=<value>...  Extra fields to return, added to the defaults. Comma-separated or repeated.
 
@@ -2642,7 +2789,7 @@ FLAG DESCRIPTIONS
     (components, customfield_10400, "Story Points"). A name that matches nothing is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/plan/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/plan/list.js)_
+_See code: [lib/commands/atlassian/jira/xray/plan/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/plan/list.js)_
 
 ## `simply atlassian jira xray set list`
 
@@ -2663,10 +2810,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -2689,7 +2837,9 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --fields=<value>...  Extra fields to return, added to the defaults. Comma-separated or repeated.
 
@@ -2697,7 +2847,7 @@ FLAG DESCRIPTIONS
     (components, customfield_10400, "Story Points"). A name that matches nothing is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/set/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/set/list.js)_
+_See code: [lib/commands/atlassian/jira/xray/set/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/set/list.js)_
 
 ## `simply atlassian jira xray test create`
 
@@ -2728,10 +2878,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -2744,8 +2895,8 @@ DESCRIPTION
   not at all. --verifies links the requirement it tests.
 
   Keys of a record this does not write, such as links and preconditions, are named in a note. A step that calls another
-  test is refused. Returns the test read back. Xray credentials have no read-only scope, so ATLASSIAN_READ_ONLY is the
-  only guard against an unintended write.
+  test is refused. Returns the test read back. Xray credentials have no read-only scope, so SIMPLY_ATLASSIAN_READ_ONLY
+  is the only guard against an unintended write.
 
 EXAMPLES
   $ simply atlassian jira xray test create --project OM --summary "Reset a password" --step "Open Users||List shown" --verifies OM-40
@@ -2758,14 +2909,16 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --field=<value>...  Another field, as role=value. Repeatable.
 
     A role or field name, as --fields takes on "test get"; no customfield_ id is needed.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/test/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/create.js)_
+_See code: [lib/commands/atlassian/jira/xray/test/create.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/create.js)_
 
 ## `simply atlassian jira xray test export`
 
@@ -2786,10 +2939,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 FILTER FLAGS
   --jql=<value>           Extra JQL ANDed onto the scope, in parentheses so it cannot widen it.
@@ -2835,7 +2989,9 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --fields=<value>...  Extra fields to return, added to the defaults. Comma-separated or repeated.
 
@@ -2843,7 +2999,7 @@ FLAG DESCRIPTIONS
     (components, customfield_10400, "Story Points"). A name that matches nothing is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/test/export.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/export.js)_
+_See code: [lib/commands/atlassian/jira/xray/test/export.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/export.js)_
 
 ## `simply atlassian jira xray test get TEST`
 
@@ -2863,10 +3019,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -2895,7 +3052,9 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --fields=<value>...  Extra fields to return, added to the defaults. Comma-separated or repeated.
 
@@ -2903,7 +3062,7 @@ FLAG DESCRIPTIONS
     (components, customfield_10400, "Story Points"). A name that matches nothing is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/test/get.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/get.js)_
+_See code: [lib/commands/atlassian/jira/xray/test/get.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/get.js)_
 
 ## `simply atlassian jira xray test list`
 
@@ -2921,10 +3080,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 FILTER FLAGS
   --jql=<value>           Extra JQL ANDed onto the scope, in parentheses so it cannot widen it.
@@ -2964,7 +3124,9 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --fields=<value>...  Extra fields to return, added to the defaults. Comma-separated or repeated.
 
@@ -2972,7 +3134,7 @@ FLAG DESCRIPTIONS
     (components, customfield_10400, "Story Points"). A name that matches nothing is an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/test/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/list.js)_
+_See code: [lib/commands/atlassian/jira/xray/test/list.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/list.js)_
 
 ## `simply atlassian jira xray test step add TEST`
 
@@ -2994,10 +3156,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -3017,10 +3180,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/test/step/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/step/add.js)_
+_See code: [lib/commands/atlassian/jira/xray/test/step/add.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/step/add.js)_
 
 ## `simply atlassian jira xray test step delete TEST STEP`
 
@@ -3041,10 +3206,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -3064,7 +3230,9 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --confirm  Required to proceed with an irreversible change.
 
@@ -3072,7 +3240,7 @@ FLAG DESCRIPTIONS
     bare, never --confirm=true or --confirm=false.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/test/step/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/step/delete.js)_
+_See code: [lib/commands/atlassian/jira/xray/test/step/delete.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/step/delete.js)_
 
 ## `simply atlassian jira xray test step update TEST STEP`
 
@@ -3096,10 +3264,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -3120,10 +3289,12 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/test/step/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/step/update.js)_
+_See code: [lib/commands/atlassian/jira/xray/test/step/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/step/update.js)_
 
 ## `simply atlassian jira xray test update TEST`
 
@@ -3156,10 +3327,11 @@ FLAGS
 
 CONNECTION FLAGS
   -e, --env-file=<value>             Path to a .env file holding connection settings.
-      --jira-api-token=<value>       [env: JIRA_API_TOKEN] API token for Jira Cloud basic auth.
-      --jira-personal-token=<value>  [env: JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data Center.
-      --jira-url=<value>             [env: JIRA_URL] Base URL of the Jira instance.
-      --jira-username=<value>        [env: JIRA_USERNAME] Account email for Jira Cloud basic auth.
+      --jira-api-token=<value>       [env: SIMPLY_JIRA_API_TOKEN] API token for Jira Cloud basic auth.
+      --jira-personal-token=<value>  [env: SIMPLY_JIRA_PERSONAL_TOKEN] Personal access token for Jira Server/Data
+                                     Center.
+      --jira-url=<value>             [env: SIMPLY_JIRA_URL] Base URL of the Jira instance.
+      --jira-username=<value>        [env: SIMPLY_JIRA_USERNAME] Account email for Jira Cloud basic auth.
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -3185,7 +3357,9 @@ FLAG DESCRIPTIONS
   -e, --env-file=<value>  Path to a .env file holding connection settings.
 
     Loaded before anything else. Variables already present in the environment win, so the file never overrides an
-    explicit export, and only Atlassian connection variables are read from it. A path that cannot be read is an error.
+    explicit export, and only Atlassian connection variables (SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*,
+    SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated unprefixed names) are read from it. A path that cannot be read is
+    an error.
 
   --confirm  Required to proceed with an irreversible change.
 
@@ -3197,7 +3371,7 @@ FLAG DESCRIPTIONS
     A role or field name, as --fields takes on "test get"; no customfield_ id is needed.
 ```
 
-_See code: [lib/commands/atlassian/jira/xray/test/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.18.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/update.js)_
+_See code: [lib/commands/atlassian/jira/xray/test/update.js](https://github.com/SimplySF/simply-atlassian/blob/@simplysf/simply-atlassian@0.19.0/packages/simply-atlassian/lib/commands/atlassian/jira/xray/test/update.js)_
 <!-- commandsstop -->
 
 ## License

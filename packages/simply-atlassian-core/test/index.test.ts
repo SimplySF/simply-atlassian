@@ -43,6 +43,11 @@ describe('@simplysf/simply-atlassian-core', () => {
         'buildAuthHeaders',
         'loadEnvFile',
         'parseEnvFile',
+        // environment variable names and their deprecated spellings
+        'LEGACY_ENV',
+        'deprecatedEnvInUse',
+        'deprecatedEnvWarning',
+        'envValue',
         'resolveConfluenceConfig',
         'resolveJiraConfig',
         'stripControl',

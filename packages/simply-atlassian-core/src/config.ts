@@ -15,6 +15,7 @@
  */
 
 import process from 'node:process';
+import { type EnvName, envValue } from './env-vars.js';
 import { ConfigError } from './errors.js';
 
 /** Atlassian ships two products with different REST surfaces and auth schemes. */
@@ -52,11 +53,11 @@ export type EnvLike = Record<string, string | undefined>;
 interface ProductSpec {
   readonly label: string;
   readonly flagPrefix: string;
-  readonly urlVar: string;
-  readonly usernameVar: string;
-  readonly apiTokenVar: string;
-  readonly personalTokenVar: string;
-  readonly sslVerifyVar: string;
+  readonly urlVar: EnvName;
+  readonly usernameVar: EnvName;
+  readonly apiTokenVar: EnvName;
+  readonly personalTokenVar: EnvName;
+  readonly sslVerifyVar: EnvName;
   /** Cloud-only path the REST API lives under, appended during canonicalization. */
   readonly cloudPathPrefix?: string;
 }
@@ -64,21 +65,21 @@ interface ProductSpec {
 const JIRA_SPEC: ProductSpec = {
   label: 'Jira',
   flagPrefix: 'jira',
-  urlVar: 'JIRA_URL',
-  usernameVar: 'JIRA_USERNAME',
-  apiTokenVar: 'JIRA_API_TOKEN',
-  personalTokenVar: 'JIRA_PERSONAL_TOKEN',
-  sslVerifyVar: 'JIRA_SSL_VERIFY',
+  urlVar: 'SIMPLY_JIRA_URL',
+  usernameVar: 'SIMPLY_JIRA_USERNAME',
+  apiTokenVar: 'SIMPLY_JIRA_API_TOKEN',
+  personalTokenVar: 'SIMPLY_JIRA_PERSONAL_TOKEN',
+  sslVerifyVar: 'SIMPLY_JIRA_SSL_VERIFY',
 };
 
 const CONFLUENCE_SPEC: ProductSpec = {
   label: 'Confluence',
   flagPrefix: 'confluence',
-  urlVar: 'CONFLUENCE_URL',
-  usernameVar: 'CONFLUENCE_USERNAME',
-  apiTokenVar: 'CONFLUENCE_API_TOKEN',
-  personalTokenVar: 'CONFLUENCE_PERSONAL_TOKEN',
-  sslVerifyVar: 'CONFLUENCE_SSL_VERIFY',
+  urlVar: 'SIMPLY_CONFLUENCE_URL',
+  usernameVar: 'SIMPLY_CONFLUENCE_USERNAME',
+  apiTokenVar: 'SIMPLY_CONFLUENCE_API_TOKEN',
+  personalTokenVar: 'SIMPLY_CONFLUENCE_PERSONAL_TOKEN',
+  sslVerifyVar: 'SIMPLY_CONFLUENCE_SSL_VERIFY',
   cloudPathPrefix: '/wiki',
 };
 
@@ -125,7 +126,7 @@ function normalizeUrl(rawUrl: string, spec: ProductSpec): { url: string; deploym
  * believing verification is off when it is on, or vice versa. The fix keeps verification intact.
  */
 function rejectSslOptOut(spec: ProductSpec, env: EnvLike): void {
-  const raw = env[spec.sslVerifyVar];
+  const raw = envValue(env, spec.sslVerifyVar);
   if (raw !== undefined && FALSE_VALUES.has(raw.trim().toLowerCase())) {
     throw new ConfigError(
       `${spec.sslVerifyVar}=${raw} is not supported: this CLI always verifies TLS certificates. ` +
@@ -140,9 +141,9 @@ function resolveAuth(
   overrides: ConfigOverrides,
   env: EnvLike,
 ): AtlassianAuth {
-  const username = overrides.username ?? env[spec.usernameVar];
-  const apiToken = overrides.apiToken ?? env[spec.apiTokenVar];
-  const personalToken = overrides.personalToken ?? env[spec.personalTokenVar];
+  const username = overrides.username ?? envValue(env, spec.usernameVar);
+  const apiToken = overrides.apiToken ?? envValue(env, spec.apiTokenVar);
+  const personalToken = overrides.personalToken ?? envValue(env, spec.personalTokenVar);
 
   if (deployment === 'cloud') {
     if (!username || !apiToken) {
@@ -165,7 +166,7 @@ function resolveAuth(
 }
 
 function resolveConfig(spec: ProductSpec, overrides: ConfigOverrides, env: EnvLike): AtlassianConfig {
-  const rawUrl = (overrides.url ?? env[spec.urlVar])?.trim();
+  const rawUrl = (overrides.url ?? envValue(env, spec.urlVar))?.trim();
   if (!rawUrl) {
     throw new ConfigError(`${spec.label} URL is not configured. Set ${spec.urlVar} or pass --${spec.flagPrefix}-url.`);
   }

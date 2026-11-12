@@ -51,8 +51,8 @@ pnpm run compile
 npx @modelcontextprotocol/inspector node ./bin/run.js
 ```
 
-Connection settings are the same environment variables the CLI reads (`JIRA_URL`,
-`JIRA_USERNAME`, `JIRA_API_TOKEN`, and so on); export them before launching the inspector, or pass
+Connection settings are the same environment variables the CLI reads (`SIMPLY_JIRA_URL`,
+`SIMPLY_JIRA_USERNAME`, `SIMPLY_JIRA_API_TOKEN`, and so on); export them before launching the inspector, or pass
 `--env-file`.
 
 ## Tests

@@ -18,8 +18,16 @@ import process from 'node:process';
 import type { EnvLike } from './config.js';
 import { stripControl } from './text.js';
 
-/** The environment variables that carry credentials, and so must never reach any output. */
+/**
+ * The environment variables that carry credentials, and so must never reach any output. The
+ * deprecated unprefixed names are listed too: redaction is about what is in the environment,
+ * not which name won, so a shadowed legacy token is still scrubbed.
+ */
 export const SECRET_ENV = [
+  'SIMPLY_JIRA_API_TOKEN',
+  'SIMPLY_JIRA_PERSONAL_TOKEN',
+  'SIMPLY_CONFLUENCE_API_TOKEN',
+  'SIMPLY_CONFLUENCE_PERSONAL_TOKEN',
   'JIRA_API_TOKEN',
   'JIRA_PERSONAL_TOKEN',
   'CONFLUENCE_API_TOKEN',

@@ -130,6 +130,6 @@ describe('confluence page get', () => {
     )) as { oclif?: { exit?: number }; message: string };
 
     expect(error.oclif?.exit).toBe(2);
-    expect(error.message).toContain('CONFLUENCE_PERSONAL_TOKEN');
+    expect(error.message).toContain('SIMPLY_CONFLUENCE_PERSONAL_TOKEN');
   });
 });

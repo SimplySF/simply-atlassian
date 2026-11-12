@@ -34,7 +34,7 @@ export default class JiraXrayTestCreate extends XrayCommand<typeof JiraXrayTestC
     'is created with them or not at all. --verifies links the requirement it tests.\n\n' +
     'Keys of a record this does not write, such as links and preconditions, are named in a note. A step that ' +
     'calls another test is refused. Returns the test read back. Xray credentials have no read-only scope, so ' +
-    'ATLASSIAN_READ_ONLY is the only guard against an unintended write.';
+    'SIMPLY_ATLASSIAN_READ_ONLY is the only guard against an unintended write.';
 
   public static override readonly examples = [
     '<%= config.bin %> <%= command.id %> --project OM --summary "Reset a password" --step "Open Users||List shown" --verifies OM-40',

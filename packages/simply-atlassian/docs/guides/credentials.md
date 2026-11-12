@@ -8,16 +8,29 @@ Connection settings come from environment variables, or from a `.env` file named
 is ignored.
 
 ```
-JIRA_URL=https://your-site.atlassian.net
-JIRA_USERNAME=you@example.com          # Cloud
-JIRA_API_TOKEN=...                     # Cloud
-JIRA_PERSONAL_TOKEN=...                # Server/Data Center, instead of the two above
+SIMPLY_JIRA_URL=https://your-site.atlassian.net
+SIMPLY_JIRA_USERNAME=you@example.com          # Cloud
+SIMPLY_JIRA_API_TOKEN=...                     # Cloud
+SIMPLY_JIRA_PERSONAL_TOKEN=...                # Server/Data Center, instead of the two above
 
-CONFLUENCE_URL=https://your-site.atlassian.net
-CONFLUENCE_USERNAME=you@example.com     # Cloud
-CONFLUENCE_API_TOKEN=...                # Cloud
-CONFLUENCE_PERSONAL_TOKEN=...           # Server/Data Center, instead of the two above
+SIMPLY_CONFLUENCE_URL=https://your-site.atlassian.net
+SIMPLY_CONFLUENCE_USERNAME=you@example.com     # Cloud
+SIMPLY_CONFLUENCE_API_TOKEN=...                # Cloud
+SIMPLY_CONFLUENCE_PERSONAL_TOKEN=...           # Server/Data Center, instead of the two above
 ```
+
+## Renamed variables
+
+Every variable now starts with `SIMPLY_`. The unprefixed names — `JIRA_URL`, `JIRA_USERNAME`,
+`JIRA_API_TOKEN`, `JIRA_PERSONAL_TOKEN`, `JIRA_SSL_VERIFY`, their `CONFLUENCE_*` counterparts, and
+`ATLASSIAN_READ_ONLY` — are shared with other Atlassian tools, so a shell set up for one of those
+quietly configured this CLI as well.
+
+The old names are deprecated, not yet removed. Each still works while its `SIMPLY_` name is unset,
+and a command that relies on one prints a warning to stderr naming the rename. Once both are set the
+`SIMPLY_` name wins and the old one is ignored without comment, so another tool can keep its own
+`JIRA_URL`. The unprefixed names will stop working in a future major release; rename them, in your
+shell and in any `.env` file, by adding the prefix.
 
 ## Precedence
 
@@ -32,10 +45,10 @@ simply atlassian jira issue search -e ~/atlassian.env --jql "project = PROJ"
 ## Cloud versus Server/Data Center
 
 Jira Cloud authenticates with your account email plus an
-[API token](https://id.atlassian.com/manage-profile/security/api-tokens) (`JIRA_USERNAME` and
-`JIRA_API_TOKEN`). Server and Data Center use a personal access token on its own
-(`JIRA_PERSONAL_TOKEN`) in place of those two. Set one style or the other, not both. Confluence
-works the same way with the `CONFLUENCE_*` names.
+[API token](https://id.atlassian.com/manage-profile/security/api-tokens) (`SIMPLY_JIRA_USERNAME` and
+`SIMPLY_JIRA_API_TOKEN`). Server and Data Center use a personal access token on its own
+(`SIMPLY_JIRA_PERSONAL_TOKEN`) in place of those two. Set one style or the other, not both. Confluence
+works the same way with the `SIMPLY_CONFLUENCE_*` names.
 
 Server/Data Center support is implemented but has not yet been verified against a live instance.
 
@@ -48,7 +61,7 @@ authority, trust that CA rather than disabling verification:
 NODE_EXTRA_CA_CERTS=/path/to/ca.pem simply atlassian jira whoami
 ```
 
-A `JIRA_SSL_VERIFY=false` or `CONFLUENCE_SSL_VERIFY=false` carried over from other Atlassian
+A `SIMPLY_JIRA_SSL_VERIFY=false` or `SIMPLY_CONFLUENCE_SSL_VERIFY=false` carried over from other Atlassian
 tooling is rejected with an error rather than silently ignored, so nobody ends up believing
 verification is off when it is on, or the reverse.
 

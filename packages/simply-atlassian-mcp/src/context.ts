@@ -20,6 +20,7 @@ import {
   ConfluenceClient,
   createXrayBackend,
   defaultXrayCacheDir,
+  deprecatedEnvWarning,
   type EnvLike,
   JiraClient,
   loadEnvFile,
@@ -33,7 +34,7 @@ export interface ServerOptions {
   /**
    * Register the tools that change or delete data. Off by default, so a server launched
    * without thinking about it can only read. Even when on, a write is still refused when the
-   * environment carries `ATLASSIAN_READ_ONLY`, exactly as the CLI refuses it.
+   * environment carries `SIMPLY_ATLASSIAN_READ_ONLY`, exactly as the CLI refuses it.
    */
   readonly allowWrites?: boolean;
   /**
@@ -91,6 +92,11 @@ export interface SessionState {
 export function createContext(options: ServerOptions = {}): ToolContext {
   const env = options.env ?? process.env;
   if (options.envFile !== undefined) loadEnvFile(options.envFile, env);
+  // Once, at startup, and to stderr: stdout is the protocol channel. A host shows it in its log.
+  const deprecation = deprecatedEnvWarning(env);
+  if (deprecation !== undefined)
+    process.stderr.write(`Warning: ${deprecation}
+`);
 
   return {
     env,

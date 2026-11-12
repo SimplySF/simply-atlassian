@@ -14,7 +14,7 @@ Use the smallest relevant topic document rather than loading the whole directory
 - [Output conventions and Jira reads](docs/design/0002-output-conventions-first-jira-commands.md):
   table output and JSON behavior.
 - [Jira write safety](docs/design/0004-write-safety-and-jira-issue-writes.md): dry runs,
-  confirmations, and `ATLASSIAN_READ_ONLY`.
+  confirmations, and `SIMPLY_ATLASSIAN_READ_ONLY`.
 - [Jira agile boards and sprints](docs/design/0009-jira-agile-boards-sprints.md): board and sprint
   commands, numeric-ID policy, agile pagination, and sprint-write limits.
 - [Open Atlassian objects in the browser](docs/design/0010-open-in-browser.md): `jira open` and
@@ -32,6 +32,8 @@ Use the smallest relevant topic document rather than loading the whole directory
   Marketplace app lives under its host product.
 - [Xray test authoring](docs/design/0021-jira-xray-test-authoring.md): creating and updating Tests,
   the documented request shapes (nothing checked live), the step diff, and partial failure.
+- [Environment variable names](docs/design/0023-simply-env-prefix.md): the `SIMPLY_` prefix, the
+  deprecated unprefixed names, and how the two resolve, warn, and load from `--env-file`.
 - [MCP server](docs/design/0007-mcp-server.md): the tool catalogue and its parity with the CLI,
   the read-only default and `--allow-writes`, the confirm gate, and error mapping.
 - [MCP install](docs/design/0018-mcp-install.md): `atlassian mcp install`, which writes the server

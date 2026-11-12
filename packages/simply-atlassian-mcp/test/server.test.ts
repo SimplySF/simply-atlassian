@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import process from 'node:process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
@@ -32,7 +33,7 @@ import {
   xrayFixtureIssue,
   type TestServer,
 } from '@simplysf/simply-atlassian-core/testing';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createServer, mapError, SERVER_NAME, SERVER_VERSION, type ServerOptions } from '../src/index.js';
 import { TOOLS } from '../src/tools.js';
 
@@ -57,10 +58,10 @@ let closeServer: (() => Promise<void>) | undefined;
 /** Connection settings pointing both products at the fake instance, as a host would set them. */
 function env(extra: EnvLike = {}): EnvLike {
   return {
-    JIRA_URL: atlassian.baseUrl,
-    JIRA_PERSONAL_TOKEN: TOKEN,
-    CONFLUENCE_URL: atlassian.baseUrl,
-    CONFLUENCE_PERSONAL_TOKEN: TOKEN,
+    SIMPLY_JIRA_URL: atlassian.baseUrl,
+    SIMPLY_JIRA_PERSONAL_TOKEN: TOKEN,
+    SIMPLY_CONFLUENCE_URL: atlassian.baseUrl,
+    SIMPLY_CONFLUENCE_PERSONAL_TOKEN: TOKEN,
     ...extra,
   };
 }
@@ -187,7 +188,7 @@ describe('read tools', () => {
   it('load connection settings from --env-file, with the environment winning', async () => {
     atlassian.route('/rest/api/2/myself', (_req, res) => respondJson(res, 200, { name: 'ada' }));
     const path = join(mkdtempSync(join(tmpdir(), 'simply-mcp-')), '.env');
-    writeFileSync(path, `JIRA_URL=${atlassian.baseUrl}\nJIRA_PERSONAL_TOKEN=${TOKEN}\n`, 'utf8');
+    writeFileSync(path, `SIMPLY_JIRA_URL=${atlassian.baseUrl}\nJIRA_PERSONAL_TOKEN=${TOKEN}\n`, 'utf8');
     const c = await connect({ envFile: path, env: {} });
 
     const result = await c.callTool({ name: 'jira_whoami', arguments: {} });
@@ -196,12 +197,33 @@ describe('read tools', () => {
     expect(jsonOf(result)).toEqual({ name: 'ada' });
   });
 
+  it('still connect with deprecated unprefixed names, warning once on stderr', async () => {
+    atlassian.route('/rest/api/2/myself', (_req, res) => respondJson(res, 200, { name: 'ada' }));
+    const written: string[] = [];
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation((chunk): boolean => {
+      written.push(String(chunk));
+      return true;
+    });
+
+    let c: Client;
+    try {
+      c = await connect({ env: { JIRA_URL: atlassian.baseUrl, JIRA_PERSONAL_TOKEN: TOKEN } });
+    } finally {
+      stderr.mockRestore();
+    }
+    const result = await c.callTool({ name: 'jira_whoami', arguments: {} });
+
+    expect(jsonOf(result)).toEqual({ name: 'ada' });
+    expect(written.join('')).toContain('Warning: Deprecated environment variables in use: JIRA_URL → SIMPLY_JIRA_URL');
+    expect(written.join('')).not.toContain(TOKEN);
+  });
+
   it('report a missing setting as a config error from the tool that needed it', async () => {
     const c = await connect({ env: {} });
     const result = await c.callTool({ name: 'jira_whoami', arguments: {} });
     expect(result.isError).toBe(true);
     expect(jsonOf(result)).toMatchObject({ code: 'config', name: 'ConfigError', exitCode: 2 });
-    expect(textOf(result)).toContain('JIRA_URL');
+    expect(textOf(result)).toContain('SIMPLY_JIRA_URL');
   });
 });
 
@@ -240,13 +262,16 @@ describe('write tools', () => {
     expect(jsonOf(result)).toMatchObject({ code: 'config', message: expect.stringContaining('Nothing to create') });
   });
 
-  it('are refused by ATLASSIAN_READ_ONLY even when the server allows writes', async () => {
-    const c = await connect({ allowWrites: true, env: env({ ATLASSIAN_READ_ONLY: 'true' }) });
+  it('are refused by SIMPLY_ATLASSIAN_READ_ONLY even when the server allows writes', async () => {
+    const c = await connect({ allowWrites: true, env: env({ SIMPLY_ATLASSIAN_READ_ONLY: 'true' }) });
 
     const result = await c.callTool({ name: 'jira_issue_create', arguments: { project: 'P', summary: 'x' } });
 
     expect(result.isError).toBe(true);
-    expect(jsonOf(result)).toMatchObject({ code: 'config', message: expect.stringContaining('ATLASSIAN_READ_ONLY') });
+    expect(jsonOf(result)).toMatchObject({
+      code: 'config',
+      message: expect.stringContaining('SIMPLY_ATLASSIAN_READ_ONLY'),
+    });
     expect(atlassian.requests).toHaveLength(0);
   });
 });
@@ -356,7 +381,7 @@ describe('mapError', () => {
   });
 
   it('redacts credentials from the environment out of any message', () => {
-    const mapped = mapError(new Error(`token ${TOKEN} leaked`), { env: { JIRA_API_TOKEN: TOKEN } });
+    const mapped = mapError(new Error(`token ${TOKEN} leaked`), { env: { SIMPLY_JIRA_API_TOKEN: TOKEN } });
     expect(mapped.message).toBe('token <redacted> leaked');
   });
 });
@@ -555,9 +580,9 @@ describe('Xray tools', () => {
     const c = await connect({
       xray: true,
       env: {
-        JIRA_URL: 'https://x.atlassian.net',
-        JIRA_USERNAME: 'u',
-        JIRA_API_TOKEN: TOKEN,
+        SIMPLY_JIRA_URL: 'https://x.atlassian.net',
+        SIMPLY_JIRA_USERNAME: 'u',
+        SIMPLY_JIRA_API_TOKEN: TOKEN,
         XDG_CACHE_HOME: cacheHome,
       },
     });

@@ -55,6 +55,7 @@ refactors that keep the public surface identical (though a short doc is welcome 
 | 0020 | [Reading Jira issue attachments](0020-jira-issue-attachments.md)                                  | Implemented (PR #65)            |
 | 0021 | [Xray test authoring](0021-jira-xray-test-authoring.md)                                           | Implemented (PRs #77–#80)       |
 | 0022 | [Moving a Confluence page under a new parent](0022-moving-a-confluence-page.md)                   | Implemented (PR #86)            |
+| 0023 | [Prefixing environment variables with `SIMPLY_`](0023-simply-env-prefix.md)                       | Implemented (PR #87)            |
 
 ## Template
 

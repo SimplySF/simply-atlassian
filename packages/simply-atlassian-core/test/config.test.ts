@@ -19,14 +19,14 @@ import { resolveConfluenceConfig, resolveJiraConfig } from '../src/config.js';
 import { ConfigError } from '../src/errors.js';
 
 const CLOUD_ENV = {
-  JIRA_URL: 'https://example.atlassian.net',
-  JIRA_USERNAME: 'user@example.com',
-  JIRA_API_TOKEN: 'api-token',
+  SIMPLY_JIRA_URL: 'https://example.atlassian.net',
+  SIMPLY_JIRA_USERNAME: 'user@example.com',
+  SIMPLY_JIRA_API_TOKEN: 'api-token',
 };
 
 const SERVER_ENV = {
-  JIRA_URL: 'https://jira.internal.example.gov',
-  JIRA_PERSONAL_TOKEN: 'pat-token',
+  SIMPLY_JIRA_URL: 'https://jira.internal.example.gov',
+  SIMPLY_JIRA_PERSONAL_TOKEN: 'pat-token',
 };
 
 describe('resolveJiraConfig', () => {
@@ -53,41 +53,43 @@ describe('resolveJiraConfig', () => {
   });
 
   it('names every missing Cloud variable', () => {
-    expect(() => resolveJiraConfig({}, { JIRA_URL: 'https://example.atlassian.net' })).toThrow(
-      /JIRA_USERNAME and JIRA_API_TOKEN/,
+    expect(() => resolveJiraConfig({}, { SIMPLY_JIRA_URL: 'https://example.atlassian.net' })).toThrow(
+      /SIMPLY_JIRA_USERNAME and SIMPLY_JIRA_API_TOKEN/,
     );
   });
 
   it('hints when Cloud credentials are supplied to a Server instance', () => {
-    expect(() => resolveJiraConfig({}, { JIRA_URL: 'https://jira.example.gov', JIRA_API_TOKEN: 'token' })).toThrow(
-      /JIRA_PERSONAL_TOKEN.*only apply to Cloud/s,
-    );
+    expect(() =>
+      resolveJiraConfig({}, { SIMPLY_JIRA_URL: 'https://jira.example.gov', SIMPLY_JIRA_API_TOKEN: 'token' }),
+    ).toThrow(/SIMPLY_JIRA_PERSONAL_TOKEN.*only apply to Cloud/s);
   });
 
   it('rejects a missing URL with the variable name and flag', () => {
     expect(() => resolveJiraConfig({}, {})).toThrow(ConfigError);
-    expect(() => resolveJiraConfig({}, {})).toThrow(/JIRA_URL|--jira-url/);
+    expect(() => resolveJiraConfig({}, {})).toThrow(/SIMPLY_JIRA_URL|--jira-url/);
   });
 
   it('rejects an unparseable URL', () => {
-    expect(() => resolveJiraConfig({}, { ...CLOUD_ENV, JIRA_URL: 'not a url' })).toThrow(ConfigError);
+    expect(() => resolveJiraConfig({}, { ...CLOUD_ENV, SIMPLY_JIRA_URL: 'not a url' })).toThrow(ConfigError);
   });
 
   it('rejects an SSL_VERIFY opt-out with a CA-bundle hint instead of silently ignoring it', () => {
     // Carried over from other Atlassian tooling, this used to disable certificate checking.
     // Failing loudly beats leaving a user wrong about whether verification is on.
     for (const value of ['false', '0', 'no', 'off']) {
-      expect(() => resolveJiraConfig({}, { ...SERVER_ENV, JIRA_SSL_VERIFY: value })).toThrow(ConfigError);
+      expect(() => resolveJiraConfig({}, { ...SERVER_ENV, SIMPLY_JIRA_SSL_VERIFY: value })).toThrow(ConfigError);
     }
-    expect(() => resolveJiraConfig({}, { ...SERVER_ENV, JIRA_SSL_VERIFY: 'false' })).toThrow(/NODE_EXTRA_CA_CERTS/);
+    expect(() => resolveJiraConfig({}, { ...SERVER_ENV, SIMPLY_JIRA_SSL_VERIFY: 'false' })).toThrow(
+      /NODE_EXTRA_CA_CERTS/,
+    );
   });
 
   it('accepts an SSL_VERIFY value that keeps verification on', () => {
-    expect(() => resolveJiraConfig({}, { ...SERVER_ENV, JIRA_SSL_VERIFY: 'true' })).not.toThrow();
+    expect(() => resolveJiraConfig({}, { ...SERVER_ENV, SIMPLY_JIRA_SSL_VERIFY: 'true' })).not.toThrow();
   });
 
   it('strips trailing slashes from the base URL', () => {
-    expect(resolveJiraConfig({}, { ...CLOUD_ENV, JIRA_URL: 'https://example.atlassian.net/' }).url).toBe(
+    expect(resolveJiraConfig({}, { ...CLOUD_ENV, SIMPLY_JIRA_URL: 'https://example.atlassian.net/' }).url).toBe(
       'https://example.atlassian.net',
     );
   });
@@ -95,24 +97,24 @@ describe('resolveJiraConfig', () => {
 
 describe('resolveConfluenceConfig', () => {
   const env = {
-    CONFLUENCE_USERNAME: 'user@example.com',
-    CONFLUENCE_API_TOKEN: 'api-token',
+    SIMPLY_CONFLUENCE_USERNAME: 'user@example.com',
+    SIMPLY_CONFLUENCE_API_TOKEN: 'api-token',
   };
 
   it('canonicalizes a bare Cloud URL to /wiki', () => {
-    const config = resolveConfluenceConfig({}, { ...env, CONFLUENCE_URL: 'https://example.atlassian.net' });
+    const config = resolveConfluenceConfig({}, { ...env, SIMPLY_CONFLUENCE_URL: 'https://example.atlassian.net' });
 
     expect(config.url).toBe('https://example.atlassian.net/wiki');
   });
 
   it('leaves an already-canonical Cloud URL alone', () => {
-    const config = resolveConfluenceConfig({}, { ...env, CONFLUENCE_URL: 'https://example.atlassian.net/wiki' });
+    const config = resolveConfluenceConfig({}, { ...env, SIMPLY_CONFLUENCE_URL: 'https://example.atlassian.net/wiki' });
 
     expect(config.url).toBe('https://example.atlassian.net/wiki');
   });
 
   it('canonicalizes odd casing like /WIKI instead of trusting it', () => {
-    const config = resolveConfluenceConfig({}, { ...env, CONFLUENCE_URL: 'https://example.atlassian.net/WIKI' });
+    const config = resolveConfluenceConfig({}, { ...env, SIMPLY_CONFLUENCE_URL: 'https://example.atlassian.net/WIKI' });
 
     expect(config.url).toBe('https://example.atlassian.net/wiki');
   });
@@ -120,7 +122,7 @@ describe('resolveConfluenceConfig', () => {
   it('truncates a pasted deep Cloud page URL back to the API root', () => {
     const config = resolveConfluenceConfig(
       {},
-      { ...env, CONFLUENCE_URL: 'https://example.atlassian.net/wiki/spaces/DOCS/pages/123' },
+      { ...env, SIMPLY_CONFLUENCE_URL: 'https://example.atlassian.net/wiki/spaces/DOCS/pages/123' },
     );
 
     expect(config.url).toBe('https://example.atlassian.net/wiki');
@@ -129,7 +131,7 @@ describe('resolveConfluenceConfig', () => {
   it('never appends /wiki for Server/DC', () => {
     const config = resolveConfluenceConfig(
       {},
-      { CONFLUENCE_URL: 'https://confluence.example.gov', CONFLUENCE_PERSONAL_TOKEN: 'pat' },
+      { SIMPLY_CONFLUENCE_URL: 'https://confluence.example.gov', SIMPLY_CONFLUENCE_PERSONAL_TOKEN: 'pat' },
     );
 
     expect(config.url).toBe('https://confluence.example.gov');

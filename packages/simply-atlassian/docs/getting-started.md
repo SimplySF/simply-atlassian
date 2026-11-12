@@ -27,12 +27,12 @@ Every command reads its connection settings from environment variables, or from 
 passed with `-e/--env-file`. The minimum for Jira Cloud:
 
 ```
-JIRA_URL=https://your-site.atlassian.net
-JIRA_USERNAME=you@example.com
-JIRA_API_TOKEN=...
+SIMPLY_JIRA_URL=https://your-site.atlassian.net
+SIMPLY_JIRA_USERNAME=you@example.com
+SIMPLY_JIRA_API_TOKEN=...
 ```
 
-Confluence uses the matching `CONFLUENCE_URL`, `CONFLUENCE_USERNAME`, and `CONFLUENCE_API_TOKEN`.
+Confluence uses the matching `SIMPLY_CONFLUENCE_URL`, `SIMPLY_CONFLUENCE_USERNAME`, and `SIMPLY_CONFLUENCE_API_TOKEN`.
 See [Credentials](/guides/credentials/) for Server/Data Center tokens, precedence between flags,
 environment, and file, and how to trust an internal certificate authority.
 
@@ -50,7 +50,7 @@ Add `--json` to either to get the raw API payload instead of the formatted table
 ## Where to go next
 
 - The [Command Reference](/reference/) lists every command by topic, with its flags and examples.
-- [Write safety](/guides/write-safety/) explains `--confirm`, `--dry-run`, `ATLASSIAN_READ_ONLY`,
+- [Write safety](/guides/write-safety/) explains `--confirm`, `--dry-run`, `SIMPLY_ATLASSIAN_READ_ONLY`,
   and why a read-scoped token is the only one of those that actually binds.
 - [Scripts and agents](/guides/scripting/) covers the `--json` contract and exit codes.
 - [MCP server](/guides/mcp-server/) gives an AI agent the same commands as tools, read-only by

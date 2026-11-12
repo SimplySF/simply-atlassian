@@ -44,7 +44,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await server.close();
-  delete process.env.ATLASSIAN_READ_ONLY;
+  delete process.env.SIMPLY_ATLASSIAN_READ_ONLY;
 });
 
 function confluenceArgv(...extra: string[]): string[] {
@@ -59,22 +59,22 @@ type Failure = { oclif?: { exit?: number }; message: string };
 
 describe('the read-only guard', () => {
   for (const value of ['1', 'true', 'TRUE', 'yes', 'on']) {
-    it(`refuses a write when ATLASSIAN_READ_ONLY is "${value}"`, async () => {
-      process.env.ATLASSIAN_READ_ONLY = value;
+    it(`refuses a write when SIMPLY_ATLASSIAN_READ_ONLY is "${value}"`, async () => {
+      process.env.SIMPLY_ATLASSIAN_READ_ONLY = value;
 
       const error = (await JiraIssueCreate.run(argv('--project', 'P', '--type', 'Task', '--summary', 's')).catch(
         (caught: unknown) => caught,
       )) as Failure;
 
       expect(error.oclif?.exit).toBe(2);
-      expect(error.message).toContain('ATLASSIAN_READ_ONLY');
+      expect(error.message).toContain('SIMPLY_ATLASSIAN_READ_ONLY');
       // The refusal must happen before any request is made.
       expect(server.requests).toHaveLength(0);
     });
   }
 
   it('refuses every write command, not only the one it was first tested on', async () => {
-    process.env.ATLASSIAN_READ_ONLY = 'true';
+    process.env.SIMPLY_ATLASSIAN_READ_ONLY = 'true';
 
     const failures = (await Promise.all(
       [
@@ -97,16 +97,16 @@ describe('the read-only guard', () => {
 
     for (const error of failures) {
       expect(error.oclif?.exit).toBe(2);
-      expect(error.message).toContain('ATLASSIAN_READ_ONLY');
+      expect(error.message).toContain('SIMPLY_ATLASSIAN_READ_ONLY');
     }
     // Not one request escaped, including the transition's lookup call.
     expect(server.requests).toHaveLength(0);
   });
 
   it('cannot be cleared by an env file, because the real environment wins', async () => {
-    process.env.ATLASSIAN_READ_ONLY = 'true';
+    process.env.SIMPLY_ATLASSIAN_READ_ONLY = 'true';
     const path = join(mkdtempSync(join(tmpdir(), 'simply-guard-')), '.env');
-    writeFileSync(path, 'ATLASSIAN_READ_ONLY=false\n', 'utf8');
+    writeFileSync(path, 'SIMPLY_ATLASSIAN_READ_ONLY=false\n', 'utf8');
 
     const error = (await JiraIssueCreate.run(
       argv('--env-file', path, '--project', 'P', '--type', 'Task', '--summary', 's'),
@@ -118,7 +118,7 @@ describe('the read-only guard', () => {
 
   it('can be switched on by an env file, which is the intended arrangement', async () => {
     const path = join(mkdtempSync(join(tmpdir(), 'simply-guard-')), '.env');
-    writeFileSync(path, 'ATLASSIAN_READ_ONLY=true\n', 'utf8');
+    writeFileSync(path, 'SIMPLY_ATLASSIAN_READ_ONLY=true\n', 'utf8');
 
     const error = (await JiraIssueCreate.run(
       argv('--env-file', path, '--project', 'P', '--type', 'Task', '--summary', 's'),
@@ -128,7 +128,7 @@ describe('the read-only guard', () => {
   });
 
   it('leaves reads alone', async () => {
-    process.env.ATLASSIAN_READ_ONLY = 'true';
+    process.env.SIMPLY_ATLASSIAN_READ_ONLY = 'true';
     server.route('/rest/api/2/myself', (_req, res) => {
       respondJson(res, 200, { displayName: 'Ada', name: 'ada' });
     });
@@ -137,7 +137,7 @@ describe('the read-only guard', () => {
   });
 
   it('ignores a value that does not mean yes', async () => {
-    process.env.ATLASSIAN_READ_ONLY = 'false';
+    process.env.SIMPLY_ATLASSIAN_READ_ONLY = 'false';
     server.route('/rest/api/2/issue', (_req, res) => {
       respondJson(res, 201, { key: 'P-1', id: '1' });
     });

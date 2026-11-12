@@ -30,7 +30,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await server.close();
-  delete process.env.ATLASSIAN_READ_ONLY;
+  delete process.env.SIMPLY_ATLASSIAN_READ_ONLY;
 });
 
 function argv(...extra: string[]): string[] {
@@ -183,7 +183,7 @@ describe('issue link create', () => {
   });
 
   it('is refused by the read-only guard before any request', async () => {
-    process.env.ATLASSIAN_READ_ONLY = 'true';
+    process.env.SIMPLY_ATLASSIAN_READ_ONLY = 'true';
     const error = (await JiraIssueLinkCreate.run(argv('P-1', 'blocks', 'P-2')).catch(
       (caught: unknown) => caught,
     )) as Failure;
@@ -367,7 +367,7 @@ describe('issue link delete', () => {
   });
 
   it('is refused by the read-only guard before any request', async () => {
-    process.env.ATLASSIAN_READ_ONLY = 'true';
+    process.env.SIMPLY_ATLASSIAN_READ_ONLY = 'true';
     const error = (await JiraIssueLinkDelete.run(argv('10201')).catch((caught: unknown) => caught)) as Failure;
 
     expect(error.oclif?.exit).toBe(2);
