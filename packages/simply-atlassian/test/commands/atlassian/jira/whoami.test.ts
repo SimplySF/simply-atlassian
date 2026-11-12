@@ -150,8 +150,9 @@ describe('jira whoami', () => {
       delete process.env.JIRA_PERSONAL_TOKEN;
     }
 
-    // oclif wraps a warning to the terminal width, marks each line with `»`, and may colour it.
-    const output = stripVTControlCharacters(written.join('')).replaceAll('»', ' ').replaceAll(/\s+/g, ' ');
+    // oclif wraps a warning to the terminal width, may colour it, and marks each line with a
+    // platform-specific arrow: `›` on Linux and macOS, `»` on Windows.
+    const output = stripVTControlCharacters(written.join('')).replaceAll(/[›»]/g, ' ').replaceAll(/\s+/g, ' ');
     expect(output).toContain('JIRA_URL → SIMPLY_JIRA_URL');
     expect(output).toContain('JIRA_PERSONAL_TOKEN → SIMPLY_JIRA_PERSONAL_TOKEN');
   });
