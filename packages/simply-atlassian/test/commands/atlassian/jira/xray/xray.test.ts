@@ -57,7 +57,7 @@ beforeEach(async () => {
   server = await startTestServer();
   cacheHome = mkdtempSync(path.join(tmpdir(), 'xray-cli-'));
   process.env.XDG_CACHE_HOME = cacheHome;
-  delete process.env.ATLASSIAN_READ_ONLY;
+  delete process.env.SIMPLY_ATLASSIAN_READ_ONLY;
   store.clear();
   stdout = [];
   stderr = [];
@@ -82,7 +82,7 @@ beforeEach(async () => {
 afterEach(async () => {
   vi.restoreAllMocks();
   delete process.env.XDG_CACHE_HOME;
-  delete process.env.ATLASSIAN_READ_ONLY;
+  delete process.env.SIMPLY_ATLASSIAN_READ_ONLY;
   await server.close();
   rmSync(cacheHome, { recursive: true, force: true });
 });
@@ -357,8 +357,8 @@ describe('write safety', () => {
     for (const command of commands) expect(command.isWrite, command.name).toBe(false);
   });
 
-  it('runs under ATLASSIAN_READ_ONLY, writing only its local instance record', async () => {
-    process.env.ATLASSIAN_READ_ONLY = 'true';
+  it('runs under SIMPLY_ATLASSIAN_READ_ONLY, writing only its local instance record', async () => {
+    process.env.SIMPLY_ATLASSIAN_READ_ONLY = 'true';
     addTests(1);
 
     const result = (await JiraXrayTestList.run(argv('--project', 'OM'))) as { issues: unknown[] };
@@ -471,8 +471,8 @@ describe('jira xray test step', () => {
     expect(stdout.join('')).toContain('add a step: Save');
   });
 
-  it('refuses every write under ATLASSIAN_READ_ONLY with exit 2', async () => {
-    process.env.ATLASSIAN_READ_ONLY = '1';
+  it('refuses every write under SIMPLY_ATLASSIAN_READ_ONLY with exit 2', async () => {
+    process.env.SIMPLY_ATLASSIAN_READ_ONLY = '1';
     const error = await failure(JiraXrayTestStepAdd.run(argv('OM-12', '--action', 'Save')));
 
     expect(error.oclif?.exit).toBe(2);
@@ -832,7 +832,7 @@ describe('jira xray test update', () => {
     expect((await failure(JiraXrayTestUpdate.run(argv('OM-12')))).message).toContain('Nothing to update');
     expect((await failure(JiraXrayTestUpdate.run(argv('nope', '--summary', 'S')))).oclif?.exit).toBe(2);
 
-    process.env.ATLASSIAN_READ_ONLY = '1';
+    process.env.SIMPLY_ATLASSIAN_READ_ONLY = '1';
     expect((await failure(JiraXrayTestUpdate.run(argv('OM-12', '--summary', 'S')))).oclif?.exit).toBe(2);
     expect(writes()).toEqual([]);
   });

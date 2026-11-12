@@ -21,18 +21,18 @@ import { assertWritesAllowed, isReadOnly } from '../src/write-safety.js';
 
 describe('the read-only guard', () => {
   for (const value of ['1', 'true', 'TRUE', 'yes', 'on', ' on ']) {
-    it(`refuses a write when ATLASSIAN_READ_ONLY is "${value}"`, () => {
-      const env = { ATLASSIAN_READ_ONLY: value };
+    it(`refuses a write when SIMPLY_ATLASSIAN_READ_ONLY is "${value}"`, () => {
+      const env = { SIMPLY_ATLASSIAN_READ_ONLY: value };
       expect(isReadOnly(env)).toBe(true);
       expect(() => assertWritesAllowed(env)).toThrow(ConfigError);
-      expect(() => assertWritesAllowed(env)).toThrow(/ATLASSIAN_READ_ONLY/);
+      expect(() => assertWritesAllowed(env)).toThrow(/SIMPLY_ATLASSIAN_READ_ONLY/);
     });
   }
 
   it('ignores a value that does not mean yes, and an absent variable', () => {
-    expect(isReadOnly({ ATLASSIAN_READ_ONLY: 'false' })).toBe(false);
+    expect(isReadOnly({ SIMPLY_ATLASSIAN_READ_ONLY: 'false' })).toBe(false);
     expect(isReadOnly({})).toBe(false);
-    expect(() => assertWritesAllowed({ ATLASSIAN_READ_ONLY: '0' })).not.toThrow();
+    expect(() => assertWritesAllowed({ SIMPLY_ATLASSIAN_READ_ONLY: '0' })).not.toThrow();
   });
 });
 
@@ -43,8 +43,8 @@ describe('redaction', () => {
 
   it('reads the credential variables out of an environment', () => {
     const secrets = secretValues({
-      JIRA_API_TOKEN: 'jira-token-1',
-      CONFLUENCE_PERSONAL_TOKEN: 'conf-pat-2',
+      SIMPLY_JIRA_API_TOKEN: 'jira-token-1',
+      SIMPLY_CONFLUENCE_PERSONAL_TOKEN: 'conf-pat-2',
       OTHER: 'x',
     });
     expect([...secrets].sort()).toEqual(['conf-pat-2', 'jira-token-1']);

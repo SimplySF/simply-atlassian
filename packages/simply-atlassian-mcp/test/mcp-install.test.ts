@@ -80,7 +80,7 @@ describe('atlassian mcp install', () => {
 
   it('writes the read-only server under simply-atlassian, launched through simply at project scope', async () => {
     const envFile = path.join(cwd, 'atlassian.env');
-    fs.writeFileSync(envFile, 'JIRA_URL=https://example.test');
+    fs.writeFileSync(envFile, 'SIMPLY_JIRA_URL=https://example.test');
 
     const result = await AtlassianMcpInstall.run([
       '--client',

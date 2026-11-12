@@ -45,6 +45,7 @@ export {
 } from './confluence-client.js';
 export { pageHistoryJson, type PageHistoryJson } from './confluence-history.js';
 export { loadEnvFile, parseEnvFile } from './env-file.js';
+export { deprecatedEnvInUse, deprecatedEnvWarning, envValue, LEGACY_ENV, type EnvName } from './env-vars.js';
 export { AuthError, CliError, ConfigError, HttpError, NetworkError, XrayPartialWriteError } from './errors.js';
 export {
   HttpTransport,

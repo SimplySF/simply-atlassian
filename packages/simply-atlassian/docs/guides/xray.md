@@ -16,7 +16,7 @@ every `jira xray` command stops with a configuration error (exit code 2) before 
 ## Setup
 
 There is nothing to set up beyond the Jira connection. Xray Server/Data Center is a plugin on the
-Jira host, so `JIRA_URL` and `JIRA_PERSONAL_TOKEN` (or their flags) are all it needs. See
+Jira host, so `SIMPLY_JIRA_URL` and `SIMPLY_JIRA_PERSONAL_TOKEN` (or their flags) are all it needs. See
 [Credentials](/guides/credentials/).
 
 ```sh
@@ -344,7 +344,7 @@ the read failed, `record` is `null` and a note says so: do not retry.
 ## Write safety
 
 **Xray credentials have no read-only scope.** A token that can read tests can write them, so
-`ATLASSIAN_READ_ONLY` is the only guard here. Set it in any context that should not write: every write
+`SIMPLY_ATLASSIAN_READ_ONLY` is the only guard here. Set it in any context that should not write: every write
 above then exits 2 before sending anything. Read commands work under it. Their one local write, the
 instance record, is a cache of the instance's layout and not a change to Jira, so the guard does not
 apply to it.

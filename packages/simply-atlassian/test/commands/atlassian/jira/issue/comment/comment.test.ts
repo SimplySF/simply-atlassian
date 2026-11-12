@@ -30,7 +30,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await server.close();
-  delete process.env.ATLASSIAN_READ_ONLY;
+  delete process.env.SIMPLY_ATLASSIAN_READ_ONLY;
 });
 
 function argv(...extra: string[]): string[] {
@@ -90,7 +90,7 @@ describe('issue comment add', () => {
   });
 
   it('is covered by the read-only guard', async () => {
-    process.env.ATLASSIAN_READ_ONLY = 'true';
+    process.env.SIMPLY_ATLASSIAN_READ_ONLY = 'true';
 
     const error = (await JiraIssueCommentAdd.run(argv('P-1', '--text', 'x')).catch(
       (caught: unknown) => caught,

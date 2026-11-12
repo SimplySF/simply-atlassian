@@ -25,6 +25,7 @@ import {
   type ConfigOverrides,
   ConfluenceClient,
   createXrayBackend,
+  deprecatedEnvWarning,
   describeStepOperation,
   defaultXrayCacheDir,
   HttpError,
@@ -158,8 +159,9 @@ const envFileFlag = {
     summary: 'Path to a .env file holding connection settings.',
     description:
       'Loaded before anything else. Variables already present in the environment win, so the ' +
-      'file never overrides an explicit export, and only Atlassian connection variables are ' +
-      'read from it. A path that cannot be read is an error.',
+      'file never overrides an explicit export, and only Atlassian connection variables ' +
+      '(SIMPLY_JIRA_*, SIMPLY_CONFLUENCE_*, SIMPLY_ATLASSIAN_READ_ONLY, and their deprecated ' +
+      'unprefixed names) are read from it. A path that cannot be read is an error.',
     helpGroup: 'CONNECTION',
   }),
 };
@@ -168,22 +170,22 @@ const jiraFlags = {
   ...envFileFlag,
   'jira-url': Flags.string({
     summary: 'Base URL of the Jira instance.',
-    env: 'JIRA_URL',
+    env: 'SIMPLY_JIRA_URL',
     helpGroup: 'CONNECTION',
   }),
   'jira-username': Flags.string({
     summary: 'Account email for Jira Cloud basic auth.',
-    env: 'JIRA_USERNAME',
+    env: 'SIMPLY_JIRA_USERNAME',
     helpGroup: 'CONNECTION',
   }),
   'jira-api-token': Flags.string({
     summary: 'API token for Jira Cloud basic auth.',
-    env: 'JIRA_API_TOKEN',
+    env: 'SIMPLY_JIRA_API_TOKEN',
     helpGroup: 'CONNECTION',
   }),
   'jira-personal-token': Flags.string({
     summary: 'Personal access token for Jira Server/Data Center.',
-    env: 'JIRA_PERSONAL_TOKEN',
+    env: 'SIMPLY_JIRA_PERSONAL_TOKEN',
     helpGroup: 'CONNECTION',
   }),
 };
@@ -192,22 +194,22 @@ const confluenceFlags = {
   ...envFileFlag,
   'confluence-url': Flags.string({
     summary: 'Base URL of the Confluence instance.',
-    env: 'CONFLUENCE_URL',
+    env: 'SIMPLY_CONFLUENCE_URL',
     helpGroup: 'CONNECTION',
   }),
   'confluence-username': Flags.string({
     summary: 'Account email for Confluence Cloud basic auth.',
-    env: 'CONFLUENCE_USERNAME',
+    env: 'SIMPLY_CONFLUENCE_USERNAME',
     helpGroup: 'CONNECTION',
   }),
   'confluence-api-token': Flags.string({
     summary: 'API token for Confluence Cloud basic auth.',
-    env: 'CONFLUENCE_API_TOKEN',
+    env: 'SIMPLY_CONFLUENCE_API_TOKEN',
     helpGroup: 'CONNECTION',
   }),
   'confluence-personal-token': Flags.string({
     summary: 'Personal access token for Confluence Server/Data Center.',
-    env: 'CONFLUENCE_PERSONAL_TOKEN',
+    env: 'SIMPLY_CONFLUENCE_PERSONAL_TOKEN',
     helpGroup: 'CONNECTION',
   }),
 };
@@ -257,6 +259,11 @@ export abstract class AtlassianCommand<T extends typeof Command> extends Command
     // Applied here, before anything reads configuration, so every later lookup sees the file.
     const envFile = this.rawFlags['env-file'];
     if (typeof envFile === 'string') loadEnvFile(envFile);
+
+    // After the env file, so a deprecated name carried in one is reported too. `warn` goes to
+    // stderr and is silent under --json, so it never reaches a machine reader's stdout.
+    const deprecation = deprecatedEnvWarning(process.env);
+    if (deprecation !== undefined) this.warn(deprecation);
 
     // After the env file, so a read-only guard carried in a credential file is honoured, and
     // before run(), so no write command can issue a request first.

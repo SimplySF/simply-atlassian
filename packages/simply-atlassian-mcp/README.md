@@ -48,20 +48,24 @@ The server reads the same variables as the CLI, described in the
 [Credentials](https://simplysf.github.io/simply-cli/atlassian/guides/credentials/) guide:
 
 ```
-JIRA_URL=https://your-site.atlassian.net
-JIRA_USERNAME=you@example.com
-JIRA_API_TOKEN=...
+SIMPLY_JIRA_URL=https://your-site.atlassian.net
+SIMPLY_JIRA_USERNAME=you@example.com
+SIMPLY_JIRA_API_TOKEN=...
 
-CONFLUENCE_URL=https://your-site.atlassian.net
-CONFLUENCE_USERNAME=you@example.com
-CONFLUENCE_API_TOKEN=...
+SIMPLY_CONFLUENCE_URL=https://your-site.atlassian.net
+SIMPLY_CONFLUENCE_USERNAME=you@example.com
+SIMPLY_CONFLUENCE_API_TOKEN=...
 ```
 
 Put them in a `.env` file and pass it with `--env-file`, or set them in the `env` block of the
 client's server entry. A variable already in the environment wins over the file, as it does for
 the CLI. Settings are resolved when a tool is called rather than at startup, so a server given only
-the `JIRA_*` variables still serves every Jira tool; only the Confluence tools report a missing
+the `SIMPLY_JIRA_*` variables still serves every Jira tool; only the Confluence tools report a missing
 setting.
+
+The unprefixed names (`JIRA_URL`, `CONFLUENCE_API_TOKEN`, `ATLASSIAN_READ_ONLY`, and so on) still
+work while the `SIMPLY_` name is unset, but are deprecated: the server writes one warning naming
+each one to stderr, which a client shows in its server log, when it starts.
 
 Use an absolute path for the env file. MCP clients launch the server from a working directory of
 their own, so `~` and relative paths may not resolve. On Windows, write the path with forward
@@ -128,9 +132,9 @@ The same entry with the settings inline and no global install:
       "command": "npx",
       "args": ["-y", "@simplysf/simply-atlassian-mcp"],
       "env": {
-        "JIRA_URL": "https://your-site.atlassian.net",
-        "JIRA_USERNAME": "you@example.com",
-        "JIRA_API_TOKEN": "..."
+        "SIMPLY_JIRA_URL": "https://your-site.atlassian.net",
+        "SIMPLY_JIRA_USERNAME": "you@example.com",
+        "SIMPLY_JIRA_API_TOKEN": "..."
       }
     }
   }
@@ -174,9 +178,9 @@ project, with the same `mcpServers` shape as Claude Desktop:
 
 ```sh
 gemini mcp add --scope user \
-  -e JIRA_URL=https://your-site.atlassian.net \
-  -e JIRA_USERNAME=you@example.com \
-  -e JIRA_API_TOKEN=... \
+  -e SIMPLY_JIRA_URL=https://your-site.atlassian.net \
+  -e SIMPLY_JIRA_USERNAME=you@example.com \
+  -e SIMPLY_JIRA_API_TOKEN=... \
   simply-atlassian simply-atlassian-mcp
 ```
 
@@ -193,9 +197,9 @@ the settings file without an env file:
       "command": "npx",
       "args": ["-y", "@simplysf/simply-atlassian-mcp"],
       "env": {
-        "JIRA_URL": "https://your-site.atlassian.net",
-        "JIRA_USERNAME": "you@example.com",
-        "JIRA_API_TOKEN": "$JIRA_API_TOKEN"
+        "SIMPLY_JIRA_URL": "https://your-site.atlassian.net",
+        "SIMPLY_JIRA_USERNAME": "you@example.com",
+        "SIMPLY_JIRA_API_TOKEN": "$SIMPLY_JIRA_API_TOKEN"
       }
     }
   }
@@ -313,7 +317,7 @@ A few things make the agent's job easier:
 
 Started without options, the server registers only the read tools. Start it with `--allow-writes`
 to also register the tools that create, update, transition, comment, link, and delete. Even then,
-`ATLASSIAN_READ_ONLY` in the environment refuses every write, exactly as it does for the CLI.
+`SIMPLY_ATLASSIAN_READ_ONLY` in the environment refuses every write, exactly as it does for the CLI.
 
 That mirrors the two-credential-file arrangement in
 [Write safety](https://simplysf.github.io/simply-cli/atlassian/guides/write-safety/): give the agent's
@@ -401,7 +405,7 @@ With `--allow-writes` as well, five write tools join them: `jira_xray_test_creat
 `jira_xray_test_step_delete`. Each returns `{ record, notes }`, the test read back, or the plan under
 `dryRun`. `jira_xray_test_step_delete` needs `confirm: true`, and so does a `jira_xray_test_update`
 whose plan deletes a step. They were built from Xray's published documentation and have not been run
-against a live instance. Xray credentials have no read-only scope, so `ATLASSIAN_READ_ONLY` is the only
+against a live instance. Xray credentials have no read-only scope, so `SIMPLY_ATLASSIAN_READ_ONLY` is the only
 guard against a write.
 
 They differ from the other tools in three ways, all described in the
@@ -439,17 +443,17 @@ agent telling you what went wrong rather than in silence.
 Run `simply-atlassian-mcp --help` at a terminal first. If it prints the tool list, the package is
 installed and working, and the problem is in how the client launches it or what it passes.
 
-| Symptom                                                           | Cause and fix                                                                                                                                                                                                                              |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| The client reports the server failed to start                     | Desktop apps do not load your shell profile, so the command may not be on their `PATH`. Use the full path to the executable (it lives in the directory `npm prefix -g` reports, under `bin/` on macOS and Linux), or the `npx` form above. |
-| The client's log says `Env file ... not found.`                   | The only startup failure. The path is wrong or relative; make it absolute. The server exits with code 2.                                                                                                                                   |
-| Every tool returns `code: "config"` naming `JIRA_URL`             | The settings are not reaching the server: the env file is not being read, or the variables were set in a shell the client did not inherit. Pass `--env-file` or an `env` block explicitly.                                                 |
-| Confluence tools fail with `code: "config"` while Jira works      | Only the `JIRA_*` variables are set. Add the `CONFLUENCE_*` ones; each product's settings are resolved separately.                                                                                                                         |
-| `code: "auth"` with status `401`                                  | The instance rejected the credentials. Cloud needs `JIRA_USERNAME` plus `JIRA_API_TOKEN`; Server/Data Center needs `JIRA_PERSONAL_TOKEN` alone. Set one style, not both.                                                                   |
-| `code: "auth"` with status `403` on a write                       | The token is read-scoped, which is the intended outcome for the everyday server. Use the write-capable server entry for this change.                                                                                                       |
-| The agent says it has no tool to create, update, or delete        | The server was started without `--allow-writes`. That is the default; see [Let the agent write](#let-the-agent-write).                                                                                                                     |
-| The agent has no `jira_xray_*` tools                              | The server was started without `--xray`. Add it to the server's `args`; see [Xray tools](#xray-tools---xray).                                                                                                                              |
-| A write returns `code: "config"` mentioning `ATLASSIAN_READ_ONLY` | The variable is set in the environment or the env file. Unset it, or point the write server at a credential file meant for writing.                                                                                                        |
+| Symptom                                                                  | Cause and fix                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The client reports the server failed to start                            | Desktop apps do not load your shell profile, so the command may not be on their `PATH`. Use the full path to the executable (it lives in the directory `npm prefix -g` reports, under `bin/` on macOS and Linux), or the `npx` form above. |
+| The client's log says `Env file ... not found.`                          | The only startup failure. The path is wrong or relative; make it absolute. The server exits with code 2.                                                                                                                                   |
+| Every tool returns `code: "config"` naming `SIMPLY_JIRA_URL`             | The settings are not reaching the server: the env file is not being read, or the variables were set in a shell the client did not inherit. Pass `--env-file` or an `env` block explicitly.                                                 |
+| Confluence tools fail with `code: "config"` while Jira works             | Only the `SIMPLY_JIRA_*` variables are set. Add the `SIMPLY_CONFLUENCE_*` ones; each product's settings are resolved separately.                                                                                                           |
+| `code: "auth"` with status `401`                                         | The instance rejected the credentials. Cloud needs `SIMPLY_JIRA_USERNAME` plus `SIMPLY_JIRA_API_TOKEN`; Server/Data Center needs `SIMPLY_JIRA_PERSONAL_TOKEN` alone. Set one style, not both.                                              |
+| `code: "auth"` with status `403` on a write                              | The token is read-scoped, which is the intended outcome for the everyday server. Use the write-capable server entry for this change.                                                                                                       |
+| The agent says it has no tool to create, update, or delete               | The server was started without `--allow-writes`. That is the default; see [Let the agent write](#let-the-agent-write).                                                                                                                     |
+| The agent has no `jira_xray_*` tools                                     | The server was started without `--xray`. Add it to the server's `args`; see [Xray tools](#xray-tools---xray).                                                                                                                              |
+| A write returns `code: "config"` mentioning `SIMPLY_ATLASSIAN_READ_ONLY` | The variable is set in the environment or the env file. Unset it, or point the write server at a credential file meant for writing.                                                                                                        |
 
 ## Embed in your own process
 

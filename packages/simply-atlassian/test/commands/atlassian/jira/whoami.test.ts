@@ -78,7 +78,7 @@ describe('jira whoami', () => {
     };
 
     expect(error.oclif?.exit).toBe(2);
-    expect(error.message).toContain('JIRA_PERSONAL_TOKEN');
+    expect(error.message).toContain('SIMPLY_JIRA_PERSONAL_TOKEN');
   });
 
   it('emits a machine-readable error on stderr under --json', async () => {
@@ -125,6 +125,61 @@ describe('jira whoami', () => {
 
     expect(error.oclif?.exit).toBe(1);
     expect(error.message).toContain('no account details');
+  });
+
+  it('still connects with the deprecated unprefixed names, warning on stderr', async () => {
+    server.route('/rest/api/2/myself', (_req, res) => {
+      respondJson(res, 200, { displayName: 'Ada', name: 'ada' });
+    });
+    process.env.JIRA_URL = server.baseUrl;
+    process.env.JIRA_PERSONAL_TOKEN = 'pat';
+
+    // oclif writes warnings to stderr through console.error, which the test runner intercepts.
+    const written: string[] = [];
+    const stderr = vi.spyOn(console, 'error').mockImplementation((...parts: unknown[]) => {
+      written.push(parts.map(String).join(' '));
+    });
+
+    try {
+      const user = (await JiraWhoami.run([])) as { displayName: string };
+      expect(user.displayName).toBe('Ada');
+    } finally {
+      stderr.mockRestore();
+      delete process.env.JIRA_URL;
+      delete process.env.JIRA_PERSONAL_TOKEN;
+    }
+
+    // oclif wraps a warning to the terminal width and marks each line with `»`.
+    const output = written.join('').replaceAll('»', ' ').replaceAll(/\s+/g, ' ');
+    expect(output).toContain('JIRA_URL → SIMPLY_JIRA_URL');
+    expect(output).toContain('JIRA_PERSONAL_TOKEN → SIMPLY_JIRA_PERSONAL_TOKEN');
+  });
+
+  it('does not warn about a deprecated name shadowed by its prefixed one', async () => {
+    server.route('/rest/api/2/myself', (_req, res) => {
+      respondJson(res, 200, { displayName: 'Ada', name: 'ada' });
+    });
+    // Left behind for another tool: ignored, so not this CLI's business to report.
+    process.env.JIRA_URL = 'https://other-tool.example.gov';
+    process.env.SIMPLY_JIRA_URL = server.baseUrl;
+    process.env.SIMPLY_JIRA_PERSONAL_TOKEN = 'pat';
+
+    const written: string[] = [];
+    const stderr = vi.spyOn(console, 'error').mockImplementation((...parts: unknown[]) => {
+      written.push(parts.map(String).join(' '));
+    });
+
+    try {
+      const user = (await JiraWhoami.run([])) as { displayName: string };
+      expect(user.displayName).toBe('Ada');
+    } finally {
+      stderr.mockRestore();
+      delete process.env.JIRA_URL;
+      delete process.env.SIMPLY_JIRA_URL;
+      delete process.env.SIMPLY_JIRA_PERSONAL_TOKEN;
+    }
+
+    expect(written.join('')).not.toContain('Deprecated');
   });
 
   it('exits 2 when --env-file points at a file that is not there', async () => {

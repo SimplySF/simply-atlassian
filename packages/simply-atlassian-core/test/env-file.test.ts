@@ -30,12 +30,14 @@ function writeEnv(contents: string): string {
 describe('parseEnvFile', () => {
   it('reads plain assignments and ignores blanks and comments', () => {
     expect(
-      parseEnvFile(['# a comment', '', 'JIRA_URL=https://jira.example.gov', '  ', '# trailing'].join('\n')),
-    ).toEqual({ JIRA_URL: 'https://jira.example.gov' });
+      parseEnvFile(['# a comment', '', 'SIMPLY_JIRA_URL=https://jira.example.gov', '  ', '# trailing'].join('\n')),
+    ).toEqual({ SIMPLY_JIRA_URL: 'https://jira.example.gov' });
   });
 
   it('tolerates an export prefix and whitespace around the equals sign', () => {
-    expect(parseEnvFile('export JIRA_PERSONAL_TOKEN = pat-value')).toEqual({ JIRA_PERSONAL_TOKEN: 'pat-value' });
+    expect(parseEnvFile('export SIMPLY_JIRA_PERSONAL_TOKEN = pat-value')).toEqual({
+      SIMPLY_JIRA_PERSONAL_TOKEN: 'pat-value',
+    });
   });
 
   it('strips matching quotes, honouring escapes only inside double quotes', () => {
@@ -49,47 +51,47 @@ describe('parseEnvFile', () => {
 
   it('keeps a quoted value intact when an inline comment follows it', () => {
     // The quotes used to survive into the value, so every request failed as bad credentials.
-    expect(parseEnvFile('JIRA_API_TOKEN="secret" # prod token')).toEqual({ JIRA_API_TOKEN: 'secret' });
-    expect(parseEnvFile("JIRA_API_TOKEN='secret' # prod token")).toEqual({ JIRA_API_TOKEN: 'secret' });
+    expect(parseEnvFile('SIMPLY_JIRA_API_TOKEN="secret" # prod token')).toEqual({ SIMPLY_JIRA_API_TOKEN: 'secret' });
+    expect(parseEnvFile("SIMPLY_JIRA_API_TOKEN='secret' # prod token")).toEqual({ SIMPLY_JIRA_API_TOKEN: 'secret' });
   });
 
   it('keeps a value that itself contains an equals sign', () => {
-    expect(parseEnvFile('JIRA_API_TOKEN=abc=def==')).toEqual({ JIRA_API_TOKEN: 'abc=def==' });
+    expect(parseEnvFile('SIMPLY_JIRA_API_TOKEN=abc=def==')).toEqual({ SIMPLY_JIRA_API_TOKEN: 'abc=def==' });
   });
 
   it('reads CRLF files and strips a leading byte-order mark', () => {
-    expect(parseEnvFile('\uFEFFJIRA_URL=https://x\r\nJIRA_PERSONAL_TOKEN=pat\r\n')).toEqual({
-      JIRA_URL: 'https://x',
-      JIRA_PERSONAL_TOKEN: 'pat',
+    expect(parseEnvFile('\uFEFFSIMPLY_JIRA_URL=https://x\r\nSIMPLY_JIRA_PERSONAL_TOKEN=pat\r\n')).toEqual({
+      SIMPLY_JIRA_URL: 'https://x',
+      SIMPLY_JIRA_PERSONAL_TOKEN: 'pat',
     });
   });
 
   it('skips lines that are not assignments rather than failing the whole file', () => {
-    expect(parseEnvFile('nonsense\nJIRA_URL=https://x')).toEqual({ JIRA_URL: 'https://x' });
+    expect(parseEnvFile('nonsense\nSIMPLY_JIRA_URL=https://x')).toEqual({ SIMPLY_JIRA_URL: 'https://x' });
   });
 });
 
 describe('loadEnvFile', () => {
   it('applies values that are absent from the environment', () => {
     const env: NodeJS.ProcessEnv = {};
-    loadEnvFile(writeEnv('JIRA_URL=https://jira.example.gov'), env);
+    loadEnvFile(writeEnv('SIMPLY_JIRA_URL=https://jira.example.gov'), env);
 
-    expect(env.JIRA_URL).toBe('https://jira.example.gov');
+    expect(env.SIMPLY_JIRA_URL).toBe('https://jira.example.gov');
   });
 
   it('never overwrites a variable already set in the environment', () => {
-    const env: NodeJS.ProcessEnv = { JIRA_URL: 'https://real.example.gov' };
-    loadEnvFile(writeEnv('JIRA_URL=https://from-file.example.gov'), env);
+    const env: NodeJS.ProcessEnv = { SIMPLY_JIRA_URL: 'https://real.example.gov' };
+    loadEnvFile(writeEnv('SIMPLY_JIRA_URL=https://from-file.example.gov'), env);
 
-    expect(env.JIRA_URL).toBe('https://real.example.gov');
+    expect(env.SIMPLY_JIRA_URL).toBe('https://real.example.gov');
   });
 
   it('fills in a variable that is exported as an empty string', () => {
-    // `export JIRA_URL=` in a wrapper script carries no value, so it must not beat the file.
-    const env: NodeJS.ProcessEnv = { JIRA_URL: '' };
-    loadEnvFile(writeEnv('JIRA_URL=https://from-file.example.gov'), env);
+    // `export SIMPLY_JIRA_URL=` in a wrapper script carries no value, so it must not beat the file.
+    const env: NodeJS.ProcessEnv = { SIMPLY_JIRA_URL: '' };
+    loadEnvFile(writeEnv('SIMPLY_JIRA_URL=https://from-file.example.gov'), env);
 
-    expect(env.JIRA_URL).toBe('https://from-file.example.gov');
+    expect(env.SIMPLY_JIRA_URL).toBe('https://from-file.example.gov');
   });
 
   it('ignores variables outside the Atlassian connection set', () => {
@@ -102,7 +104,7 @@ describe('loadEnvFile', () => {
           'NODE_TLS_REJECT_UNAUTHORIZED=0',
           'NODE_OPTIONS=--require=/tmp/evil.js',
           'PATH=/tmp/evil',
-          'JIRA_URL=https://jira.example.gov',
+          'SIMPLY_JIRA_URL=https://jira.example.gov',
         ].join('\n'),
       ),
       env,
@@ -111,14 +113,31 @@ describe('loadEnvFile', () => {
     expect(env.NODE_TLS_REJECT_UNAUTHORIZED).toBeUndefined();
     expect(env.NODE_OPTIONS).toBeUndefined();
     expect(env.PATH).toBeUndefined();
-    expect(env.JIRA_URL).toBe('https://jira.example.gov');
+    expect(env.SIMPLY_JIRA_URL).toBe('https://jira.example.gov');
   });
 
   it('still applies SSL_VERIFY so the explanatory config error can fire', () => {
     const env: NodeJS.ProcessEnv = {};
-    loadEnvFile(writeEnv('JIRA_SSL_VERIFY=false'), env);
+    loadEnvFile(writeEnv('SIMPLY_JIRA_SSL_VERIFY=false'), env);
 
-    expect(env.JIRA_SSL_VERIFY).toBe('false');
+    expect(env.SIMPLY_JIRA_SSL_VERIFY).toBe('false');
+  });
+
+  it('still applies a deprecated unprefixed name', () => {
+    const env: NodeJS.ProcessEnv = {};
+    loadEnvFile(writeEnv('JIRA_URL=https://jira.example.gov'), env);
+
+    expect(env.JIRA_URL).toBe('https://jira.example.gov');
+  });
+
+  it('treats both names of a setting as one when the environment already sets it', () => {
+    // The prefixed name wins on lookup, so without this a file's SIMPLY_ATLASSIAN_READ_ONLY=0
+    // would outrank a real ATLASSIAN_READ_ONLY=1 and turn the guard off from a file.
+    const env: NodeJS.ProcessEnv = { ATLASSIAN_READ_ONLY: '1', SIMPLY_JIRA_URL: 'https://real.example.gov' };
+    loadEnvFile(writeEnv(['SIMPLY_ATLASSIAN_READ_ONLY=0', 'JIRA_URL=https://from-file.example.gov'].join('\n')), env);
+
+    expect(env.SIMPLY_ATLASSIAN_READ_ONLY).toBeUndefined();
+    expect(env.JIRA_URL).toBeUndefined();
   });
 
   it('raises ConfigError for a path that does not exist', () => {

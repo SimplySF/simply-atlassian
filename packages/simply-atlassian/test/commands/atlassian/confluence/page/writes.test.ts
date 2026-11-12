@@ -30,7 +30,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await server.close();
-  delete process.env.ATLASSIAN_READ_ONLY;
+  delete process.env.SIMPLY_ATLASSIAN_READ_ONLY;
 });
 
 function argv(...extra: string[]): string[] {
@@ -132,7 +132,7 @@ describe('page create', () => {
   });
 
   it('is refused by the read-only guard before any request', async () => {
-    process.env.ATLASSIAN_READ_ONLY = 'true';
+    process.env.SIMPLY_ATLASSIAN_READ_ONLY = 'true';
     const error = (await ConfluencePageCreate.run(argv('--space', 'DOCS', '--title', 'T', '--text', 'x')).catch(
       (caught: unknown) => caught,
     )) as Failure;
@@ -275,7 +275,7 @@ describe('page update', () => {
   });
 
   it('is refused by the read-only guard before any request', async () => {
-    process.env.ATLASSIAN_READ_ONLY = 'true';
+    process.env.SIMPLY_ATLASSIAN_READ_ONLY = 'true';
     const error = (await ConfluencePageUpdate.run(argv('123', '--text', 'x')).catch(
       (caught: unknown) => caught,
     )) as Failure;
@@ -376,7 +376,7 @@ describe('page delete', () => {
   });
 
   it('is refused by the read-only guard before any request', async () => {
-    process.env.ATLASSIAN_READ_ONLY = 'true';
+    process.env.SIMPLY_ATLASSIAN_READ_ONLY = 'true';
     const error = (await ConfluencePageDelete.run(argv('123')).catch((caught: unknown) => caught)) as Failure;
 
     expect(error.oclif?.exit).toBe(2);
@@ -410,7 +410,7 @@ describe('page comment add', () => {
   });
 
   it('is refused by the read-only guard before any request', async () => {
-    process.env.ATLASSIAN_READ_ONLY = 'true';
+    process.env.SIMPLY_ATLASSIAN_READ_ONLY = 'true';
     const error = (await ConfluencePageCommentAdd.run(argv('123', '--text', 'x')).catch(
       (caught: unknown) => caught,
     )) as Failure;

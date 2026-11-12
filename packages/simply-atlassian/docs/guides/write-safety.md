@@ -34,7 +34,7 @@ is the cheapest way to see what is about to happen.
 simply atlassian jira issue transition PROJ-1 "Done" --dry-run
 ```
 
-## `ATLASSIAN_READ_ONLY`
+## `SIMPLY_ATLASSIAN_READ_ONLY`
 
 Set it to `1`, `true`, `yes`, or `on` and every write command refuses before making any request.
 Reads are unaffected. This guards against misconfiguration: the wrong credential file, the wrong

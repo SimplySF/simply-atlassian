@@ -50,7 +50,9 @@ afterEach(async () => {
 async function connect(answer?: (message: string) => ElicitResult): Promise<{ prompts: string[] }> {
   const prompts: string[] = [];
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  const server = createServer({ env: { JIRA_URL: atlassian.baseUrl, JIRA_PERSONAL_TOKEN: 'pat-attachments-token' } });
+  const server = createServer({
+    env: { SIMPLY_JIRA_URL: atlassian.baseUrl, SIMPLY_JIRA_PERSONAL_TOKEN: 'pat-attachments-token' },
+  });
   client = new Client(
     { name: 'test-client', version: '0.0.0' },
     answer === undefined ? {} : { capabilities: { elicitation: { form: {} } } },

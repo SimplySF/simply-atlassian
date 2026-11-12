@@ -27,7 +27,7 @@ Requires Node.js 22 or later.
 ```ts
 import { JiraClient, resolveJiraConfig } from '@simplysf/simply-atlassian-core';
 
-// Reads JIRA_URL and either JIRA_USERNAME + JIRA_API_TOKEN (Cloud) or JIRA_PERSONAL_TOKEN
+// Reads SIMPLY_JIRA_URL and either SIMPLY_JIRA_USERNAME + SIMPLY_JIRA_API_TOKEN (Cloud) or SIMPLY_JIRA_PERSONAL_TOKEN
 // (Server/Data Center) from the environment; explicit overrides win over it.
 const jira = new JiraClient(resolveJiraConfig());
 
@@ -57,15 +57,15 @@ internal.
 
 ### Configuration and authentication
 
-| Export                                                   | Description                                                                                                                                                |
-| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `resolveJiraConfig(overrides?, env?)`                    | Resolves a Jira `AtlassianConfig` from explicit overrides and the environment (`JIRA_*` variables). Throws `ConfigError` when required values are missing. |
-| `resolveConfluenceConfig(overrides?, env?)`              | Same for Confluence (`CONFLUENCE_*`); appends `/wiki` to a Cloud URL.                                                                                      |
-| `buildAuthHeaders(config)`                               | The `Authorization` header for a config: Basic for Cloud, Bearer for Server/DC.                                                                            |
-| `loadEnvFile(path, env?)`                                | Loads Atlassian connection variables from a `.env` file into `env` without overriding values already present.                                              |
-| `parseEnvFile(contents)`                                 | Parses `.env` text into a key/value map.                                                                                                                   |
-| `AtlassianConfig`, `ConfigOverrides`, `EnvLike`          | Types: a resolved config; the per-call overrides; an environment-shaped map.                                                                               |
-| `Deployment`, `AtlassianAuth`, `BasicAuth`, `BearerAuth` | Types: `'cloud' \| 'server'`, and the two credential shapes.                                                                                               |
+| Export                                                   | Description                                                                                                                                                       |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resolveJiraConfig(overrides?, env?)`                    | Resolves a Jira `AtlassianConfig` from explicit overrides and the environment (`SIMPLY_JIRA_*` variables). Throws `ConfigError` when required values are missing. |
+| `resolveConfluenceConfig(overrides?, env?)`              | Same for Confluence (`SIMPLY_CONFLUENCE_*`); appends `/wiki` to a Cloud URL.                                                                                      |
+| `buildAuthHeaders(config)`                               | The `Authorization` header for a config: Basic for Cloud, Bearer for Server/DC.                                                                                   |
+| `loadEnvFile(path, env?)`                                | Loads Atlassian connection variables from a `.env` file into `env` without overriding values already present.                                                     |
+| `parseEnvFile(contents)`                                 | Parses `.env` text into a key/value map.                                                                                                                          |
+| `AtlassianConfig`, `ConfigOverrides`, `EnvLike`          | Types: a resolved config; the per-call overrides; an environment-shaped map.                                                                                      |
+| `Deployment`, `AtlassianAuth`, `BasicAuth`, `BearerAuth` | Types: `'cloud' \| 'server'`, and the two credential shapes.                                                                                                      |
 
 ### Clients
 
@@ -111,12 +111,12 @@ internal.
 
 ### Safety
 
-| Export                                                           | Description                                                                                                        |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `assertWritesAllowed(env?)`, `isReadOnly(env?)`, `READ_ONLY_ENV` | The `ATLASSIAN_READ_ONLY` guard the CLI applies before any write command and the MCP server before any write tool. |
-| `secretValues(env?)`, `collectSecrets(values)`, `SECRET_ENV`     | The credential values worth redacting: the `*_TOKEN` variables, plus whatever else a caller collected.             |
-| `redactSecrets(message, secrets)`                                | Blanks every occurrence of every secret out of a message.                                                          |
-| `sanitiseDeep(value, secrets)`                                   | Redacts and control-strips an arbitrary response body, recursively and bounded.                                    |
+| Export                                                           | Description                                                                                                               |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `assertWritesAllowed(env?)`, `isReadOnly(env?)`, `READ_ONLY_ENV` | The `SIMPLY_ATLASSIAN_READ_ONLY` guard the CLI applies before any write command and the MCP server before any write tool. |
+| `secretValues(env?)`, `collectSecrets(values)`, `SECRET_ENV`     | The credential values worth redacting: the `*_TOKEN` variables, plus whatever else a caller collected.                    |
+| `redactSecrets(message, secrets)`                                | Blanks every occurrence of every secret out of a message.                                                                 |
+| `sanitiseDeep(value, secrets)`                                   | Redacts and control-strips an arbitrary response body, recursively and bounded.                                           |
 
 ### Operations
 
