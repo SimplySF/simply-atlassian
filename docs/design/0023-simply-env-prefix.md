@@ -1,6 +1,6 @@
 # 0023 — Prefixing environment variables with `SIMPLY_`
 
-**Status:** Implemented
+**Status:** Implemented (PR #87)
 **Package:** `simply-atlassian-core`, `simply-atlassian`, `simply-atlassian-mcp`
 **Date:** 2026-11-12
 
