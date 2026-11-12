@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.20.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.19.0...%40simplysf%2Fsimply-atlassian%400.20.0) (2026-11-12)
+
+### Features
+
+- **simply-atlassian-core:** prefix environment variables with SIMPLY_ ([#87](https://github.com/SimplySF/simply-atlassian/issues/87)) ([b61907d](https://github.com/SimplySF/simply-atlassian/commit/b61907d1f01f1409c01f0e36ec6451c9b29ae91e))
+
 # [0.19.0](https://github.com/SimplySF/simply-atlassian/compare/%40simplysf%2Fsimply-atlassian%400.18.0...%40simplysf%2Fsimply-atlassian%400.19.0) (2026-11-09)
 
 ### Features
