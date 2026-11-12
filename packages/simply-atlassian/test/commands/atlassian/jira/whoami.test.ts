@@ -15,6 +15,7 @@
  */
 
 import process from 'node:process';
+import { stripVTControlCharacters } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { respondJson, startTestServer, type TestServer } from '@simplysf/simply-atlassian-core/testing';
 import JiraWhoami from '../../../../src/commands/atlassian/jira/whoami.js';
@@ -149,8 +150,8 @@ describe('jira whoami', () => {
       delete process.env.JIRA_PERSONAL_TOKEN;
     }
 
-    // oclif wraps a warning to the terminal width and marks each line with `»`.
-    const output = written.join('').replaceAll('»', ' ').replaceAll(/\s+/g, ' ');
+    // oclif wraps a warning to the terminal width, marks each line with `»`, and may colour it.
+    const output = stripVTControlCharacters(written.join('')).replaceAll('»', ' ').replaceAll(/\s+/g, ' ');
     expect(output).toContain('JIRA_URL → SIMPLY_JIRA_URL');
     expect(output).toContain('JIRA_PERSONAL_TOKEN → SIMPLY_JIRA_PERSONAL_TOKEN');
   });
